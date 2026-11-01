@@ -1,0 +1,56 @@
+import Foundation
+
+/// mpv configuration. Defaults are the values validated on Apple TV hardware (Phase 0).
+public struct MpvOptions: Sendable, Equatable {
+    /// Hardware decoders in priority order. mpv tries each in turn, so the zero-copy
+    /// `videotoolbox` falls back to `videotoolbox-copy` by itself. Use `["no"]` to force software.
+    public var hwdec: [String]
+    public var demuxerMaxBytes: String
+    public var demuxerMaxBackBytes: String
+    /// mpv `msg-level` value, e.g. `all=warn` or `all=v`.
+    public var messageLevel: String
+    /// Persistent shader/pipeline cache directory; nil disables it.
+    public var shaderCacheDirectory: URL?
+
+    public init(
+        hwdec: [String] = ["videotoolbox", "videotoolbox-copy"],
+        demuxerMaxBytes: String = "50MiB",
+        demuxerMaxBackBytes: String = "25MiB",
+        messageLevel: String = "all=warn",
+        shaderCacheDirectory: URL? = MpvOptions.defaultShaderCacheDirectory
+    ) {
+        self.hwdec = hwdec
+        self.demuxerMaxBytes = demuxerMaxBytes
+        self.demuxerMaxBackBytes = demuxerMaxBackBytes
+        self.messageLevel = messageLevel
+        self.shaderCacheDirectory = shaderCacheDirectory
+    }
+
+    public static var defaultShaderCacheDirectory: URL? {
+        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?
+            .appendingPathComponent("mpv-shader-cache", isDirectory: true)
+    }
+
+    /// The `name=value` pairs set before `mpv_initialize`, in order.
+    var pairs: [(name: String, value: String)] {
+        var out: [(String, String)] = [
+            ("terminal", "yes"),
+            ("msg-level", messageLevel),
+            ("vo", "gpu-next"),
+            ("gpu-api", "vulkan"),
+            ("gpu-context", "moltenvk"),
+            ("hwdec", hwdec.joined(separator: ",")),
+            ("keep-open", "yes"),
+            ("cache", "yes"),
+            ("demuxer-max-bytes", demuxerMaxBytes),
+            ("demuxer-max-back-bytes", demuxerMaxBackBytes),
+            ("video-rotate", "no"),
+            ("subs-match-os-language", "yes"),
+            ("subs-fallback", "yes"),
+        ]
+        if let dir = shaderCacheDirectory {
+            out.append(("gpu-shader-cache-dir", dir.path))
+        }
+        return out
+    }
+}

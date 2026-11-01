@@ -1,0 +1,44 @@
+# Generated project: `xcodegen generate` (the .xcodeproj is not committed).
+name: JellyTV
+options:
+  bundleIdPrefix: dev.antonin
+  deploymentTarget:
+    tvOS: "17.0"
+packages:
+  JellyKit:
+    path: Packages/JellyKit
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+targets:
+  JellyTV:
+    type: application
+    platform: tvOS
+    sources: [Apps/JellyTV]
+    dependencies:
+      - package: JellyKit
+        products: [PlayerCore, LibraryKit]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.antonin.jellytv
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        # Open ATS while developing against plain-HTTP LAN servers.
+        INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsArbitraryLoads: YES
+        MARKETING_VERSION: "0.1"
+        CURRENT_PROJECT_VERSION: "1"
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: 39TMVBW2CY
+schemes:
+  JellyTV:
+    build:
+      targets:
+        JellyTV: all
+    test:
+      targets:
+        - name: PlayerCoreTests
+          parallelizable: false
+        - name: LibraryKitTests
+          parallelizable: false
+    run:
+      config: Debug
