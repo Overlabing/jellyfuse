@@ -18,3 +18,14 @@ xcodebuild -project JellyTV.xcodeproj -scheme JellyTV \
 ```
 
 The app plays the stream passed as launch argument `-url <stream url>`.
+
+## Tests
+
+`LibraryKit` is pure Foundation and its tests pass with `swift test` when the package is built
+for macOS. The package itself only declares tvOS (PlayerCore needs UIKit), so the package's test
+targets are built for tvOS with:
+
+```sh
+cd Packages/JellyKit && xcodebuild -scheme JellyKit-Package \
+  -destination 'platform=tvOS Simulator,name=Apple TV 4K (3rd generation)' build-for-testing
+```

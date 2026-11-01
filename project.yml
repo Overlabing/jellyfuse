@@ -29,16 +29,3 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: 39TMVBW2CY
-schemes:
-  JellyTV:
-    build:
-      targets:
-        JellyTV: all
-    test:
-      targets:
-        - name: PlayerCoreTests
-          parallelizable: false
-        - name: LibraryKitTests
-          parallelizable: false
-    run:
-      config: Debug
