@@ -9,6 +9,8 @@ public struct MediaItem: Sendable, Equatable, Identifiable, Codable {
         case series
         case season
         case episode
+        /// A Jellyfin collection: opens a screen listing its movies, not a detail screen.
+        case boxSet
     }
 
     public let id: String
@@ -201,6 +203,7 @@ extension MediaItem.Kind {
         case .series: self = .series
         case .season: self = .season
         case .episode: self = .episode
+        case .boxSet: self = .boxSet
         default: return nil
         }
     }

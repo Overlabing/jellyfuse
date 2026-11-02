@@ -31,6 +31,17 @@ public enum ShelfKey: Hashable, Sendable, Codable {
     }
 }
 
+/// A paginated grid in memory: ids in server order, the server's total, and where the next page starts.
+struct GridState: Equatable {
+    var ids: [String]
+    var total: Int
+    /// Server offset of the next page (differs from `ids.count` when a page held duplicates).
+    var nextIndex: Int
+    var fetchedAt: Date
+
+    var isComplete: Bool { nextIndex >= total }
+}
+
 /// Resources of the detail screen. Memory only, keyed by what they describe.
 enum DetailKey: Hashable, Sendable {
     case item(String)
@@ -53,12 +64,16 @@ enum DetailKey: Hashable, Sendable {
 @Observable
 public final class LibraryStore {
     public static let shelfLimit = 20
+    /// Items per page of a full library grid (a multiple of every column count the grid uses).
+    public static let gridPageSize = 120
     /// Items of a « Voir tout » grid (no pagination in v1).
     public static let gridLimit = 100
 
     public private(set) var items: [String: MediaItem] = [:]
     public private(set) var userData: [String: UserData] = [:]
     @ObservationIgnored private var shelves: [ShelfKey: Stamped<[String]>] = [:]
+    @ObservationIgnored private var grids: [GridKey: GridState] = [:]
+    @ObservationIgnored private var gridInflight: [GridKey: Task<Void, any Error>] = [:]
     @ObservationIgnored private var librariesStamped: Stamped<[Library]>?
     @ObservationIgnored private var details: [String: ItemDetail] = [:]
     @ObservationIgnored private var children: [DetailKey: [String]] = [:]
@@ -117,6 +132,11 @@ public final class LibraryStore {
         return librariesStamped?.value ?? []
     }
 
+    /// The libraries of one kind, in the server's order.
+    public func libraries(of kind: Library.Kind) -> [Library] {
+        libraries.filter { $0.kind == kind }
+    }
+
     public func isLibrariesStale() -> Bool {
         guard let librariesStamped else { return true }
         return librariesStamped.isStale(for: .views, now: now())
@@ -126,6 +146,32 @@ public final class LibraryStore {
     public func isStale(_ key: ShelfKey) -> Bool {
         guard let stamped = shelves[key] else { return true }
         return stamped.isStale(for: key.kind, now: now())
+    }
+
+    // MARK: Grid reads (paginated, memory only)
+
+    /// The loaded part of a grid joined with user data, in server order.
+    public func gridEntries(_ key: GridKey) -> [LibraryEntry] {
+        _ = revision
+        return (grids[key]?.ids ?? []).compactMap { id in items[id].map { LibraryEntry(item: $0, userData: userData[id] ?? .none) } }
+    }
+
+    /// The server's total for the grid; nil until its first page has landed.
+    public func gridTotal(_ key: GridKey) -> Int? {
+        _ = revision
+        return grids[key]?.total
+    }
+
+    /// True once the last page has landed. A grid never loaded is not complete.
+    public func isGridComplete(_ key: GridKey) -> Bool {
+        _ = revision
+        return grids[key]?.isComplete ?? false
+    }
+
+    /// Never loaded counts as stale.
+    public func isStale(_ key: GridKey) -> Bool {
+        guard let state = grids[key] else { return true }
+        return now().timeIntervalSince(state.fetchedAt) > ResourceKind.shelfPage.staleTime.seconds
     }
 
     // MARK: Detail reads
@@ -180,6 +226,68 @@ public final class LibraryStore {
         } catch is CancellationError {
             return
         }
+    }
+
+    /// Loads the first page of a grid unless it is fresh (or `force`), replacing what was loaded: a stale
+    /// grid starts over from its first page. Sharing and offline rules as for shelves.
+    public func ensureGridFresh(_ key: GridKey, force: Bool = false) async throws {
+        guard force || isStale(key) else { return }
+        try await runGridLoad(key, startIndex: 0)
+    }
+
+    /// Appends the next page of a grid. No-op when the grid is complete or was never loaded; a load already
+    /// in flight is awaited instead of doubled.
+    public func loadNextGridPage(_ key: GridKey) async throws {
+        guard let state = grids[key], !state.isComplete else { return }
+        try await runGridLoad(key, startIndex: state.nextIndex)
+    }
+
+    private func runGridLoad(_ key: GridKey, startIndex: Int) async throws {
+        if let task = gridInflight[key] {
+            try await settle(task, for: key)
+            return
+        }
+        if let reachability, !reachability.isOnline { return }
+        let task = Task { try await self.loadGridPage(key, startIndex: startIndex) }
+        gridInflight[key] = task
+        try await settle(task, for: key)
+    }
+
+    private func settle(_ task: Task<Void, any Error>, for key: GridKey) async throws {
+        defer { if gridInflight[key] == task { gridInflight[key] = nil } }
+        do {
+            try await task.value
+        } catch is CancellationError {
+            return
+        }
+    }
+
+    private func loadGridPage(_ key: GridKey, startIndex: Int) async throws {
+        let page = try await request { try await self.api.items(key.query, startIndex: startIndex, limit: Self.gridPageSize) }
+        guard !Task.isCancelled else { throw CancellationError() }
+        for entry in page.entries {
+            items[entry.item.id] = entry.item
+            userData[entry.item.id] = entry.userData
+        }
+        let ids = page.entries.map(\.item.id)
+        let reached = startIndex + ids.count
+        // An empty page ends the list even when the total is optimistic.
+        let nextIndex = ids.isEmpty ? max(page.total, reached) : reached
+        if startIndex == 0 {
+            grids[key] = GridState(ids: Self.unique(ids), total: page.total, nextIndex: nextIndex, fetchedAt: now())
+        } else if var state = grids[key], state.nextIndex == startIndex {
+            let known = Set(state.ids)
+            state.ids += Self.unique(ids).filter { !known.contains($0) }
+            state.total = page.total
+            state.nextIndex = nextIndex
+            grids[key] = state
+        }
+        revision += 1
+    }
+
+    private static func unique(_ ids: [String]) -> [String] {
+        var seen = Set<String>()
+        return ids.filter { seen.insert($0).inserted }
     }
 
     /// Loads the library list unless it is fresh (or `force`); same sharing and offline rules as shelves.
@@ -333,6 +441,9 @@ public final class LibraryStore {
         for (key, stamped) in shelves where kinds.contains(key.kind) {
             shelves[key] = Stamped(stamped.value, fetchedAt: .distantPast)
         }
+        if kinds.contains(.shelfPage) {
+            for key in grids.keys { grids[key]?.fetchedAt = .distantPast }
+        }
         if kinds.contains(.views), let librariesStamped {
             self.librariesStamped = Stamped(librariesStamped.value, fetchedAt: .distantPast)
         }
@@ -376,6 +487,10 @@ public final class LibraryStore {
         for (key, task) in inflight {
             task.cancel()
             inflight[key] = nil
+        }
+        for (key, task) in gridInflight {
+            task.cancel()
+            gridInflight[key] = nil
         }
         userData[id] = transform(userData[id] ?? .none)
     }

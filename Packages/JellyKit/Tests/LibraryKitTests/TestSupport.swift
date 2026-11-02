@@ -31,6 +31,9 @@ actor FakeAPI: LibraryAPI {
     var episodeResults: [String: [LibraryEntry]] = [:]
     private(set) var favoriteCalls: [String] = []
     private(set) var playedCalls: [String] = []
+    /// Everything a paginated query can return, in server order (`items(...)` slices it).
+    var pagedItems: [LibraryEntry] = []
+    private(set) var itemQueries: [(query: ItemsQuery, startIndex: Int, limit: Int)] = []
     var errors: [any Error] = []
     private var gate: CheckedContinuation<Void, Never>?
     private var gated = false
@@ -38,6 +41,7 @@ actor FakeAPI: LibraryAPI {
 
     func setResume(_ value: [LibraryEntry]) { resumeResult = value }
     func setLatest(_ value: [LibraryEntry], in id: String) { latestResults[id] = value }
+    func setPaged(_ value: [LibraryEntry]) { pagedItems = value }
     func setGrid(_ value: [LibraryEntry], in id: String) { gridResults[id] = value }
     func setLibraries(_ value: [Library]) { librariesResult = value }
     func setDetail(_ value: ItemDetail, userData: UserData = .none) { detailResults[value.item.id] = (value, userData) }
@@ -95,6 +99,12 @@ actor FakeAPI: LibraryAPI {
     func setPlayed(_ isPlayed: Bool, for itemId: String) async throws {
         try await gate("played:\(itemId):\(isPlayed)")
         playedCalls.append("\(itemId):\(isPlayed)")
+    }
+    func items(_ query: ItemsQuery, startIndex: Int, limit: Int) async throws -> ItemsPage {
+        try await gate("items:\(startIndex)")
+        itemQueries.append((query, startIndex, limit))
+        let slice = pagedItems.dropFirst(startIndex).prefix(limit)
+        return ItemsPage(entries: Array(slice), total: pagedItems.count)
     }
     func latest(in libraryId: String, limit: Int) async throws -> [LibraryEntry] {
         try await answer("latest:\(libraryId)", latestResults[libraryId] ?? [])
