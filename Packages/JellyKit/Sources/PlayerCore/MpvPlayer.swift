@@ -42,10 +42,11 @@ public final class MpvPlayer: @unchecked Sendable {
         let box = WakeupBox()
         let retained = Unmanaged.passRetained(box)
         wakeup = retained
-        box.onWakeup = { [weak self] in self?.drainEvents() }
-        mpv_set_wakeup_callback(handle, { context in
-            Unmanaged<WakeupBox>.fromOpaque(context!).takeUnretainedValue().onWakeup?()
-        }, retained.toOpaque())
+        // Called from mpv's own core thread: must stay nonisolated. Without the
+        // explicit @Sendable the literal inherits this init's @MainActor isolation
+        // and the Swift 6 runtime traps (dispatch_assert_queue) on first event.
+        box.onWakeup = { @Sendable [weak self] in self?.drainEvents() }
+        mpv_set_wakeup_callback(handle, mpvWakeupTrampoline, retained.toOpaque())
     }
 
     /// Creates the player with the surface matching `options.backend`.
@@ -102,7 +103,7 @@ public final class MpvPlayer: @unchecked Sendable {
 
     // MARK: Internals
 
-    private final class WakeupBox: @unchecked Sendable {
+    final class WakeupBox: @unchecked Sendable {
         var onWakeup: (@Sendable () -> Void)?
     }
 
@@ -188,4 +189,12 @@ public enum MpvError: Error, Equatable {
     static func describe(_ status: CInt) -> String {
         String(cString: mpv_error_string(status))
     }
+}
+
+// mpv calls this from its own core thread. A closure literal written inside the
+// @MainActor init inherits that isolation under Swift 6.2 and the runtime traps
+// (dispatch_assert_queue) on the first event; a free nonisolated function does not.
+private func mpvWakeupTrampoline(_ context: UnsafeMutableRawPointer?) {
+    guard let context else { return }
+    Unmanaged<MpvPlayer.WakeupBox>.fromOpaque(context).takeUnretainedValue().onWakeup?()
 }

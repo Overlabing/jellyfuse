@@ -38,7 +38,9 @@ public struct MpvOptions: Sendable, Equatable {
     /// The `name=value` pairs set before `mpv_initialize`, in order.
     var pairs: [(name: String, value: String)] {
         var out: [(String, String)] = [
-            ("terminal", "yes"),
+            // terminal input/stdout belongs to CLI mpv; with stdin closed (home-screen
+            // launch) mpv reads EOF and quits the process.
+            ("terminal", "no"),
             ("msg-level", messageLevel),
             ("hwdec", hwdec.joined(separator: ",")),
             ("keep-open", "yes"),
