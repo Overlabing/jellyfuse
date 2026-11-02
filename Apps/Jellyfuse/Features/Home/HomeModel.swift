@@ -7,9 +7,10 @@ import Observation
 @MainActor
 @Observable
 final class HomeModel {
-    private let store: LibraryStore
+    /// Shared with the playback services: a stop patches this store.
+    let store: LibraryStore
     private let client: JellyfinClient
-    private let reachability: ServerReachability
+    let reachability: ServerReachability
     private(set) var hasLoaded = false
     private(set) var failure: UserFacingError?
 
@@ -47,10 +48,6 @@ final class HomeModel {
 
     /// Cold start: nothing cached and the first load has not answered yet.
     var isLoadingCold: Bool { !hasLoaded && content.isEmpty }
-
-    func streamURL(for target: PlayTarget) -> URL? {
-        client.streamURL(itemId: target.id, mediaSourceId: target.id)
-    }
 
     /// Revalidates every shelf that is stale; fresh ones are left alone. The library list comes first:
     /// it decides which per-library shelves exist.

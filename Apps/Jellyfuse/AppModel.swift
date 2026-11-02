@@ -2,6 +2,7 @@ import Foundation
 import HomePresentation
 import LibraryKit
 import Observation
+import PlaybackEngine
 
 /// Session lifecycle and the objects that live exactly as long as a session.
 @MainActor
@@ -9,6 +10,7 @@ import Observation
 final class AppModel {
     private(set) var session: Session?
     private(set) var home: HomeModel?
+    private(set) var playback: PlaybackServices?
     /// What the player screen is showing, if anything.
     var playing: PlayRequest?
 
@@ -25,18 +27,20 @@ final class AppModel {
         SessionStore.clear()
         session = nil
         home = nil
+        playback = nil
         playing = nil
     }
 
     func play(_ target: PlayTarget) {
-        guard let home, let url = home.streamURL(for: target) else { return }
-        playing = PlayRequest(url: url, startSeconds: target.resumeSeconds)
+        playing = PlayRequest(target: target)
     }
 
     private func start(_ session: Session) {
         self.session = session
         let client = JellyfinClient(session: session, onUnauthorized: Self.makeUnauthorizedHandler(self))
-        home = HomeModel(session: session, client: client)
+        let home = HomeModel(session: session, client: client)
+        self.home = home
+        playback = PlaybackServices(session: session, client: client, store: home.store, reachability: home.reachability)
     }
 
     /// Fired from the SDK's threads: built outside the actor so the closure does not inherit its isolation.
@@ -49,6 +53,5 @@ final class AppModel {
 
 struct PlayRequest: Identifiable, Equatable {
     let id = UUID()
-    let url: URL
-    let startSeconds: Double
+    let target: PlayTarget
 }
