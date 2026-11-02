@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Jellyfuse - Lecteur - audio et sous-titres</title>
+<meta name="viewport" content="width=1920">
+<style>
+:root{
+  --canvas:#07070B; --surface:#101018; --raised:#181824; --overlay:#212131;
+  --text:#F4F4F8; --text2:#A6A6B8; --text3:#6E6E82; --stroke:rgba(255,255,255,.10);
+  --accent:#8A6CFF; --spark:#FF5C8A; --ok:#3DDC97; --warn:#FFB84D; --danger:#FF5A5F;
+  --grad:linear-gradient(135deg,#8A6CFF 0%,#C65BDB 55%,#FF5C8A 100%);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:#000}
+body{width:1920px;height:1080px;overflow:hidden;background:var(--canvas);color:var(--text);
+  font-family:-apple-system,"SF Pro Display","SF Pro Text","Helvetica Neue",Inter,Arial,sans-serif;
+  font-weight:500;-webkit-font-smoothing:antialiased;transform-origin:0 0}
+.tv{position:absolute;inset:0;overflow:hidden;background:var(--canvas)}
+.abs{position:absolute}
+/* typography: tvOS HIG sizes */
+.t-large{font-size:76px;font-weight:800;letter-spacing:-1.5px;line-height:1.02}
+.t-title1{font-size:76px;font-weight:700;letter-spacing:-1px}
+.t-title2{font-size:57px;font-weight:700;letter-spacing:-.5px}
+.t-title3{font-size:48px;font-weight:700}
+.t-head{font-size:38px;font-weight:700}
+.t-sub{font-size:38px;font-weight:400;color:var(--text2)}
+.t-call{font-size:31px;font-weight:500}
+.t-body{font-size:29px;font-weight:500}
+.t-cap{font-size:25px;font-weight:500}
+.t-cap2{font-size:23px;font-weight:500}
+.dim{color:var(--text2)} .dim3{color:var(--text3)}
+/* wordmark */
+.logo{display:flex;align-items:center;gap:14px;font-weight:800;font-size:40px;letter-spacing:-1px}
+.logo svg{width:40px;height:40px}
+.logo b{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:800}
+/* nav */
+.nav{position:absolute;left:0;right:0;top:0;height:170px;padding:56px 90px 0;display:flex;align-items:center;gap:64px;
+  background:linear-gradient(180deg,rgba(7,7,11,.92),rgba(7,7,11,0));z-index:30}
+.tabs{display:flex;gap:10px;margin-left:12px}
+.tab{padding:12px 30px;border-radius:40px;font-size:31px;color:var(--text2)}
+.tab.on{color:#fff;font-weight:700;position:relative}
+.tab.on:after{content:"";position:absolute;left:30px;right:30px;bottom:2px;height:4px;border-radius:2px;background:var(--grad)}
+.tab.f{background:rgba(255,255,255,.16);color:#fff}
+.nav .sp{flex:1}
+.avatar{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:28px;color:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.14)}
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:16px;height:84px;padding:0 44px;border-radius:42px;font-size:31px;font-weight:700;
+  background:rgba(255,255,255,.14);color:#fff;backdrop-filter:blur(20px)}
+.btn svg{width:34px;height:34px;fill:currentColor}
+.btn.focus{background:#fff;color:#0a0a10;transform:scale(1.08);box-shadow:0 24px 50px rgba(0,0,0,.55),0 0 70px rgba(138,108,255,.45)}
+.btn.round{width:84px;padding:0;justify-content:center}
+.btn.primary{background:var(--grad);color:#fff}
+.chip{white-space:nowrap;display:inline-flex;align-items:center;gap:10px;height:60px;padding:0 26px;border-radius:30px;font-size:27px;font-weight:600;background:rgba(255,255,255,.10);color:var(--text)}
+.chip.on{background:#fff;color:#0a0a10}
+.chip.focus{background:#fff;color:#0a0a10;transform:scale(1.08);box-shadow:0 18px 40px rgba(0,0,0,.5),0 0 50px rgba(138,108,255,.4)}
+.badge{display:inline-flex;align-items:center;height:36px;padding:0 12px;border-radius:8px;border:2px solid rgba(255,255,255,.45);font-size:22px;font-weight:700;color:rgba(255,255,255,.88);letter-spacing:.5px}
+.badge.fill{background:rgba(255,255,255,.9);color:#0a0a10;border-color:transparent}
+.meta{display:flex;align-items:center;gap:20px;font-size:29px;color:var(--text2)}
+.meta .dot{width:6px;height:6px;border-radius:50%;background:var(--text3)}
+.meta .ok,.meta .rate{color:var(--warn);font-weight:700}
+/* art placeholders */
+.art{position:relative;overflow:hidden}
+.art:before{content:"";position:absolute;inset:0;background:radial-gradient(120% 80% at 20% 0%,rgba(255,255,255,.22),transparent 55%)}
+.art:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(0,0,0,.65))}
+.art .ti{position:absolute;left:18px;right:18px;bottom:18px;z-index:2;font-weight:800;font-size:30px;line-height:1.05;letter-spacing:-.5px;text-shadow:0 2px 12px rgba(0,0,0,.5)}
+.art .ini{position:absolute;right:-8px;top:-30px;z-index:1;font-size:230px;font-weight:900;color:rgba(255,255,255,.10);letter-spacing:-10px}
+/* cards */
+.poster{width:250px;height:375px;border-radius:14px;flex:none}
+.land{width:400px;height:225px;border-radius:14px;flex:none}
+.card{position:relative;flex:none}
+.card.focus{transform:scale(1.12);z-index:10}
+.card.focus .art,.card.focus .still{box-shadow:0 0 0 5px #fff,0 36px 70px rgba(0,0,0,.65),0 0 90px rgba(138,108,255,.50)}
+.card .cap,.card .cap2{position:relative;z-index:2}
+.card .cap{margin-top:16px;font-size:27px;font-weight:600;line-height:1.2}
+.card .cap2{font-size:23px;color:var(--text2);margin-top:4px;font-weight:500}
+.prog{position:absolute;left:0;right:0;bottom:0;height:8px;background:rgba(255,255,255,.28);z-index:3}
+.prog i{display:block;height:100%;background:var(--grad)}
+.flag{position:absolute;top:14px;right:14px;z-index:3;width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--ok);font-weight:800}
+.new{position:absolute;top:14px;left:14px;z-index:3;padding:5px 12px;border-radius:8px;background:var(--grad);font-size:20px;font-weight:800;letter-spacing:.8px}
+.shelf{position:absolute;left:0;right:0}
+.shelf h3{margin:0 0 26px 90px;font-size:38px;font-weight:700;letter-spacing:-.3px}
+.row{display:flex;gap:40px;padding-left:90px}
+.back{position:absolute;inset:0}
+.vig-l{position:absolute;inset:0;background:linear-gradient(90deg,rgba(7,7,11,.96) 0%,rgba(7,7,11,.78) 32%,rgba(7,7,11,0) 70%)}
+.vig-b{position:absolute;inset:0;background:linear-gradient(0deg,var(--canvas) 0%,rgba(7,7,11,.92) 22%,rgba(7,7,11,0) 60%)}
+.vig-t{position:absolute;inset:0;background:linear-gradient(180deg,rgba(7,7,11,.8) 0%,rgba(7,7,11,0) 24%)}
+.panel{background:rgba(24,24,36,.72);border-radius:28px;backdrop-filter:blur(40px);border:1px solid var(--stroke)}
+.toggle{width:96px;height:56px;border-radius:28px;background:rgba(255,255,255,.18);position:relative}
+.toggle:after{content:"";position:absolute;left:6px;top:6px;width:44px;height:44px;border-radius:50%;background:#fff}
+.toggle.on{background:var(--ok)} .toggle.on:after{left:46px}
+
+.osd-top{position:absolute;left:0;right:0;top:0;height:300px;background:linear-gradient(180deg,rgba(0,0,0,.78),rgba(0,0,0,0));padding:70px 90px}
+.osd-bot{position:absolute;left:0;right:0;bottom:0;height:520px;background:linear-gradient(0deg,rgba(0,0,0,.88) 0%,rgba(0,0,0,.6) 55%,rgba(0,0,0,0));}
+.bar{position:absolute;left:90px;right:90px;bottom:228px;height:12px;border-radius:6px;background:rgba(255,255,255,.25)}
+.bar .buf{position:absolute;left:0;top:0;bottom:0;width:61%;background:rgba(255,255,255,.28);border-radius:6px}
+.bar .pos{position:absolute;left:0;top:0;bottom:0;width:42%;background:var(--grad);border-radius:6px}
+.bar .knob{position:absolute;left:42%;top:50%;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;background:#fff;box-shadow:0 0 0 6px rgba(255,255,255,.25),0 6px 20px rgba(0,0,0,.6)}
+.bar .ch{position:absolute;top:-2px;bottom:-2px;width:4px;background:rgba(0,0,0,.85)}
+.bar .seg{position:absolute;top:-8px;height:28px;border-radius:6px;border:2px solid rgba(255,255,255,.0);background:rgba(255,184,77,.0)}
+.thumb{position:absolute;left:calc(90px + 42% * 1740 / 100 - 160px);bottom:290px;width:320px}
+.thumb .img{width:320px;height:180px;border-radius:12px;box-shadow:0 0 0 4px #fff,0 24px 60px rgba(0,0,0,.7)}
+.thumb .ts{text-align:center;margin-top:14px;font-size:31px;font-weight:700;font-variant-numeric:tabular-nums}
+.thumb .ch2{text-align:center;font-size:23px;color:var(--text2)}
+.times{position:absolute;left:90px;right:90px;bottom:172px;display:flex;justify-content:space-between;font-size:27px;font-variant-numeric:tabular-nums;color:rgba(255,255,255,.85)}
+.ctl{position:absolute;left:90px;right:90px;bottom:60px;display:flex;align-items:center;gap:18px}
+.ctl .btn{height:76px}
+.skip{position:absolute;right:90px;bottom:330px}
+
+.side{position:absolute;right:0;top:0;bottom:0;width:1180px;background:linear-gradient(90deg,rgba(7,7,11,0),rgba(7,7,11,.92) 18%);padding:90px 90px 60px 200px}
+.col h4{font-size:25px;letter-spacing:2px;color:var(--text2);font-weight:700;margin-bottom:22px}
+.opt{white-space:nowrap;display:flex;align-items:center;gap:18px;height:84px;padding:0 28px;border-radius:20px;font-size:31px;margin-bottom:8px;color:var(--text2)}
+.opt .sub{font-size:23px;color:var(--text3);margin-left:auto}
+.opt.sel{color:#fff}.opt.sel:before{content:"✓";color:var(--accent);font-weight:900;margin-right:-4px}
+.opt.focus{background:#fff;color:#0a0a10;transform:scale(1.04);box-shadow:0 20px 50px rgba(0,0,0,.5)}
+.opt.focus .sub{color:#55556a}
+</style></head>
+<body><div class="tv"><div class="back" style="background:radial-gradient(70% 90% at 30% 55%,hsl(210 60% 30%),transparent 65%),radial-gradient(40% 50% at 78% 38%,hsl(32 90% 58% / .7),transparent 60%),linear-gradient(180deg,hsl(220 45% 12%),hsl(230 50% 5%))"></div><div style="position:absolute;left:0;right:0;bottom:0;height:340px;background:linear-gradient(0deg,#02030a,rgba(2,3,10,0))"></div><div style="position:absolute;left:760px;bottom:250px;width:360px;height:520px;background:linear-gradient(180deg,rgba(0,0,0,.0),rgba(0,0,0,.85));border-radius:180px 180px 0 0;filter:blur(1px)"></div><div style="position:absolute;inset:0;background:rgba(0,0,0,.35)"></div>
+<div class="side"><div style="display:flex;gap:60px">
+<div class="col" style="flex:1"><h4>AUDIO</h4>
+<div class="opt sel">Français<span class="sub">EAC3 5.1</span></div>
+<div class="opt">English<span class="sub">TrueHD Atmos 7.1</span></div>
+<div class="opt">Deutsch<span class="sub">AC3 5.1</span></div>
+<div class="opt">Commentaire du réalisateur<span class="sub">AAC 2.0</span></div></div>
+<div class="col" style="flex:1"><h4>SOUS-TITRES</h4>
+<div class="opt">Désactivés</div>
+<div class="opt focus">Français (forcés)<span class="sub">SRT</span></div>
+<div class="opt sel">English<span class="sub">PGS</span></div>
+<div class="opt">English SDH<span class="sub">ASS</span></div>
+<div class="opt">Español<span class="sub">SRT</span></div></div></div>
+<div class="t-cap2 dim3" style="position:absolute;left:200px;bottom:70px;right:90px;line-height:1.5">Menu ou ← pour fermer · Les choix sont mémorisés pour cette série.</div></div>
+</div>
+<script>/* optionnel : met l'écran 1920x1080 à l'échelle de la fenêtre */(function(){function f(){var s=Math.min(innerWidth/1920,innerHeight/1080);document.body.style.transform='scale('+s+')';document.documentElement.style.width='1920px'}if(innerWidth<1920||innerHeight<1080){f();addEventListener('resize',f)}})();</script>
+</body></html>
