@@ -20,3 +20,11 @@ Antonin : structurer dès maintenant pour iOS/iPad/macOS, zéro migration plus t
   à PlayerCore — les futures slices iOS/macOS s'ajoutent à la release MPVKit sans
   toucher au code.
 - Seule l'UI finale (Apps/) est par-plateforme, et c'est voulu (UI focus ≠ UI tactile).
+
+## 2026-11-02 (soir) — périmètre et Accueil
+- **Pas de musique dans Jellyfuse** (verbatim Antonin). Les bibliothèques musique
+  (CollectionType music/musicvideos), livres et photos sont exclues partout :
+  shelves, recherche, vues. Jellyfuse = vidéo (movies, tvshows ; mixed masqué v1).
+- « Ajouts récents » : UNE shelf par bibliothèque Jellyfin vidéo (ex. « Films — ajouts
+  récents », « Séries — ajouts récents »), chacune avec un « Voir tout » en fin de
+  rangée ouvrant la grille de la bibliothèque triée par date d'ajout.
