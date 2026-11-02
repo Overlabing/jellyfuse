@@ -173,16 +173,9 @@ public struct ContentTabs: View {
             #if os(tvOS)
             // Nothing is above the tab row: Menu and up close the panel (the list below climbs back here first).
             .onExitCommand { onClose() }
-            .onMoveCommand { move in
-                // Left / right stay in the row, whatever the full-width list rows below look like to the focus
-                // engine; up has nothing above it and closes. Down is left to the engine (into the content).
-                switch move {
-                case .up: onClose()
-                case .left: step(-1)
-                case .right: step(1)
-                default: break
-                }
-            }
+            // Left / right are the focus engine's alone (one mechanism: a manual step on top of it jumped two tabs
+            // on the real pad); the focus sections keep them inside the row. Only up, which has nothing above, is ours.
+            .onMoveCommand { if $0 == .up { onClose() } }
             #endif
             .focusSection()
             content
@@ -201,14 +194,6 @@ public struct ContentTabs: View {
         .defaultFocus($focusedTab, selection)
         // The selection follows the focus (like the system tab bar): no click needed to open a tab.
         .onChange(of: focusedTab) { _, tab in if let tab { onSelectTab(tab) } }
-    }
-
-    /// Moves the focus to the neighbouring tab; nothing at the ends.
-    private func step(_ delta: Int) {
-        let tabs = model.tabs
-        guard let current = focusedTab.flatMap(tabs.firstIndex(of:)) else { return }
-        let next = current + delta
-        if tabs.indices.contains(next) { focusedTab = tabs[next] }
     }
 
     @ViewBuilder private var content: some View {
