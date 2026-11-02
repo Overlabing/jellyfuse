@@ -117,13 +117,14 @@ struct OSDProgressBar: View {
                     skipChevrons(skip).position(x: x, y: -44)
                 }
             }
-            .overlay(alignment: .topLeading) {
+            .overlay(alignment: .bottomLeading) {
                 if let preview {
-                    // Centred on the playhead (kept on screen), its bottom edge just above the bar.
+                    // A box of known width centred on the playhead (kept on screen), standing on the bar:
+                    // bottom-aligned to it, then lifted by the bar's height and a gap.
                     let centre = min(max(x, Self.bubbleWidth / 2), proxy.size.width - Self.bubbleWidth / 2)
                     bubble(preview, chapter: chapterTitle)
-                        .alignmentGuide(.leading) { $0.width / 2 - centre }
-                        .alignmentGuide(.top) { $0[.bottom] + 28 }
+                        .frame(width: Self.bubbleWidth, alignment: .bottom)
+                        .offset(x: centre - Self.bubbleWidth / 2, y: -(trackHeight + 28))
                 }
             }
             .animation(.easeOut(duration: 0.15), value: progress)
@@ -133,8 +134,8 @@ struct OSDProgressBar: View {
         .accessibilityHidden(true)
     }
 
-    /// Also the thumbnail's width, so the bubble does not resize as the frames change.
-    private static let bubbleWidth: CGFloat = 320
+    /// The bubble's width with a thumbnail, so it does not resize as the frames change.
+    private static let bubbleWidth: CGFloat = 336
 
     private func bubble(_ text: String, chapter: String?) -> some View {
         VStack(spacing: 2) {
@@ -142,7 +143,9 @@ struct OSDProgressBar: View {
                 thumbnail
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: Self.bubbleWidth)
+                    .frame(width: Self.bubbleWidth - 2 * Design.Spacing.xs)
+                    // The overlay proposes the bar's 10 pt height: without this the frame collapses to it.
+                    .fixedSize(horizontal: false, vertical: true)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .padding(.bottom, Design.Spacing.xs)
             }
