@@ -11,3 +11,11 @@ et une piste d'implémentation pour ne pas re-réfléchir de zéro.
   `sub-pos` (0–150, 100 = bas) ou `sub-margin-y` via `MpvPlayer.setProperty`, avec une
   valeur calée sur la hauteur de l'OSD ; revenir à la valeur d'origine à la fermeture.
   Comportement du lecteur système/Netflix.
+
+## Accueil
+
+- **Billboard dynamique** (Antonin, 2026-11-02) : le hero de l'Accueil doit refléter la
+  carte focusée dans « À suivre » (et idéalement les autres shelves), à la Netflix :
+  backdrop + logo + boutons qui changent au fil de la navigation, avec un léger debounce
+  (~300 ms) pour ne pas recharger à chaque cran. Toucher HomeView/Billboard +
+  @FocusState remonté des cartes.
