@@ -1,17 +1,32 @@
 import Foundation
 import Observation
 
-/// Home shelves the store loads. Each maps to a `ResourceKind` (freshness, persistence).
-public enum ShelfKey: String, Sendable, CaseIterable, Codable {
+/// Shelves the store loads. Each maps to a `ResourceKind` (freshness, persistence). Per-library
+/// shelves carry the library id, so the set of keys follows the user's libraries.
+public enum ShelfKey: Hashable, Sendable, Codable {
     case continueWatching
     case nextUp
-    case recentlyAdded
+    /// « Ajouts récents » of one library: the home shelf.
+    case latestIn(libraryId: String)
+    /// The « Voir tout » grid of one library, newest added first. Memory only.
+    case recentGrid(libraryId: String)
 
     public var kind: ResourceKind {
         switch self {
         case .continueWatching: .continueWatching
         case .nextUp: .nextUp
-        case .recentlyAdded: .recentlyAdded
+        case .latestIn: .recentlyAdded
+        case .recentGrid: .shelfPage
+        }
+    }
+
+    /// Stable total order for the snapshot.
+    var sortKey: String {
+        switch self {
+        case .continueWatching: "0"
+        case .nextUp: "1"
+        case .latestIn(let id): "2-\(id)"
+        case .recentGrid(let id): "3-\(id)"
         }
     }
 }
@@ -24,10 +39,13 @@ public enum ShelfKey: String, Sendable, CaseIterable, Codable {
 @Observable
 public final class LibraryStore {
     public static let shelfLimit = 20
+    /// Items of a « Voir tout » grid (no pagination in v1).
+    public static let gridLimit = 100
 
     public private(set) var items: [String: MediaItem] = [:]
     public private(set) var userData: [String: UserData] = [:]
     @ObservationIgnored private var shelves: [ShelfKey: Stamped<[String]>] = [:]
+    @ObservationIgnored private var librariesStamped: Stamped<[Library]>?
     /// Bumped on every shelf change so views reading `shelf(_:)` are invalidated.
     private var revision = 0
 
@@ -39,6 +57,7 @@ public final class LibraryStore {
     @ObservationIgnored private let persistDelay: Duration
     @ObservationIgnored private let retryDelays: [Duration]
     @ObservationIgnored private var inflight: [ShelfKey: Task<Void, any Error>] = [:]
+    @ObservationIgnored private var librariesTask: Task<Void, any Error>?
     @ObservationIgnored private var persistTask: Task<Void, Never>?
 
     /// Hydrates from the owner's snapshot, if any: shelves come back stale, so the screen paints
@@ -74,6 +93,17 @@ public final class LibraryStore {
         shelf(key).compactMap { id in items[id].map { LibraryEntry(item: $0, userData: userData[id] ?? .none) } }
     }
 
+    /// The user's video libraries, in the server's order. Empty until loaded (or hydrated).
+    public var libraries: [Library] {
+        _ = revision
+        return librariesStamped?.value ?? []
+    }
+
+    public func isLibrariesStale() -> Bool {
+        guard let librariesStamped else { return true }
+        return librariesStamped.isStale(for: .views, now: now())
+    }
+
     /// Never loaded counts as stale.
     public func isStale(_ key: ShelfKey) -> Bool {
         guard let stamped = shelves[key] else { return true }
@@ -106,35 +136,75 @@ public final class LibraryStore {
         }
     }
 
-    private func load(_ key: ShelfKey) async throws {
-        let entries: [LibraryEntry]
+    /// Loads the library list unless it is fresh (or `force`); same sharing and offline rules as shelves.
+    public func ensureLibrariesFresh(force: Bool = false) async throws {
+        guard force || isLibrariesStale() else { return }
+        if let task = librariesTask {
+            try await settleLibraries(task)
+            return
+        }
+        if let reachability, !reachability.isOnline { return }
+        let task = Task {
+            let libraries = try await self.request { try await self.api.libraries() }
+            guard !Task.isCancelled else { throw CancellationError() }
+            self.librariesStamped = Stamped(libraries, fetchedAt: self.now())
+            self.revision += 1
+            self.schedulePersist(for: .views)
+        }
+        librariesTask = task
+        try await settleLibraries(task)
+    }
+
+    private func settleLibraries(_ task: Task<Void, any Error>) async throws {
+        defer { if librariesTask == task { librariesTask = nil } }
         do {
-            entries = try await fetch(key)
+            try await task.value
+        } catch is CancellationError {
+            return
+        }
+    }
+
+    private func load(_ key: ShelfKey) async throws {
+        let entries = try await request { try await self.fetch(key) }
+        // A patch cancelled this request: its answer predates the patch and must not overwrite it.
+        guard !Task.isCancelled else { throw CancellationError() }
+        install(entries, into: key)
+    }
+
+    /// Runs one GET with the reachability bookkeeping common to every resource.
+    private func request<T: Sendable>(_ body: () async throws -> T) async throws -> T {
+        let value: T
+        do {
+            value = try await withRetry(body)
         } catch {
             if Task.isCancelled { throw CancellationError() }
             reachability?.reportFailure(error)
             throw error
         }
-        // A patch cancelled this request: its answer predates the patch and must not overwrite it.
         guard !Task.isCancelled else { throw CancellationError() }
         reachability?.reportSuccess()
-        install(entries, into: key)
+        return value
     }
 
     /// GETs retry on transport errors only (1 s, then 2 s), never on an HTTP answer.
-    private func fetch(_ key: ShelfKey) async throws -> [LibraryEntry] {
+    private func withRetry<T>(_ body: () async throws -> T) async throws -> T {
         var delays = retryDelays[...]
         while true {
             do {
-                switch key {
-                case .continueWatching: return try await api.resume(limit: Self.shelfLimit)
-                case .nextUp: return try await api.nextUp(limit: Self.shelfLimit)
-                case .recentlyAdded: return try await api.latestMedia(limit: Self.shelfLimit)
-                }
+                return try await body()
             } catch {
                 guard UserFacingError.isNetwork(error), let delay = delays.popFirst() else { throw error }
                 try await Task.sleep(for: delay)
             }
+        }
+    }
+
+    private func fetch(_ key: ShelfKey) async throws -> [LibraryEntry] {
+        switch key {
+        case .continueWatching: try await api.resume(limit: Self.shelfLimit)
+        case .nextUp: try await api.nextUp(limit: Self.shelfLimit)
+        case .latestIn(let id): try await api.latest(in: id, limit: Self.shelfLimit)
+        case .recentGrid(let id): try await api.recentlyAdded(in: id, limit: Self.gridLimit)
         }
     }
 
@@ -154,6 +224,9 @@ public final class LibraryStore {
     public func markStale(_ kinds: Set<ResourceKind>) {
         for (key, stamped) in shelves where kinds.contains(key.kind) {
             shelves[key] = Stamped(stamped.value, fetchedAt: .distantPast)
+        }
+        if kinds.contains(.views), let librariesStamped {
+            self.librariesStamped = Stamped(librariesStamped.value, fetchedAt: .distantPast)
         }
         revision += 1
     }
@@ -200,6 +273,7 @@ public final class LibraryStore {
         guard let snapshot = snapshots.load(owner: owner, now: now()) else { return }
         items = snapshot.items
         userData = snapshot.userData
+        if !snapshot.libraries.isEmpty { librariesStamped = Stamped(snapshot.libraries, fetchedAt: .distantPast) }
         for shelf in snapshot.shelves {
             shelves[shelf.key] = Stamped(shelf.ids, fetchedAt: .distantPast)
         }
@@ -224,7 +298,8 @@ public final class LibraryStore {
             schemaVersion: LibrarySnapshot.currentVersion,
             savedAt: now(),
             owner: owner,
-            shelves: persisted.map { .init(key: $0.key, ids: $0.value.value) }.sorted { $0.key.rawValue < $1.key.rawValue },
+            libraries: librariesStamped?.value ?? [],
+            shelves: persisted.map { .init(key: $0.key, ids: $0.value.value) }.sorted { $0.key.sortKey < $1.key.sortKey },
             items: items.filter { ids.contains($0.key) },
             userData: userData.filter { ids.contains($0.key) }
         )

@@ -36,7 +36,8 @@ import Testing
 
     @Test func libraryCallsRequireSignIn() async {
         let client = JellyfinClient(serverURL: session.serverURL, deviceId: "dev")
-        await #expect(throws: JellyfinError.self) { try await client.latestMedia() }
+        await #expect(throws: JellyfinError.self) { try await client.latest(in: "lib") }
+        await #expect(throws: JellyfinError.self) { try await client.libraries() }
     }
 
     @Test func progressIsWatchedFraction() {
