@@ -36,16 +36,17 @@ public actor JellyfinClient {
     private let onUnauthorized: (@Sendable () -> Void)?
 
     /// Unauthenticated client, used to sign in.
-    public init(serverURL: URL, deviceId: String, urlSession: URLSession = .shared) {
-        self.init(serverURL: serverURL, deviceId: deviceId, token: nil, userId: nil, configuration: urlSession.configuration, onUnauthorized: nil)
+    public init(serverURL: URL, deviceId: String, deviceName: String = "Apple TV", urlSession: URLSession = .shared) {
+        self.init(serverURL: serverURL, deviceId: deviceId, deviceName: deviceName, token: nil, userId: nil, configuration: urlSession.configuration, onUnauthorized: nil)
     }
 
     /// `onUnauthorized` fires when a signed request is answered 401: the server revoked the token.
-    public init(session: Session, urlSession: URLSession = .shared, onUnauthorized: (@Sendable () -> Void)? = nil) {
-        self.init(serverURL: session.serverURL, deviceId: session.deviceId, token: session.token, userId: session.userId, configuration: urlSession.configuration, onUnauthorized: onUnauthorized)
+    /// `deviceName` is how the server lists this device; the app passes the platform's own name.
+    public init(session: Session, deviceName: String = "Apple TV", urlSession: URLSession = .shared, onUnauthorized: (@Sendable () -> Void)? = nil) {
+        self.init(serverURL: session.serverURL, deviceId: session.deviceId, deviceName: deviceName, token: session.token, userId: session.userId, configuration: urlSession.configuration, onUnauthorized: onUnauthorized)
     }
 
-    private init(serverURL: URL, deviceId: String, token: String?, userId: String?, configuration: URLSessionConfiguration, onUnauthorized: (@Sendable () -> Void)?) {
+    private init(serverURL: URL, deviceId: String, deviceName: String, token: String?, userId: String?, configuration: URLSessionConfiguration, onUnauthorized: (@Sendable () -> Void)?) {
         self.serverURL = serverURL
         self.deviceId = deviceId
         self.userId = userId
@@ -56,7 +57,7 @@ public actor JellyfinClient {
                 url: serverURL,
                 accessToken: token,
                 client: Self.clientName,
-                deviceName: "Apple TV",
+                deviceName: deviceName,
                 deviceID: deviceId,
                 version: Self.clientVersion
             ),

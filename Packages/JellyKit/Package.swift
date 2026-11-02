@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "JellyKit",
-    platforms: [.tvOS(.v17)],
+    platforms: [.tvOS(.v17), .iOS(.v17), .macOS(.v14)],
     products: [
         .library(name: "PlayerCore", targets: ["PlayerCore"]),
         .library(name: "LibraryKit", targets: ["LibraryKit"]),
