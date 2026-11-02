@@ -73,7 +73,7 @@ private struct UpNextCard: View {
                 .frame(width: 256, height: 144)
                 .clipShape(RoundedRectangle(cornerRadius: Design.Radius.card))
             VStack(alignment: .leading, spacing: Design.Spacing.xs) {
-                Text("Épisode suivant")
+                Text("Épisode suivant", bundle: .module)
                     .font(Design.Typography.caption)
                     .foregroundStyle(Design.Palette.textSecondary)
                 Text(model.title)
@@ -82,7 +82,7 @@ private struct UpNextCard: View {
                 Text(hint)
                     .font(Design.Typography.caption.monospacedDigit())
                     .foregroundStyle(.white.opacity(0.85))
-                Text(model.offersWatchCredits ? "Menu : regarder le générique" : "Menu : ignorer")
+                Text(model.offersWatchCredits ? String(localized: "Menu : regarder le générique", bundle: .module) : String(localized: "Menu : ignorer", bundle: .module))
                     .font(Design.Typography.caption)
                     .foregroundStyle(Design.Palette.textSecondary)
             }
@@ -96,7 +96,7 @@ private struct UpNextCard: View {
 
     private var hint: String {
         let countdown = model.countdown
-        return String(localized: "Lecture dans \(countdown) s · cliquer pour lancer")
+        return String(localized: "Lecture dans \(countdown) s · cliquer pour lancer", bundle: .module)
     }
 }
 

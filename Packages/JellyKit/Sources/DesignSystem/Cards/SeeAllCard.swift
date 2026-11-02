@@ -15,7 +15,7 @@ public struct SeeAllCard: View {
                 .frame(width: metrics.poster.width, height: metrics.poster.height)
         }
         .cardButtonStyle()
-        .accessibilityLabel(String(localized: "Voir tout"))
+        .accessibilityLabel(String(localized: "Voir tout", bundle: .module))
     }
 }
 
@@ -26,7 +26,7 @@ private struct SeeAllFace: View {
         VStack(spacing: Design.Spacing.s) {
             Image(systemName: "arrow.right")
                 .font(Design.Typography.title)
-            Text("Voir tout")
+            Text("Voir tout", bundle: .module)
                 .font(Design.Typography.body.weight(.semibold))
         }
         .foregroundStyle(isFocused ? Design.Palette.textPrimary : Design.Palette.textSecondary)

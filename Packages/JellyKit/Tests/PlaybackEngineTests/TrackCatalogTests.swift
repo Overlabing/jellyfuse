@@ -28,7 +28,7 @@ import Testing
 
     @Test func subtitleTracksCarryFlagsAndGroupAwareIDs() {
         let catalog = TrackCatalog(streams: streams(), externalIndices: [6], locale: fr)
-        #expect(catalog.subtitles.map(\.title) == ["Français (forcés)", "Anglais SDH", "Espagnol"])
+        #expect(catalog.subtitles.map(\.title) == ["Français " + tr(fr: "(forcés)", en: "(forced)"), "Anglais SDH", "Espagnol"])
         #expect(catalog.subtitles.map(\.detail) == ["SRT", "PGS", "SRT"])
         // Embedded first (file order), then the sub-added sidecar.
         #expect(catalog.subtitles.map(\.mpvID) == [1, 2, 3])
@@ -42,7 +42,7 @@ import Testing
 
     @Test func unknownLanguageFallsBackToAPositionalName() {
         let catalog = TrackCatalog(streams: [stream(3, .audio, codec: "ac3", language: "und")], externalIndices: [], locale: fr)
-        #expect(catalog.audio.first?.title == "Piste 4")
+        #expect(catalog.audio.first?.title == tr(fr: "Piste 4", en: "Track 4"))
     }
 
     @Test func lookupByJellyfinIndex() {

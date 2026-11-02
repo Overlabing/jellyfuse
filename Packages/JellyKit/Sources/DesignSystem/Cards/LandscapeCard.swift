@@ -27,7 +27,7 @@ public struct LandscapeCard: View {
             .contextMenu {
                 if let onToggleWatched {
                     Button(
-                        model.isWatched ? String(localized: "Marquer non vu") : String(localized: "Marquer comme vu"),
+                        model.isWatched ? String(localized: "Marquer non vu", bundle: .module) : String(localized: "Marquer comme vu", bundle: .module),
                         systemImage: model.isWatched ? "eye.slash" : "eye",
                         action: onToggleWatched
                     )

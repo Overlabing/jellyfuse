@@ -187,16 +187,16 @@ struct PlayerScreen: View {
 
     private var stats: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("state: \(model.phase.rawValue)")
+            Text(verbatim: "state: \(model.phase.rawValue)")
             Text(String(format: "time: %.1f / %.1f", model.timePosition, model.duration))
-            Text("video-codec: \(model.videoCodec)")
-            Text("hwdec-current: \(model.hwdecCurrent)")
-            Text("trickplay: \(model.trickplay.map { "loaded (\($0.width) px)" } ?? "none")")
-            Text("focus: \(focusProbe.description)")
-            Text("panel presented: \(transport.isPanelOpen)")
-            Text("osd visible: \(transport.visibility.isVisible)")
-            Text("last press: \(lastPressRawValue.map(String.init) ?? "-")")
-            if let error = model.lastError { Text("error: \(error)") }
+            Text(verbatim: "video-codec: \(model.videoCodec)")
+            Text(verbatim: "hwdec-current: \(model.hwdecCurrent)")
+            Text(verbatim: "trickplay: \(model.trickplay.map { "loaded (\($0.width) px)" } ?? "none")")
+            Text(verbatim: "focus: \(focusProbe.description)")
+            Text(verbatim: "panel presented: \(transport.isPanelOpen)")
+            Text(verbatim: "osd visible: \(transport.visibility.isVisible)")
+            Text(verbatim: "last press: \(lastPressRawValue.map(String.init) ?? "-")")
+            if let error = model.lastError { Text(verbatim: "error: \(error)") }
         }
         .font(.system(size: 28, weight: .medium, design: .monospaced))
         .foregroundStyle(.white)

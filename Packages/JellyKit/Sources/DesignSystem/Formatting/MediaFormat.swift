@@ -15,7 +15,7 @@ public enum MediaFormat {
         guard seconds > 0 else { return nil }
         let minutes = Int((seconds / 60).rounded(.up))
         guard let runtime = runtime(minutes: minutes) else { return nil }
-        return String(localized: "\(runtime) restantes")
+        return String(localized: "\(runtime) restantes", bundle: .module)
     }
 
     /// A playback position as `0 h 12`, `1 h 05` (minutes rounded down). Nil for non-positive positions.
@@ -35,6 +35,6 @@ public enum MediaFormat {
     public static func resumeDescription(progress: Double?) -> String? {
         guard let progress, progress > 0 else { return nil }
         let percent = Int((progress * 100).rounded())
-        return String(localized: "repris à \(percent) %")
+        return String(localized: "repris à \(percent) %", bundle: .module)
     }
 }

@@ -17,7 +17,7 @@ public struct PlayerStatusView: View {
             ProgressView()
                 .scaleEffect(2)
                 .tint(.white)
-                .accessibilityLabel(Text("Chargement"))
+                .accessibilityLabel(Text("Chargement", bundle: .module))
         case .failed(let title, let message):
             VStack(spacing: Design.Spacing.s) {
                 Text(title).font(Design.Typography.title)
@@ -25,7 +25,7 @@ public struct PlayerStatusView: View {
                     .font(Design.Typography.body)
                     .foregroundStyle(Design.Palette.textSecondary)
                     .multilineTextAlignment(.center)
-                Text("Appuyez sur Menu pour revenir.")
+                Text("Appuyez sur Menu pour revenir.", bundle: .module)
                     .font(Design.Typography.caption)
                     .foregroundStyle(Design.Palette.textTertiary)
             }

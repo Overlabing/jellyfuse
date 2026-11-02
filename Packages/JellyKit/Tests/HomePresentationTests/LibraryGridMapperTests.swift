@@ -34,13 +34,13 @@ import Testing
     }
 
     @Test func summaryListsSortFiltersAndJump() {
-        #expect(LibraryGridMapper.summary(sort: .default, filter: .none, startsAt: nil) == "Titre A–Z")
+        #expect(LibraryGridMapper.summary(sort: .default, filter: .none, startsAt: nil) == tr(fr: "Titre A–Z", en: "Title A–Z"))
         #expect(
             LibraryGridMapper.summary(sort: .default, filter: LibraryFilter(unwatchedOnly: true, favoritesOnly: true), startsAt: "M")
-                == "Titre A–Z · Non vus · Favoris · Dès « M »"
+                == tr(fr: "Titre A–Z · Non vus · Favoris · Dès « M »", en: "Title A–Z · Unwatched · Favorites · From “M”")
         )
         // A jump means nothing outside A-Z order and is not announced.
-        #expect(LibraryGridMapper.summary(sort: LibrarySort(.year), filter: .none, startsAt: "M") == "Année, récent d'abord")
+        #expect(LibraryGridMapper.summary(sort: LibrarySort(.year), filter: .none, startsAt: "M") == tr(fr: "Année, récent d'abord", en: "Year, newest first"))
     }
 
     @Test func personModelKeepsTheJellyfinPersonId() {

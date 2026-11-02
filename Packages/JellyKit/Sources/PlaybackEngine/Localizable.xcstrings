@@ -1,0 +1,38 @@
+{
+  "sourceLanguage" : "fr",
+  "strings" : {
+    "(forcés)" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "(forcés)"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "(forced)"
+          }
+        }
+      }
+    },
+    "Piste %lld" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Piste %lld"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Track %lld"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

@@ -18,7 +18,7 @@ public struct PlayPrompt: Sendable, Equatable, Identifiable {
     public init?(_ target: PlayTarget) {
         guard target.resumeSeconds > 0, let position = MediaFormat.position(seconds: target.resumeSeconds) else { return nil }
         title = target.title
-        resumeLabel = String(localized: "Reprendre à \(position)")
+        resumeLabel = String(localized: "Reprendre à \(position)", bundle: .module)
         resume = target
         restart = PlayTarget(id: target.id, title: target.title, resumeSeconds: 0)
     }

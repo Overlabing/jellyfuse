@@ -56,14 +56,25 @@ public struct OSDModel: Sendable, Equatable {
         return "\(hours):\(minutes < 10 ? "0" : "")\(minutes):\(secs < 10 ? "0" : "")\(secs)"
     }
 
-    /// `Se termine à 22 h 47`: the wall-clock time the file ends if it plays on from now.
-    public static func endTime(now: Date, remaining: Double, calendar: Calendar = .current) -> String {
+    /// `Se termine à 22 h 47` / `Ends at 10:47 PM`: the wall-clock time the file ends if it plays on from now.
+    /// French keeps the mockup's `22 h 47`; other languages use the locale's own short time style.
+    public static func endTime(now: Date, remaining: Double, calendar: Calendar = .current, locale: Locale = .current) -> String {
         let end = now.addingTimeInterval(remaining)
-        let parts = calendar.dateComponents([.hour, .minute], from: end)
-        let hour = parts.hour ?? 0
-        let minute = parts.minute ?? 0
-        let time = "\(hour) h \(minute < 10 ? "0" : "")\(minute)"
-        return String(localized: "Se termine à \(time)")
+        let time: String
+        if locale.language.languageCode?.identifier == "fr" {
+            let parts = calendar.dateComponents([.hour, .minute], from: end)
+            let minute = parts.minute ?? 0
+            time = "\(parts.hour ?? 0) h \(minute < 10 ? "0" : "")\(minute)"
+        } else {
+            let formatter = DateFormatter()
+            formatter.calendar = calendar
+            formatter.timeZone = calendar.timeZone
+            formatter.locale = locale
+            formatter.timeStyle = .short
+            formatter.dateStyle = .none
+            time = formatter.string(from: end)
+        }
+        return String(localized: "Se termine à \(time)", bundle: .module)
     }
 
     private static func sanitized(_ seconds: Double) -> Double {

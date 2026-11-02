@@ -65,12 +65,12 @@ public struct Billboard: View {
                 PillButton(primaryLabel, systemImage: "play.fill", action: onPlay)
                     .prefersDefaultFocus(true, in: focusNamespace)
                 PillButton(
-                    model.isInList ? String(localized: "Dans ma liste") : String(localized: "Ma liste"),
+                    model.isInList ? String(localized: "Dans ma liste", bundle: .module) : String(localized: "Ma liste", bundle: .module),
                     systemImage: model.isInList ? "checkmark" : "plus",
                     action: onToggleList
                 )
                 if let onOpenDetail {
-                    PillButton(String(localized: "Détails"), systemImage: "info.circle", action: onOpenDetail)
+                    PillButton(String(localized: "Détails", bundle: .module), systemImage: "info.circle", action: onOpenDetail)
                 }
             }
             .padding(.top, Design.Spacing.s)

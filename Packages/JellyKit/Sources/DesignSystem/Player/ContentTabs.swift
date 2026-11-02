@@ -7,10 +7,10 @@ public enum PlayerTab: String, Sendable, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .info: String(localized: "Infos")
-        case .audio: String(localized: "Audio")
-        case .subtitles: String(localized: "Sous-titres")
-        case .chapters: String(localized: "Chapitres")
+        case .info: String(localized: "Infos", bundle: .module)
+        case .audio: String(localized: "Audio", bundle: .module)
+        case .subtitles: String(localized: "Sous-titres", bundle: .module)
+        case .chapters: String(localized: "Chapitres", bundle: .module)
         }
     }
 }
@@ -34,7 +34,7 @@ public struct TrackRow: Sendable, Equatable, Identifiable {
 
     /// The subtitle list: « Désactivés » first, checked when no subtitle track is.
     public static func subtitleList(_ tracks: [TrackRow]) -> [TrackRow] {
-        let off = TrackRow(id: offID, title: String(localized: "Désactivés"), isSelected: !tracks.contains { $0.isSelected })
+        let off = TrackRow(id: offID, title: String(localized: "Désactivés", bundle: .module), isSelected: !tracks.contains { $0.isSelected })
         return [off] + tracks
     }
 }
@@ -63,7 +63,7 @@ public struct ChapterRow: Sendable, Equatable, Identifiable {
         return starts.indices.map { index in
             let name = names[index].flatMap { $0.isEmpty ? nil : $0 }
             return ChapterRow(
-                id: index, title: name ?? String(localized: "Chapitre \(index + 1)"),
+                id: index, title: name ?? String(localized: "Chapitre \(index + 1)", bundle: .module),
                 time: OSDModel.clock(starts[index]), startSeconds: starts[index], isCurrent: index == current
             )
         }
@@ -223,7 +223,7 @@ public struct ContentTabs: View {
         if model.canSwitchTracks {
             list(rows.map { Row(id: $0.id, title: $0.title, detail: $0.detail, isMarked: $0.isSelected) }, onSelect: { onSelect($0) })
         } else {
-            Text("Les pistes sont choisies par le serveur pendant un transcodage.")
+            Text("Les pistes sont choisies par le serveur pendant un transcodage.", bundle: .module)
                 .font(Design.Typography.body)
                 .foregroundStyle(Design.Palette.textSecondary)
                 .padding(Design.Spacing.s)
