@@ -6,7 +6,7 @@ import SwiftUI
 struct RecentGridScreen: View {
     let model: HomeModel
     let library: Library
-    let onPlay: (PlayTarget) -> Void
+    let onOpen: (String) -> Void
     @State private var hasLoaded = false
     @State private var failure: UserFacingError?
 
@@ -17,9 +17,7 @@ struct RecentGridScreen: View {
             items: content.items,
             isLoading: !hasLoaded && content.isEmpty,
             failureMessage: content.isEmpty ? failure.map { _ in String(localized: "Impossible de charger la bibliothèque.") } : nil,
-            onPlay: { id in
-                if let target = content.target(for: id) { onPlay(target) }
-            }
+            onOpen: onOpen
         )
         .task {
             failure = await model.refreshGrid(for: library)

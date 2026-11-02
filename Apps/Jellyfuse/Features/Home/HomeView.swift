@@ -10,7 +10,10 @@ struct HomeView: View {
     let content: HomeContent
     let isLoadingCold: Bool
     let failureMessage: String?
+    /// Plays an item straight away (billboard, « À suivre »).
     let onPlay: (String) -> Void
+    /// Opens the detail screen of a movie or series.
+    let onOpenDetail: (String) -> Void
     let onSeeAll: (Library) -> Void
     let onToggleList: () -> Void
 
@@ -23,6 +26,7 @@ struct HomeView: View {
                         primaryLabel: billboard.primaryLabel,
                         onPlay: { onPlay(billboard.target.id) },
                         onToggleList: onToggleList,
+                        onOpenDetail: billboard.detailId.map { id in { onOpenDetail(id) } },
                         focusNamespace: focusNamespace
                     )
                 } else if isLoadingCold {
@@ -43,7 +47,7 @@ struct HomeView: View {
                 ForEach(content.libraryShelves) { shelf in
                     if !shelf.items.isEmpty {
                         Shelf(title: shelf.title, items: shelf.items) { model in
-                            PosterCard(model) { onPlay(model.id) }
+                            PosterCard(model) { onOpenDetail(model.id) }
                         } trailing: {
                             SeeAllCard { onSeeAll(shelf.library) }
                         }
