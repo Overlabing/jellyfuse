@@ -67,6 +67,7 @@ struct LibraryView: View {
                 .foregroundStyle(Design.Palette.textSecondary)
                 .lineLimit(1)
             PillButton(String(localized: "Filtres et tri"), systemImage: "line.3.horizontal.decrease", action: onOpenFilters)
+                .accessibilityIdentifier("library.filters")
         }
         .padding(.horizontal, metrics.screenMargin)
         .padding(.bottom, metrics.focusInset)

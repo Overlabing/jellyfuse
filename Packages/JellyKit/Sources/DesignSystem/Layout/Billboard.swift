@@ -63,6 +63,7 @@ public struct Billboard: View {
                 .lineLimit(2)
             HStack(spacing: Design.Spacing.m) {
                 PillButton(primaryLabel, systemImage: "play.fill", action: onPlay)
+                    .accessibilityIdentifier("home.billboard.play")
                     .prefersDefaultFocus(true, in: focusNamespace)
                 PillButton(
                     model.isInList ? String(localized: "Dans ma liste", bundle: .module) : String(localized: "Ma liste", bundle: .module),
