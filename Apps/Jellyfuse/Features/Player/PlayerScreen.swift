@@ -1,15 +1,21 @@
 import PlayerCore
 import SwiftUI
 
-/// Single V0 screen: plays the stream passed as launch argument `-url <stream url>`.
+/// Plays one stream (direct play for now). Menu closes it.
 struct PlayerScreen: View {
-    @State private var model = PlaybackModel()
+    let url: URL
+    let onClose: () -> Void
+    @State private var model: PlaybackModel
 
-    private static let streamURL = UserDefaults.standard.string(forKey: "url").flatMap(URL.init(string:))
+    init(url: URL, startSeconds: Double, onClose: @escaping () -> Void) {
+        self.url = url
+        self.onClose = onClose
+        _model = State(initialValue: PlaybackModel(startSeconds: startSeconds))
+    }
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            if let player = model.player, let url = Self.streamURL {
+            if let player = model.player {
                 MpvPlayerView(player: player, startURL: url)
                     .ignoresSafeArea()
                 stats
@@ -21,11 +27,12 @@ struct PlayerScreen: View {
         }
         .focusable()
         .onPlayPauseCommand { model.togglePause() }
+        .onExitCommand(perform: onClose)
     }
 
     private var message: String {
         if let failure = model.failure { return "Player failed: \(failure)" }
-        return "Launch with -url <stream url> to play a stream."
+        return "Player unavailable."
     }
 
     private var stats: some View {

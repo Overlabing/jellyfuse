@@ -16,7 +16,10 @@ final class PlaybackModel {
     let player: MpvPlayer?
     private var eventTask: Task<Void, Never>?
 
-    init() {
+    private let startSeconds: Double
+
+    init(startSeconds: Double = 0) {
+        self.startSeconds = startSeconds
         do {
             player = try MpvPlayer()
         } catch {
@@ -41,7 +44,9 @@ final class PlaybackModel {
     private func apply(_ event: MpvEvent) {
         switch event {
         case .startFile: state = "loading"
-        case .fileLoaded: state = "playing"
+        case .fileLoaded:
+            state = "playing"
+            if startSeconds > 0 { player?.seek(to: startSeconds) }
         case .endFile(let error):
             state = error == nil ? "ended" : "error"
             lastError = error
