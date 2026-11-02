@@ -52,7 +52,8 @@ public struct TrickplaySheet: Sendable, Equatable {
         }
         return widths
             .compactMap { key, info in sheet(width: Int(key), info: info) }
-            .min { abs($0.width - preferredWidth) < abs($1.width - preferredWidth) }
+            // A distance tie goes to the larger width: a sharper thumbnail beats a lighter one.
+            .min { (abs($0.width - preferredWidth), -$0.width) < (abs($1.width - preferredWidth), -$1.width) }
     }
 
     private static func sheet(width: Int?, info: TrickplayInfoDto) -> TrickplaySheet? {
