@@ -8,6 +8,9 @@ import SwiftUI
 /// Menu closes the display, then the player.
 struct PlayerScreen: View {
     let onClose: () -> Void
+    /// The next episode is starting (Select on its card, the countdown, or the end of the file).
+    let onPlayNext: (PlayTarget) -> Void
+    @State private var tiles: TrickplayTiles
     @State private var model: PlaybackModel
     @State private var transport: TransportController
     @State private var tab = PlayerTab.info
@@ -15,8 +18,13 @@ struct PlayerScreen: View {
     private let showsStats = UserDefaults.standard.bool(forKey: "stats")
     @State private var focusProbe = FocusProbe()
 
-    init(target: PlayTarget, services: PlaybackServices, onClose: @escaping () -> Void) {
+    init(target: PlayTarget, services: PlaybackServices, onClose: @escaping () -> Void, onPlayNext: @escaping (PlayTarget) -> Void) {
         self.onClose = onClose
+        self.onPlayNext = onPlayNext
+        let itemId = target.id
+        _tiles = State(initialValue: TrickplayTiles(urlForTile: { width, index in
+            services.trickplayTileURL(itemId: itemId, width: width, index: index)
+        }))
         let model = PlaybackModel(target: target, services: services)
         _model = State(initialValue: model)
         _transport = State(initialValue: TransportController(driver: .init(
@@ -32,7 +40,9 @@ struct PlayerScreen: View {
                 MpvPlayerView(player: player, startURL: url)
                     .ignoresSafeArea()
             }
-            PlayerOSD(state: transport.state, model: osdModel)
+            PlayerOSD(state: transport.state, model: osdModel, scrubThumbnail: scrubThumbnail)
+                .ignoresSafeArea()
+            PlayerPrompts(skipLabel: skipLabel, upNext: upNextCard, isOSDVisible: transport.visibility.isVisible)
                 .ignoresSafeArea()
             status
             if showsStats { stats }
@@ -47,7 +57,12 @@ struct PlayerScreen: View {
         .task(id: transport.visibility.deadline) { await hideWhenIdle() }
         .task(id: transport.skipFeedback?.token) { await clearSkipFeedback() }
         .onChange(of: model.isPaused) { _, paused in transport.pausedChanged(paused) }
-        .onChange(of: model.phase) { _, phase in if phase == .ended { onClose() } }
+        .task(id: scrubTile) { if let sheet = model.trickplay, let scrubTile { await tiles.load(tile: scrubTile, of: sheet) } }
+        .onChange(of: model.autoplay) { _, next in if let next { playNext(next) } }
+        .onChange(of: model.phase) { _, phase in
+            guard phase == .ended else { return }
+            if let next = model.episodeAtEnd { playNext(next) } else { onClose() }
+        }
         .onDisappear { model.stop() }
     }
 
@@ -100,15 +115,59 @@ struct PlayerScreen: View {
     private var remoteHandlers: RemoteHandlers {
         RemoteHandlers(
             onTouch: { transport.reveal() },
-            onSelect: { transport.select() },
+            onSelect: { select() },
             onPlayPause: { transport.playPause() },
-            onMenu: { if transport.menu() == .exit { onClose() } },
+            onMenu: { if !transport.isScrubbing, model.dismissEndCard() { return }; if transport.menu() == .exit { onClose() } },
             onSkip: { transport.skip($0) },
             onDown: { transport.openPanel() },
             onPanBegan: { transport.panBegan() },
             onPan: { transport.pan(fraction: $0) },
             onPanEnded: {}
         )
+    }
+
+    // MARK: Trickplay, skip and next episode
+
+    /// The trickplay tile under the scrub preview, to load; nil when not scrubbing or without trickplay.
+    private var scrubTile: Int? {
+        guard transport.isScrubbing, let sheet = model.trickplay else { return nil }
+        return sheet.tile(at: transport.displayedPosition).tileIndex
+    }
+
+    private var scrubThumbnail: Image? {
+        guard transport.isScrubbing, let sheet = model.trickplay else { return nil }
+        return tiles.thumbnail(for: sheet, at: transport.displayedPosition)
+    }
+
+    private var skipLabel: String? {
+        switch model.skippableSegment?.kind {
+        case .intro: String(localized: "Passer l'intro")
+        case .outro: String(localized: "Passer le générique")
+        case nil: nil
+        }
+    }
+
+    private var upNextCard: UpNextCardModel? {
+        guard let card = model.endCard, let next = model.nextEpisode else { return nil }
+        return UpNextCardModel(title: next.title, thumbnail: next.thumbnail, countdown: card.countdown, offersWatchCredits: card.phase == .credits)
+    }
+
+    /// Select acts on what the screen offers (next episode, skip) before it toggles pause; a scrub comes first.
+    private func select() {
+        guard !transport.isScrubbing else { return transport.select() }
+        if let next = model.endCard != nil ? model.nextEpisode : nil {
+            playNext(next)
+        } else if model.skippableSegment != nil {
+            model.skipSegment()
+        } else {
+            transport.select()
+        }
+    }
+
+    /// Reports the current episode stopped, then hands over to the next one (Stopped goes out before its Start).
+    private func playNext(_ next: NextEpisode) {
+        model.stop()
+        onPlayNext(next.target)
     }
 
     private func hideWhenIdle() async {

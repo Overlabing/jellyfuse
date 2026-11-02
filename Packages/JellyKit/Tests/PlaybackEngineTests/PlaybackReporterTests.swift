@@ -100,6 +100,24 @@ actor FakeEffects: PlaybackEffects {
         #expect(stopped.positionTicks == 420_000_000)
     }
 
+    @Test func chainingEpisodesStopsTheCurrentOneBeforeTheNextOneStarts() async {
+        let reporter = makeReporter()
+        await reporter.begin(identity(item: "ep1", session: "ps1"))
+        await reporter.started(snap(0))
+        await reporter.stop(snap(1500))
+        await reporter.begin(identity(item: "ep2", session: "ps2"))
+        await reporter.started(snap(0))
+
+        let sent = await api.accepted
+        #expect(sent.map(\.kind) == ["start", "stopped", "start"])
+        guard case .stopped(let stopped) = sent[1], case .start(let start) = sent[2] else {
+            Issue.record("unexpected report shapes")
+            return
+        }
+        #expect(stopped.itemID == "ep1" && stopped.positionTicks == 15_000_000_000)
+        #expect(start.itemID == "ep2" && start.playSessionID == "ps2" && start.positionTicks == 0)
+    }
+
     @Test func itemIdIsNeverTheMediaSourceIdOnTheWire() async throws {
         let reporter = makeReporter()
         await reporter.begin(identity(item: "ITEM", source: "SOURCE"))

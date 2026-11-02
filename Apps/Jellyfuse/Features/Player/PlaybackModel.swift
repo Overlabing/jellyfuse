@@ -40,6 +40,15 @@ final class PlaybackModel {
     private(set) var subtitleIndex: Int?
     /// Synopsis and chapters, once loaded.
     private(set) var detail: ItemDetail?
+    /// The intro and credits the server marked, if any.
+    private(set) var segments = ItemSegments.none
+    /// The following episode, when this is an episode that has one.
+    private(set) var nextEpisode: NextEpisode?
+    /// Set when the countdown ran out: the screen then plays this episode.
+    private(set) var autoplay: NextEpisode?
+    private var endOfEpisode = EndOfEpisodeState()
+    private var countdownElapsed = 0.0
+    private var countdownTask: Task<Void, Never>?
 
     let player: MpvPlayer?
 
@@ -55,6 +64,7 @@ final class PlaybackModel {
     private var eventTask: Task<Void, Never>?
     private var resolveTask: Task<Void, Never>?
     private var detailTask: Task<Void, Never>?
+    private var extrasTask: Task<Void, Never>?
     private var tickTask: Task<Void, Never>?
     private let reports: AsyncStream<Report>.Continuation
     private var hasStarted = false
@@ -97,12 +107,23 @@ final class PlaybackModel {
             let detail = await services.detail(id)
             self?.detail = detail
         }
+        // One request each per playback, off the critical path of the stream.
+        extrasTask = Task { [weak self] in
+            async let segments = services.segments(id)
+            async let next = services.nextEpisode(after: id)
+            let (foundSegments, foundNext) = await (segments, next)
+            guard !Task.isCancelled else { return }
+            self?.segments = foundSegments
+            self?.nextEpisode = foundNext
+        }
     }
 
     isolated deinit {
         stop()
         resolveTask?.cancel()
         detailTask?.cancel()
+        extrasTask?.cancel()
+        countdownTask?.cancel()
         eventTask?.cancel()
         player?.shutdown()
     }
@@ -123,6 +144,73 @@ final class PlaybackModel {
         seeks.seek(to: seconds, at: .now)
         player.seek(to: seconds)
         if hasStarted, !isStopped { reports.yield(.update(snapshot(), .immediate)) }
+    }
+
+    // MARK: Segments and next episode
+
+    /// The scrub thumbnails, when the server generated them.
+    var trickplay: TrickplaySheet? { detail?.trickplay }
+
+    /// The « Passer l'intro / le générique » segment the viewer is in.
+    var skippableSegment: MediaSegment? { segments.skippable(at: position, hasNext: nextEpisode != nil) }
+
+    func skipSegment() {
+        guard let segment = skippableSegment else { return }
+        seek(to: segment.end)
+    }
+
+    /// The end-of-episode card showing now, and the seconds left of its countdown.
+    var endCard: (phase: EndOfEpisodePhase, countdown: Int)? {
+        guard nextEpisode != nil, endOfEpisode.phase != .idle else { return nil }
+        return (endOfEpisode.phase, max(Int((Double(EndOfEpisodeGate.countdownSeconds) - countdownElapsed).rounded(.up)), 0))
+    }
+
+    /// Menu on the card: « Regarder le générique » on the credits, a plain dismiss near the end. False when no
+    /// card was showing, so Menu does its usual job.
+    func dismissEndCard() -> Bool {
+        guard endCard != nil else { return false }
+        if endOfEpisode.phase == .credits { endOfEpisode.watchCredits() } else { endOfEpisode.dismiss() }
+        cardChanged()
+        return true
+    }
+
+    /// What plays when the file ends by itself: the next episode, unless the viewer turned its card down.
+    var episodeAtEnd: NextEpisode? { endOfEpisode.isDismissed ? nil : nextEpisode }
+
+    /// Runs the gate for a new position: re-arms after a backward seek, shows or clears the card.
+    private func evaluateEnd(position: Double, previous: Double) {
+        guard nextEpisode != nil else { return }
+        if previous - position > EndOfEpisodeGate.rearmSeek { endOfEpisode.reset() }
+        let credits = segments.credits.map { $0.start...$0.end }
+        let target = EndOfEpisodeGate.targetPhase(position: position, duration: duration, credits: credits, hasNext: true)
+        if target == .idle { endOfEpisode.complete() } else { endOfEpisode.enter(target) }
+        cardChanged()
+    }
+
+    /// Starts the countdown when a card appears, stops it when it goes.
+    private func cardChanged() {
+        if endOfEpisode.phase == .idle {
+            countdownTask?.cancel()
+            countdownTask = nil
+            countdownElapsed = 0
+        } else if countdownTask == nil {
+            countdownTask = Task { [weak self] in
+                // Counts playing time only: a paused episode keeps its card.
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .milliseconds(250))
+                    guard let self, !Task.isCancelled else { return }
+                    if self.isPaused { continue }
+                    self.countdownElapsed += 0.25
+                    if self.countdownElapsed >= Double(EndOfEpisodeGate.countdownSeconds) {
+                        self.endOfEpisode.complete()
+                        self.countdownTask = nil
+                        self.countdownElapsed = 0
+                        self.autoplay = self.nextEpisode
+                        return
+                    }
+                }
+            }
+        }
     }
 
     // MARK: Tracks and chapters
@@ -233,7 +321,10 @@ final class PlaybackModel {
         case .shutdown: phase = .stopped
         case .propertyChanged(let property):
             switch property {
-            case .timePosition(let value): timePosition = value
+            case .timePosition(let value):
+                let previous = timePosition
+                timePosition = value
+                evaluateEnd(position: value, previous: previous)
             case .duration(let value): duration = value
             case .paused(let paused): pausedChanged(paused)
             case .videoCodec(let value): videoCodec = value

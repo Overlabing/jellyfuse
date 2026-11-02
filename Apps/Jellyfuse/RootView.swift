@@ -56,7 +56,11 @@ private struct MainTabs: View {
             }
         }
         .fullScreenCover(item: $model.playing) { request in
-            PlayerScreen(target: request.target, services: playback, onClose: { model.playing = nil })
+            // `.id`: the next episode replaces the request, and the new player must not inherit the old one's state.
+            PlayerScreen(
+                target: request.target, services: playback, onClose: { model.playing = nil }, onPlayNext: { model.play($0) }
+            )
+            .id(request.id)
         }
     }
 }
