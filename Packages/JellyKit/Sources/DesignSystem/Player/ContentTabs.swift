@@ -173,9 +173,20 @@ public struct ContentTabs: View {
             #if os(tvOS)
             // Nothing is above the tab row: Menu and up close the panel (the list below climbs back here first).
             .onExitCommand { onClose() }
-            .onMoveCommand { if $0 == .up { onClose() } }
+            .onMoveCommand { move in
+                // Left / right stay in the row, whatever the full-width list rows below look like to the focus
+                // engine; up has nothing above it and closes. Down is left to the engine (into the content).
+                switch move {
+                case .up: onClose()
+                case .left: step(-1)
+                case .right: step(1)
+                default: break
+                }
+            }
             #endif
+            .focusSection()
             content
+                .focusSection()
                 #if os(tvOS)
                 // Menu from inside the list climbs back to the tab (like the system tab bar) instead of closing
                 // the panel: the event is consumed here, so the presentation never sees it. From the tabs, which
@@ -188,6 +199,16 @@ public struct ContentTabs: View {
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 28))
         .focusSection()
         .defaultFocus($focusedTab, selection)
+        // The selection follows the focus (like the system tab bar): no click needed to open a tab.
+        .onChange(of: focusedTab) { _, tab in if let tab { onSelectTab(tab) } }
+    }
+
+    /// Moves the focus to the neighbouring tab; nothing at the ends.
+    private func step(_ delta: Int) {
+        let tabs = model.tabs
+        guard let current = focusedTab.flatMap(tabs.firstIndex(of:)) else { return }
+        let next = current + delta
+        if tabs.indices.contains(next) { focusedTab = tabs[next] }
     }
 
     @ViewBuilder private var content: some View {
@@ -267,6 +288,8 @@ public struct ContentTabs: View {
             }
             .scrollClipDisabled()
             .frame(maxHeight: 460)
+            // Focus effects may overflow sideways, but a scrolled row must not draw over the tab row.
+            .mask(Rectangle().padding(.horizontal, -Design.Spacing.l))
             .onAppear {
                 if let marked = rows.first(where: \.isMarked) { proxy.scrollTo(marked.id, anchor: .center) }
             }
