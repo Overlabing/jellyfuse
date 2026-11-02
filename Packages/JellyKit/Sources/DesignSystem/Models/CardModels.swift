@@ -37,7 +37,7 @@ public struct PosterModel: Sendable, Equatable, Identifiable {
 
     /// VoiceOver label: `Nocturne, 2025, repris à 62 %`.
     public var accessibilityDescription: String {
-        let watched = isWatched ? String(localized: "vu") : nil
+        let watched = isWatched ? String(localized: "vu", bundle: .module) : nil
         return [title, subtitle, MediaFormat.resumeDescription(progress: progress), watched]
             .compactMap { $0 }
             .joined(separator: ", ")
@@ -70,7 +70,7 @@ public struct LandscapeModel: Sendable, Equatable, Identifiable {
     }
 
     public var accessibilityDescription: String {
-        let watched = isWatched ? String(localized: "vu") : nil
+        let watched = isWatched ? String(localized: "vu", bundle: .module) : nil
         return [title, subtitle, MediaFormat.resumeDescription(progress: progress), watched]
             .compactMap { $0 }
             .joined(separator: ", ")
@@ -208,7 +208,7 @@ public struct DetailHeaderModel: Sendable, Equatable, Identifiable {
         if let certification, !certification.isEmpty { parts.append(.text(certification)) }
         if let yearText { parts.append(.text(yearText)) }
         if let seasonCount, seasonCount > 0 {
-            parts.append(.text(seasonCount == 1 ? String(localized: "1 saison") : String(localized: "\(seasonCount) saisons")))
+            parts.append(.text(seasonCount == 1 ? String(localized: "1 saison", bundle: .module) : String(localized: "\(seasonCount) saisons", bundle: .module)))
         } else if let runtimeMinutes, let text = MediaFormat.runtime(minutes: runtimeMinutes) {
             parts.append(.text(text))
         }

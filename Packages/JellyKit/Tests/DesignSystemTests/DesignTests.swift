@@ -41,9 +41,9 @@ import Testing
     }
 
     @Test func remainingRoundsUp() {
-        #expect(MediaFormat.remaining(seconds: 28 * 60) == "28 min restantes")
-        #expect(MediaFormat.remaining(seconds: 28 * 60 + 1) == "29 min restantes")
-        #expect(MediaFormat.remaining(seconds: 72 * 60) == "1 h 12 restantes")
+        #expect(MediaFormat.remaining(seconds: 28 * 60) == tr(fr: "28 min restantes", en: "28 min left"))
+        #expect(MediaFormat.remaining(seconds: 28 * 60 + 1) == tr(fr: "29 min restantes", en: "29 min left"))
+        #expect(MediaFormat.remaining(seconds: 72 * 60) == tr(fr: "1 h 12 restantes", en: "1 h 12 left"))
         #expect(MediaFormat.remaining(seconds: 0) == nil)
     }
 
@@ -54,7 +54,7 @@ import Testing
     }
 
     @Test func resumeDescription() {
-        #expect(MediaFormat.resumeDescription(progress: 0.62) == "repris à 62 %")
+        #expect(MediaFormat.resumeDescription(progress: 0.62) == tr(fr: "repris à 62 %", en: "resumes at 62%"))
         #expect(MediaFormat.resumeDescription(progress: nil) == nil)
         #expect(MediaFormat.resumeDescription(progress: 0) == nil)
     }
@@ -71,9 +71,9 @@ import Testing
 
     @Test func posterAccessibilityDescription() {
         let model = PosterModel(id: "1", title: "Nocturne", subtitle: "2025", image: art, progress: 0.62)
-        #expect(model.accessibilityDescription == "Nocturne, 2025, repris à 62 %")
+        #expect(model.accessibilityDescription == "Nocturne, 2025, " + tr(fr: "repris à 62 %", en: "resumes at 62%"))
         let watched = PosterModel(id: "2", title: "Atlas", image: art, isWatched: true)
-        #expect(watched.accessibilityDescription == "Atlas, vu")
+        #expect(watched.accessibilityDescription == "Atlas, " + tr(fr: "vu", en: "watched"))
     }
 
     @Test func billboardMetaLine() {

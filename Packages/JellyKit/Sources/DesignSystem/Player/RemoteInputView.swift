@@ -108,8 +108,8 @@ public final class RemoteInputUIView: UIView {
     private static let repeatInterval: Duration = .milliseconds(300)
 
     /// The tvOS simulator's Menu / Back key arrives as this private press type instead of `.menu`, and the
-    /// system would then dismiss the player: it is handled like Menu.
-    static let simulatorMenu = UIPress.PressType(rawValue: 2041)!
+    /// system would then dismiss the player: it is handled like Menu. `nil` where the OS does not know that value: then only the real Menu key is handled.
+    static let simulatorMenu = UIPress.PressType(rawValue: 2041)
     /// A press delivered both ways must not count twice.
     private static let menuDebounce: TimeInterval = 0.3
     /// Downward travel, in pad heights, that counts as a swipe down.
@@ -152,6 +152,21 @@ public final class RemoteInputUIView: UIView {
     public required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
 
     public override var canBecomeFocused: Bool { takesFocus }
+
+    // VoiceOver: this view is the player's only focus target. Direct interaction hands the raw presses
+    // (arrows, select, play/pause) to it instead of VoiceOver's own navigation.
+    public override var isAccessibilityElement: Bool {
+        get { takesFocus }
+        set {}
+    }
+    public override var accessibilityLabel: String? {
+        get { String(localized: "Lecteur vidéo", bundle: .module) }
+        set {}
+    }
+    public override var accessibilityTraits: UIAccessibilityTraits {
+        get { .allowsDirectInteraction }
+        set {}
+    }
 
     public override func didMoveToWindow() {
         super.didMoveToWindow()

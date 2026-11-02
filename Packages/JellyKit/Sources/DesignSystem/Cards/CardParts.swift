@@ -10,6 +10,7 @@ struct CardCaption: View {
     var isFocused = false
     /// How far the growing artwork pushes the caption down: half the artwork's extra height.
     var focusShift: CGFloat = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(alignment: .leading, spacing: Design.Spacing.xs) {
@@ -26,7 +27,7 @@ struct CardCaption: View {
         }
         .frame(width: width, alignment: .leading)
         .offset(y: isFocused ? focusShift : 0)
-        .animation(.easeOut(duration: 0.15), value: isFocused)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: isFocused)
     }
 }
 

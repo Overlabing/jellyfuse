@@ -68,8 +68,8 @@ public struct TrackCatalog: Sendable, Equatable {
     static func title(of stream: MediaStream, locale: Locale) -> String {
         var name = languageName(stream.language, locale: locale)
             ?? stream.localizedLanguage ?? stream.title
-            ?? String(localized: "Piste \((stream.index ?? 0) + 1)")
-        if stream.isForced == true { name += " " + String(localized: "(forcés)") }
+            ?? String(localized: "Piste \((stream.index ?? 0) + 1)", bundle: .module)
+        if stream.isForced == true { name += " " + String(localized: "(forcés)", bundle: .module) }
         if stream.isHearingImpaired == true { name += " SDH" }
         return name
     }

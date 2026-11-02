@@ -4,6 +4,7 @@ import SwiftUI
 /// end time and remaining time over a dark gradient. Props in; the remote is read by `RemoteInputView`.
 public struct PlayerOSD: View {
     @Environment(\.designMetrics) private var metrics
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private let state: OSDState
     private let model: OSDModel
     private let scrubThumbnail: Image?
@@ -18,7 +19,7 @@ public struct PlayerOSD: View {
     public var body: some View {
         VStack(alignment: .leading, spacing: Design.Spacing.s) {
             if !state.isPanelOpen {
-                Text("Balayez vers le bas pour plus d'informations")
+                Text("Balayez vers le bas pour plus d'informations", bundle: .module)
                     .font(Design.Typography.caption)
                     .foregroundStyle(.white.opacity(0.75))
                     .padding(.horizontal, Design.Spacing.m)
@@ -40,9 +41,11 @@ public struct PlayerOSD: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         .background(alignment: .bottom) { gradient }
         .opacity(state.isVisible ? 1 : 0)
-        .offset(y: state.isVisible ? 0 : 24)
+        .offset(y: state.isVisible || reduceMotion ? 0 : 24)
         .animation(.easeOut(duration: 0.25), value: state.isVisible)
         .accessibilityElement(children: .combine)
+        // Faded out, the display is still in the tree: VoiceOver must not read it.
+        .accessibilityHidden(!state.isVisible)
     }
 
     private var times: some View {
@@ -85,6 +88,7 @@ struct OSDProgressBar: View {
     let thumbnail: Image?
     let skip: SkipFeedback?
     let isScrubbing: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let trackHeight: CGFloat = 10
     private let gap: Double = 6
@@ -126,8 +130,8 @@ struct OSDProgressBar: View {
                         .offset(x: centre - Self.bubbleWidth / 2, y: -(trackHeight + 28))
                 }
             }
-            .animation(.easeOut(duration: 0.15), value: progress)
-            .animation(.easeOut(duration: 0.15), value: isScrubbing)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: progress)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: isScrubbing)
         }
         .frame(height: trackHeight)
         .accessibilityHidden(true)
@@ -179,7 +183,7 @@ struct OSDProgressBar: View {
         .padding(.horizontal, Design.Spacing.s)
         .padding(.vertical, Design.Spacing.xs)
         .background(.black.opacity(0.6), in: Capsule())
-        .symbolEffect(.bounce, value: skip.token)
+        .symbolEffect(.bounce, value: reduceMotion ? 0 : skip.token)
         .id(skip.token)
         .transition(.opacity)
     }

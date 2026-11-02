@@ -26,6 +26,7 @@ public struct PlayerPrompts: View {
     private let skipLabel: String?
     private let upNext: UpNextCardModel?
     private let isOSDVisible: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// `skipLabel`: « Passer l'intro » or « Passer le générique » while in such a segment, else nil.
     public init(skipLabel: String?, upNext: UpNextCardModel?, isOSDVisible: Bool) {
@@ -38,12 +39,12 @@ public struct PlayerPrompts: View {
         HStack(alignment: .bottom) {
             if let skipLabel { SkipButton(label: skipLabel).transition(.opacity) }
             Spacer()
-            if let upNext { UpNextCard(model: upNext).transition(.move(edge: .trailing).combined(with: .opacity)) }
+            if let upNext { UpNextCard(model: upNext).transition(reduceMotion ? .opacity : .move(edge: .trailing).combined(with: .opacity)) }
         }
         .padding(.horizontal, metrics.screenMargin)
         .padding(.bottom, isOSDVisible ? 320 : 100)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-        .animation(.easeOut(duration: 0.25), value: isOSDVisible)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.25), value: isOSDVisible)
         .animation(.easeOut(duration: 0.25), value: skipLabel)
         .animation(.easeOut(duration: 0.25), value: upNext == nil)
         .allowsHitTesting(false)
@@ -73,7 +74,7 @@ private struct UpNextCard: View {
                 .frame(width: 256, height: 144)
                 .clipShape(RoundedRectangle(cornerRadius: Design.Radius.card))
             VStack(alignment: .leading, spacing: Design.Spacing.xs) {
-                Text("Épisode suivant")
+                Text("Épisode suivant", bundle: .module)
                     .font(Design.Typography.caption)
                     .foregroundStyle(Design.Palette.textSecondary)
                 Text(model.title)
@@ -82,7 +83,7 @@ private struct UpNextCard: View {
                 Text(hint)
                     .font(Design.Typography.caption.monospacedDigit())
                     .foregroundStyle(.white.opacity(0.85))
-                Text(model.offersWatchCredits ? "Menu : regarder le générique" : "Menu : ignorer")
+                Text(model.offersWatchCredits ? String(localized: "Menu : regarder le générique", bundle: .module) : String(localized: "Menu : ignorer", bundle: .module))
                     .font(Design.Typography.caption)
                     .foregroundStyle(Design.Palette.textSecondary)
             }
@@ -96,7 +97,7 @@ private struct UpNextCard: View {
 
     private var hint: String {
         let countdown = model.countdown
-        return String(localized: "Lecture dans \(countdown) s · cliquer pour lancer")
+        return String(localized: "Lecture dans \(countdown) s · cliquer pour lancer", bundle: .module)
     }
 }
 

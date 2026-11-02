@@ -72,11 +72,11 @@ private func seriesContent(_ episodes: [LibraryEntry], selected: String? = nil) 
     @Test func movieLabelAndTargetFollowTheResumePosition() {
         let item = MediaItem(id: "m1", name: "Nocturne", runtimeTicks: 100 * minute, kind: .movie)
         let fresh = DetailMapper.content(item: item, detail: nil, userData: .none, seasons: [], episodes: [], selectedSeasonId: nil, imageURL: urls)
-        #expect(fresh.playLabel == "Lecture")
+        #expect(fresh.playLabel == tr(fr: "Lecture", en: "Play"))
         #expect(fresh.playTarget?.resumeSeconds == 0)
         let started = UserData(played: false, playbackPositionTicks: 30 * minute, playCount: 0, isFavorite: true, lastPlayedDate: nil)
         let resumed = DetailMapper.content(item: item, detail: nil, userData: started, seasons: [], episodes: [], selectedSeasonId: nil, imageURL: urls)
-        #expect(resumed.playLabel == "Reprendre")
+        #expect(resumed.playLabel == tr(fr: "Reprendre", en: "Resume"))
         #expect(resumed.playTarget?.resumeSeconds == 1800)
         #expect(resumed.isFavorite)
     }
@@ -94,8 +94,8 @@ private func seriesContent(_ episodes: [LibraryEntry], selected: String? = nil) 
         let content = seriesContent([episode("e1", season: "se1", number: 1), episode("e2", season: "se1", number: 2)])
         #expect(content.isSeries)
         #expect(content.playTarget?.id == "e1")
-        #expect(content.playLabel == "Lecture S1 · E1")
-        #expect(content.header.metaParts().contains(.text("2 saisons")))
+        #expect(content.playLabel == tr(fr: "Lecture S1 · E1", en: "Play S1 · E1"))
+        #expect(content.header.metaParts().contains(.text(tr(fr: "2 saisons", en: "2 seasons"))))
     }
 
     @Test func inProgressEpisodeWinsAndLabelsResume() {
@@ -106,7 +106,7 @@ private func seriesContent(_ episodes: [LibraryEntry], selected: String? = nil) 
         ])
         #expect(content.playTarget?.id == "e2")
         #expect(content.playTarget?.resumeSeconds == 600)
-        #expect(content.playLabel == "Reprendre S1 · E2")
+        #expect(content.playLabel == tr(fr: "Reprendre S1 · E2", en: "Resume S1 · E2"))
     }
 
     @Test func nextEpisodeAfterTheLastWatchedOneIsPlayed() {
@@ -116,7 +116,7 @@ private func seriesContent(_ episodes: [LibraryEntry], selected: String? = nil) 
             episode("e3", season: "se2", number: 1, seasonNumber: 2),
         ])
         #expect(content.playTarget?.id == "e3")
-        #expect(content.playLabel == "Lecture S2 · E1")
+        #expect(content.playLabel == tr(fr: "Lecture S2 · E1", en: "Play S2 · E1"))
         #expect(content.selectedSeasonId == "se2")
     }
 
@@ -131,7 +131,7 @@ private func seriesContent(_ episodes: [LibraryEntry], selected: String? = nil) 
     @Test func seriesWithoutEpisodesHasNoTarget() {
         let content = seriesContent([])
         #expect(content.playTarget == nil)
-        #expect(content.playLabel == "Lecture")
+        #expect(content.playLabel == tr(fr: "Lecture", en: "Play"))
         #expect(content.selectedSeasonId == "se1")
     }
 
@@ -159,7 +159,7 @@ private func seriesContent(_ episodes: [LibraryEntry], selected: String? = nil) 
         #expect(watched.subtitle == "40 min")
         #expect(watched.isWatched)
         #expect(partial.progress == 0.5)
-        #expect(partial.subtitle == "20 min restantes")
+        #expect(partial.subtitle == tr(fr: "20 min restantes", en: "20 min left"))
         #expect(!partial.isWatched)
     }
 
@@ -174,7 +174,7 @@ private func seriesContent(_ episodes: [LibraryEntry], selected: String? = nil) 
             [person("a1", .actor, role: "Léa", tag: "t1"), person("a2", .actor), person("d1", .director)], imageURL: urls
         )
         #expect(models.map(\.name) == ["Name d1", "Name a1", "Name a2"])
-        #expect(models[0].role == String(localized: "Réalisation"))
+        #expect(models[0].role == tr(fr: "Réalisation", en: "Director"))
         #expect(models[1].role == "Léa")
         #expect(models[2].role == nil)
         #expect(models[1].image.url?.absoluteString == "https://jf.test/a1/primary/t1/300")

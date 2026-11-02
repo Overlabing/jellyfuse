@@ -11,7 +11,7 @@ import DesignSystem
     @Test func promptOffersFormattedPositionAndRestart() throws {
         let target = PlayTarget(id: "a", title: "White Collar", resumeSeconds: 12 * 60 + 40)
         let prompt = try #require(PlayPrompt(target))
-        #expect(prompt.resumeLabel == "Reprendre à 0 h 12")
+        #expect(prompt.resumeLabel == tr(fr: "Reprendre à 0 h 12", en: "Resume at 0 h 12"))
         #expect(prompt.resume == target)
         #expect(prompt.restart == PlayTarget(id: "a", title: "White Collar", resumeSeconds: 0))
     }

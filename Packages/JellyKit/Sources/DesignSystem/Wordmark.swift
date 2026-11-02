@@ -31,13 +31,13 @@ public struct Wordmark: View {
                 .fill(Design.Palette.accentGradient)
                 .frame(width: metrics.wordmarkHeight, height: metrics.wordmarkHeight)
             HStack(spacing: 0) {
-                Text("jelly").foregroundStyle(Design.Palette.textPrimary)
-                Text("fuse").foregroundStyle(Design.Palette.accentGradient)
+                Text(verbatim: "jelly").foregroundStyle(Design.Palette.textPrimary)
+                Text(verbatim: "fuse").foregroundStyle(Design.Palette.accentGradient)
             }
             .font(.system(size: metrics.wordmarkHeight, weight: .heavy))
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("jellyfuse")
+        .accessibilityLabel(Text(verbatim: "jellyfuse"))
     }
 }
 

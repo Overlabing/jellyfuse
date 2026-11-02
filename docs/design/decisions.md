@@ -43,3 +43,20 @@ n'a pas de langue de métadonnées par requête ni par utilisateur — c'est un 
 bibliothèque (preferredMetadataLanguage), demande communautaire ouverte depuis des années.
 Décision : l'UI de Jellyfuse suit la langue du device (déjà fait) ; pour les métadonnées,
 régler la langue des bibliothèques côté serveur. Pas de contournement applicatif.
+
+## Localisation fr + en — String Catalogs (lot 3.8)
+
+- Un `Localizable.xcstrings` par module qui a des chaînes : l'app (`Apps/Jellyfuse`) et les packages
+  `DesignSystem`, `HomePresentation`, `PlaybackEngine` (`PlayerPresentation`, `SettingsKit`, `LibraryKit`,
+  `PlayerCore` n'ont aucune chaîne utilisateur). Langue source `fr` (clé = texte français), `en` traduit,
+  entrées `fr` explicites pour que `fr.lproj` existe dans chaque bundle.
+- Packages : `defaultLocalization: "fr"` dans `Package.swift` ; toute chaîne y est résolue avec
+  `bundle: .module` (`String(localized: "…", bundle: .module)`, `Text("…", bundle: .module)`). Un `String(localized:)`
+  sans bundle lirait le catalogue de l'app et afficherait le français brut.
+- Pas de `project.yml` à toucher : xcodegen embarque le `.xcstrings` de l'app comme ressource, SwiftPM ceux des packages.
+- Extraction : le build app n'émet pas les `.stringsdata` par défaut ; pour vérifier qu'aucune clé ne manque,
+  `xcodebuild … SWIFT_EMIT_LOC_STRINGS=YES build` puis comparer les `*.stringsdata` aux catalogues.
+- Tests : les attentes dépendent de la langue (`tr(fr:en:)` dans `Tests/*/LocalizationSupport.swift`) ;
+  lancer `xcodebuild test … -testLanguage fr` ET `-testLanguage en`. Un test par module vérifie que chaque clé a sa traduction.
+- Une langue autre que fr/en retombe sur le français (région de développement).
+- Ajouter une chaîne : l'écrire en français dans le code, puis ajouter sa traduction `en` dans le catalogue du module.

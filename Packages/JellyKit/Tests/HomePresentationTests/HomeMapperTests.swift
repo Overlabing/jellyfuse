@@ -29,7 +29,7 @@ private func films(_ entries: [LibraryEntry]) -> LibraryShelfSource {
         let series = LibraryShelfSource(library: Library(id: "series", name: "Séries", kind: .tvshows), entries: [entry("s1", "Ep", series: "Nocturne")])
         let content = HomeMapper.content(continueWatching: [], nextUp: [], libraries: [films([entry("r1", "Neuf")]), series], imageURL: urls)
         #expect(content.libraryShelves.map(\.id) == ["films", "series"])
-        #expect(content.libraryShelves.map(\.title) == ["Films — Ajouts récents", "Séries — Ajouts récents"])
+        #expect(content.libraryShelves.map(\.title) == [tr(fr: "Films — Ajouts récents", en: "Films — Recently added"), tr(fr: "Séries — Ajouts récents", en: "Séries — Recently added")])
         #expect(content.libraryShelves[1].items.map(\.id) == ["s1"])
     }
 
@@ -59,12 +59,12 @@ private func films(_ entries: [LibraryEntry]) -> LibraryShelfSource {
         )
         #expect(withResume.billboard?.model.id == "m1")
         #expect(withResume.billboard?.target.resumeSeconds == 1800)
-        #expect(withResume.billboard?.primaryLabel == String(localized: "Reprendre"))
+        #expect(withResume.billboard?.primaryLabel == tr(fr: "Reprendre", en: "Resume"))
 
         let recentOnly = HomeMapper.content(continueWatching: [], nextUp: [], libraries: [films([entry("r1", "Neuf")])], imageURL: urls)
         #expect(recentOnly.billboard?.model.id == "r1")
         #expect(recentOnly.billboard?.target.resumeSeconds == 0)
-        #expect(recentOnly.billboard?.primaryLabel == String(localized: "Lecture"))
+        #expect(recentOnly.billboard?.primaryLabel == tr(fr: "Lecture", en: "Play"))
     }
 
     @Test func emptyInputIsEmptyContent() {

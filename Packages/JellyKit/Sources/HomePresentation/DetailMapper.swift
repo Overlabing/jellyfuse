@@ -115,16 +115,16 @@ public enum DetailMapper {
     }
 
     private static func playLabel(isSeries: Bool, entry: LibraryEntry?, episodes: [LibraryEntry]) -> String {
-        guard let entry else { return String(localized: "Lecture") }
+        guard let entry else { return String(localized: "Lecture", bundle: .module) }
         let resumes = entry.userData.playbackPositionTicks > 0 && !entry.userData.played
-        guard isSeries else { return resumes ? String(localized: "Reprendre") : String(localized: "Lecture") }
+        guard isSeries else { return resumes ? String(localized: "Reprendre", bundle: .module) : String(localized: "Lecture", bundle: .module) }
         let hasHistory = episodes.contains { $0.userData.played || $0.userData.playbackPositionTicks > 0 }
         guard let season = entry.item.parentIndexNumber, let number = entry.item.indexNumber else {
-            return hasHistory ? String(localized: "Reprendre") : String(localized: "Lecture")
+            return hasHistory ? String(localized: "Reprendre", bundle: .module) : String(localized: "Lecture", bundle: .module)
         }
         return resumes
-            ? String(localized: "Reprendre S\(season) · E\(number)")
-            : String(localized: "Lecture S\(season) · E\(number)")
+            ? String(localized: "Reprendre S\(season) · E\(number)", bundle: .module)
+            : String(localized: "Lecture S\(season) · E\(number)", bundle: .module)
     }
 
     // MARK: Pieces
@@ -157,7 +157,7 @@ public enum DetailMapper {
                     id: "\(person.kind.rawValue)-\(person.id)",
                     personId: person.id,
                     name: person.name,
-                    role: person.kind == .director ? String(localized: "Réalisation") : person.role,
+                    role: person.kind == .director ? String(localized: "Réalisation", bundle: .module) : person.role,
                     image: ArtworkSource(url: imageURL(person.id, .primary, person.primaryImageTag, personImageWidth), placeholderTitle: person.name)
                 )
             }

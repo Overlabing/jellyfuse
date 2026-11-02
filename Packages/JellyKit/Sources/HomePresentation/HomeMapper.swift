@@ -125,7 +125,7 @@ public enum HomeMapper {
                 model: billboard(entry, isInList: isInList(detailId ?? entry.item.id), imageURL: imageURL),
                 target: target,
                 detailId: detailId,
-                primaryLabel: target.resumeSeconds > 0 ? String(localized: "Reprendre") : String(localized: "Lecture")
+                primaryLabel: target.resumeSeconds > 0 ? String(localized: "Reprendre", bundle: .module) : String(localized: "Lecture", bundle: .module)
             )
         }
         return HomeContent(
@@ -134,7 +134,7 @@ public enum HomeMapper {
             libraryShelves: libraries.map { source in
                 LibraryShelfContent(
                     library: source.library,
-                    title: String(localized: "\(source.library.name) — Ajouts récents"),
+                    title: String(localized: "\(source.library.name) — Ajouts récents", bundle: .module),
                     items: source.entries.map { poster($0, imageURL: imageURL) }
                 )
             },

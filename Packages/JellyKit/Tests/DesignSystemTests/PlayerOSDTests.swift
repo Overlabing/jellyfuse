@@ -35,11 +35,12 @@ import Testing
     }
 
     @Test func endTimeIsNowPlusRemaining() {
+        let locale = Locale(identifier: testUsesEnglish ? "en_US" : "fr_FR")
         // 20:00 + 26 min 36 s = 20:26:36 -> 20 h 26.
-        #expect(OSDModel.endTime(now: date(20, 0), remaining: 1596, calendar: utc) == "Se termine à 20 h 26")
+        #expect(OSDModel.endTime(now: date(20, 0), remaining: 1596, calendar: utc, locale: locale).replacingOccurrences(of: "\u{202F}", with: " ") == tr(fr: "Se termine à 20 h 26", en: "Ends at 8:26 PM"))
         // Crosses midnight and pads minutes.
-        #expect(OSDModel.endTime(now: date(23, 30), remaining: 2100, calendar: utc) == "Se termine à 0 h 05")
-        #expect(OSDModel.endTime(now: date(21, 0), remaining: 6420, calendar: utc) == "Se termine à 22 h 47")
+        #expect(OSDModel.endTime(now: date(23, 30), remaining: 2100, calendar: utc, locale: locale).replacingOccurrences(of: "\u{202F}", with: " ") == tr(fr: "Se termine à 0 h 05", en: "Ends at 12:05 AM"))
+        #expect(OSDModel.endTime(now: date(21, 0), remaining: 6420, calendar: utc, locale: locale).replacingOccurrences(of: "\u{202F}", with: " ") == tr(fr: "Se termine à 22 h 47", en: "Ends at 10:47 PM"))
     }
 
     @Test func scrubbingShowsPreviewAtTarget() {

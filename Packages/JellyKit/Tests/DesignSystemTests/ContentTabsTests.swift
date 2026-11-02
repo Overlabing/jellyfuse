@@ -24,7 +24,7 @@ import Testing
 
     @Test func chapterRowsAreNamedTimedAndMarked() {
         let rows = ChapterRow.rows(names: ["Intro", nil, ""], starts: [0, 65, 3700], position: 100)
-        #expect(rows.map(\.title) == ["Intro", "Chapitre 2", "Chapitre 3"])
+        #expect(rows.map(\.title) == ["Intro", tr(fr: "Chapitre 2", en: "Chapter 2"), tr(fr: "Chapitre 3", en: "Chapter 3")])
         #expect(rows.map(\.time) == ["0:00:00", "0:01:05", "1:01:40"])
         #expect(rows.map(\.isCurrent) == [false, true, false])
         #expect(rows[2].startSeconds == 3700)
