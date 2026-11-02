@@ -13,6 +13,7 @@ final class HomeModel {
     let reachability: ServerReachability
     private(set) var hasLoaded = false
     private(set) var failure: UserFacingError?
+    private var isUpdatingList = false
 
     init(session: Session, client: JellyfinClient) {
         self.client = client
@@ -33,8 +34,18 @@ final class HomeModel {
             libraries: store.libraries.map {
                 LibraryShelfSource(library: $0, entries: store.entries(.latestIn(libraryId: $0.id)))
             },
+            isInList: { [store] in store.userData[$0]?.isFavorite ?? false },
             imageURL: Self.makeImageURL(client)
         )
+    }
+
+    /// « Ma liste » on the billboard: optimistic through the store; a refusal rolls the button back.
+    func toggleBillboardList() async {
+        guard let billboard = content.billboard, !isUpdatingList else { return }
+        isUpdatingList = true
+        defer { isUpdatingList = false }
+        let id = billboard.listId
+        try? await store.setFavorite(!(store.userData[id]?.isFavorite ?? false), for: id)
     }
 
     /// The « Voir tout » grid of a library, from the store.
@@ -62,6 +73,7 @@ final class HomeModel {
         async let libraries = loadLibraries()
         var errors = await [resume, next, libraries].compactMap { $0 }
         errors += await loadLibraryShelves()
+        await loadBillboardList()
         hasLoaded = true
         failure = errors.first.map(UserFacingError.init)
     }
@@ -69,6 +81,13 @@ final class HomeModel {
     /// Revalidates the « Voir tout » grid of one library.
     func refreshGrid(for library: Library) async -> UserFacingError? {
         await load(.recentGrid(libraryId: library.id)).map(UserFacingError.init)
+    }
+
+    /// The billboard of an episode acts on its series, whose favorite flag no shelf carries: the detail
+    /// load brings it. Best effort; without it the button reads « Ma liste ».
+    private func loadBillboardList() async {
+        guard let billboard = content.billboard, billboard.listId != billboard.target.id else { return }
+        try? await store.ensureDetailFresh(billboard.listId)
     }
 
     private func loadLibraryShelves() async -> [any Error] {

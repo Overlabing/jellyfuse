@@ -62,6 +62,12 @@ enum PreviewData {
         LandscapeModel(id: "l4", title: "Atlas", subtitle: "S1 E1", image: art("Atlas")),
     ]
 
+    static let people: [PersonModel] = [
+        PersonModel(id: "c1", name: "Inès Marchand", role: "Léa", image: art("Inès Marchand")),
+        PersonModel(id: "c2", name: "Tom Duval", role: "Samuel", image: art("Tom Duval")),
+        PersonModel(id: "c3", name: "Salomé Ricard", role: "Réalisation", image: art("Salomé Ricard")),
+    ]
+
     static let detailHeader = DetailHeaderModel(
         id: "d1",
         title: "Fréquences",

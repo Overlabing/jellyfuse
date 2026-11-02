@@ -5,9 +5,12 @@ public struct LandscapeCard: View {
     @Environment(\.designMetrics) private var metrics
     private let model: LandscapeModel
     private let onSelect: () -> Void
+    private let onToggleWatched: (() -> Void)?
 
-    public init(_ model: LandscapeModel, onSelect: @escaping () -> Void) {
+    /// `onToggleWatched` adds the long-press menu « Marquer comme vu » / « Marquer non vu ».
+    public init(_ model: LandscapeModel, onToggleWatched: (() -> Void)? = nil, onSelect: @escaping () -> Void) {
         self.model = model
+        self.onToggleWatched = onToggleWatched
         self.onSelect = onSelect
     }
 
@@ -19,6 +22,15 @@ public struct LandscapeCard: View {
                 }
             }
             .cardButtonStyle()
+            .contextMenu {
+                if let onToggleWatched {
+                    Button(
+                        model.isWatched ? String(localized: "Marquer non vu") : String(localized: "Marquer comme vu"),
+                        systemImage: model.isWatched ? "eye.slash" : "eye",
+                        action: onToggleWatched
+                    )
+                }
+            }
             CardCaption(title: model.title, subtitle: model.subtitle, width: metrics.landscape.width)
         }
         .accessibilityLabel(model.accessibilityDescription)

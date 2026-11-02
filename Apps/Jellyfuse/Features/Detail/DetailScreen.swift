@@ -14,17 +14,26 @@ struct DetailScreen: View {
             content: content,
             isLoadingChildren: model.isLoadingChildren,
             failureMessage: model.failure.map(Self.message),
-            favoriteFailureMessage: model.favoriteFailed ? String(localized: "Impossible de modifier Ma liste.") : nil,
+            actionFailureMessage: model.actionFailure.map(Self.message),
             onPlay: {
                 if let target = content?.playTarget { onPlay(target) }
             },
             onToggleFavorite: { Task { await model.toggleFavorite() } },
+            onToggleWatched: { Task { await model.toggleWatched() } },
             onSelectSeason: { model.selectedSeasonId = $0 },
             onPlayEpisode: { id in
                 if let target = content?.target(forEpisode: id) { onPlay(target) }
-            }
+            },
+            onSetEpisodeWatched: { id, watched in Task { await model.setWatched(watched, for: id) } }
         )
         .task { await model.refresh() }
+    }
+
+    private static func message(for failure: DetailModel.ActionFailure) -> String {
+        switch failure {
+        case .favorite: String(localized: "Impossible de modifier Ma liste.")
+        case .watched: String(localized: "Impossible de modifier l'état « vu ».")
+        }
     }
 
     private static func message(for failure: UserFacingError) -> String {

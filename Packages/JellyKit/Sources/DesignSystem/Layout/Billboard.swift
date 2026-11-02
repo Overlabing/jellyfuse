@@ -67,7 +67,11 @@ public struct Billboard: View {
             HStack(spacing: Design.Spacing.m) {
                 PillButton(primaryLabel, systemImage: "play.fill", action: onPlay)
                     .prefersDefaultFocus(true, in: focusNamespace)
-                PillButton(String(localized: "Ma liste"), systemImage: "plus", action: onToggleList)
+                PillButton(
+                    model.isInList ? String(localized: "Dans ma liste") : String(localized: "Ma liste"),
+                    systemImage: model.isInList ? "checkmark" : "plus",
+                    action: onToggleList
+                )
                 if let onOpenDetail {
                     PillButton(String(localized: "Détails"), systemImage: "info.circle", action: onOpenDetail)
                 }

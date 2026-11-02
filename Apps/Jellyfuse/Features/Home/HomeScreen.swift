@@ -27,8 +27,7 @@ struct HomeScreen: View {
                 },
                 onOpenDetail: { path.append(.detail($0)) },
                 onSeeAll: { path.append(.grid($0)) },
-                // Favorites need a façade mutation (lot 3.3, optimistic patch): not wired yet.
-                onToggleList: {}
+                onToggleList: { Task { await model.toggleBillboardList() } }
             )
             .navigationDestination(for: HomeRoute.self) { route in
                 switch route {

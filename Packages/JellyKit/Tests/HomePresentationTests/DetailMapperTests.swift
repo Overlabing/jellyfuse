@@ -162,4 +162,55 @@ private func seriesContent(_ episodes: [LibraryEntry], selected: String? = nil) 
         #expect(partial.subtitle == "20 min restantes")
         #expect(!partial.isWatched)
     }
+
+    // MARK: Cast and watched
+
+    private func person(_ id: String, _ kind: Person.Kind, role: String? = nil, tag: String? = nil) -> Person {
+        Person(id: id, name: "Name \(id)", kind: kind, role: role, primaryImageTag: tag)
+    }
+
+    @Test func peopleListDirectorsFirstWithRoleAndPortrait() {
+        let models = DetailMapper.people(
+            [person("a1", .actor, role: "Léa", tag: "t1"), person("a2", .actor), person("d1", .director)], imageURL: urls
+        )
+        #expect(models.map(\.name) == ["Name d1", "Name a1", "Name a2"])
+        #expect(models[0].role == String(localized: "Réalisation"))
+        #expect(models[1].role == "Léa")
+        #expect(models[2].role == nil)
+        #expect(models[1].image.url?.absoluteString == "https://jf.test/a1/primary/t1/300")
+        #expect(models[2].image.url == nil)
+        #expect(models[2].image.placeholderTitle == "Name a2")
+    }
+
+    @Test func peopleAreCappedAndDeduplicated() {
+        let actors = (0..<30).map { person("a\($0)", .actor) }
+        let models = DetailMapper.people(actors + [person("a0", .actor), person("a0", .director)], imageURL: urls)
+        #expect(models.count == DetailMapper.peopleLimit)
+        #expect(Set(models.map(\.id)).count == models.count)
+        // The same person credited as director and actor keeps both cards, with distinct ids.
+        let both = DetailMapper.people([person("x", .actor), person("x", .director)], imageURL: urls)
+        #expect(both.count == 2 && both[0].id != both[1].id)
+    }
+
+    @Test func contentCarriesPeopleForMovieAndSeries() {
+        let item = MediaItem(id: "m1", name: "Nocturne", kind: .movie)
+        let detail = ItemDetail(item: item, people: [person("a1", .actor)])
+        let movie = DetailMapper.content(item: item, detail: detail, userData: .none, seasons: [], episodes: [], selectedSeasonId: nil, imageURL: urls)
+        #expect(movie.people.count == 1)
+        let withoutDetail = DetailMapper.content(item: item, detail: nil, userData: .none, seasons: [], episodes: [], selectedSeasonId: nil, imageURL: urls)
+        #expect(withoutDetail.people.isEmpty)
+        let show = DetailMapper.content(
+            item: series, detail: ItemDetail(item: series, people: [person("a1", .actor)]), userData: .none,
+            seasons: seasons, episodes: [], selectedSeasonId: nil, imageURL: urls
+        )
+        #expect(show.people.count == 1)
+    }
+
+    @Test func watchedStateIsForMoviesOnly() {
+        let item = MediaItem(id: "m1", name: "Nocturne", kind: .movie)
+        let watched = UserData(played: true, playbackPositionTicks: 0, playCount: 1, isFavorite: false, lastPlayedDate: nil)
+        let movie = DetailMapper.content(item: item, detail: nil, userData: watched, seasons: [], episodes: [], selectedSeasonId: nil, imageURL: urls)
+        #expect(movie.isWatched == true)
+        #expect(seriesContent([episode("e1", season: "se1", number: 1)]).isWatched == nil)
+    }
 }

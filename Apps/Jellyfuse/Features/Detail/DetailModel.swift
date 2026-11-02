@@ -3,7 +3,7 @@ import LibraryKit
 import Observation
 
 /// Detail screen state for one movie or series: reads the store (observed), revalidates on appear,
-/// and toggles « Ma liste » through the store's optimistic mutation.
+/// and toggles « Ma liste » / « Vu » through the store's optimistic mutations.
 @MainActor
 @Observable
 final class DetailModel {
@@ -14,8 +14,15 @@ final class DetailModel {
     var selectedSeasonId: String?
     private(set) var hasLoaded = false
     private(set) var failure: UserFacingError?
-    private(set) var favoriteFailed = false
+    /// The last user action the server refused (its optimistic change was rolled back).
+    private(set) var actionFailure: ActionFailure?
     private var isUpdatingFavorite = false
+    private var watchedUpdating = Set<String>()
+
+    enum ActionFailure {
+        case favorite
+        case watched
+    }
 
     init(id: String, store: LibraryStore, client: JellyfinClient) {
         self.id = id
@@ -62,10 +69,26 @@ final class DetailModel {
         defer { isUpdatingFavorite = false }
         do {
             try await store.setFavorite(!(store.userData[id]?.isFavorite ?? false), for: id)
-            favoriteFailed = false
+            actionFailure = nil
         } catch {
-            favoriteFailed = true
+            actionFailure = .favorite
         }
+    }
+
+    /// Marks a movie or an episode (of this series) watched or not; one request per item at a time.
+    func setWatched(_ watched: Bool, for itemId: String) async {
+        guard watchedUpdating.insert(itemId).inserted else { return }
+        defer { watchedUpdating.remove(itemId) }
+        do {
+            try await store.setPlayed(watched, for: itemId)
+            actionFailure = nil
+        } catch {
+            actionFailure = .watched
+        }
+    }
+
+    func toggleWatched() async {
+        await setWatched(!(store.userData[id]?.played ?? false), for: id)
     }
 
     private func attempt(_ body: () async throws -> Void) async -> (any Error)? {

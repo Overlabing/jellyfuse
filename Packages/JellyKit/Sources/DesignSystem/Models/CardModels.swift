@@ -77,6 +77,26 @@ public struct LandscapeModel: Sendable, Equatable, Identifiable {
     }
 }
 
+/// Display value of a cast card (round portrait, name and role underneath).
+public struct PersonModel: Sendable, Equatable, Identifiable {
+    public let id: String
+    public let name: String
+    /// The character, or « Réalisation » for a director.
+    public let role: String?
+    public let image: ArtworkSource
+
+    public init(id: String, name: String, role: String? = nil, image: ArtworkSource) {
+        self.id = id
+        self.name = name
+        self.role = role
+        self.image = image
+    }
+
+    public var accessibilityDescription: String {
+        [name, role].compactMap { $0 }.joined(separator: ", ")
+    }
+}
+
 /// Display value of the home billboard.
 public struct BillboardModel: Sendable, Equatable, Identifiable {
     public enum MetaPart: Sendable, Equatable {
@@ -91,6 +111,8 @@ public struct BillboardModel: Sendable, Equatable, Identifiable {
     public let rating: Double?
     public let year: Int?
     public let runtimeMinutes: Int?
+    /// The item (or its series) is in « Ma liste ».
+    public let isInList: Bool
 
     public init(
         id: String,
@@ -99,7 +121,8 @@ public struct BillboardModel: Sendable, Equatable, Identifiable {
         backdrop: ArtworkSource,
         rating: Double? = nil,
         year: Int? = nil,
-        runtimeMinutes: Int? = nil
+        runtimeMinutes: Int? = nil,
+        isInList: Bool = false
     ) {
         self.id = id
         self.title = title
@@ -108,6 +131,7 @@ public struct BillboardModel: Sendable, Equatable, Identifiable {
         self.rating = rating
         self.year = year
         self.runtimeMinutes = runtimeMinutes
+        self.isInList = isInList
     }
 
     /// The single meta line: `★ 7,8 · 2025 · 2 h 08`. Missing values are skipped.

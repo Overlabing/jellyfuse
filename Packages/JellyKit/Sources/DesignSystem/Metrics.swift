@@ -21,6 +21,9 @@ extension Design {
         public var detailHeroHeight: CGFloat
         /// Largest area of the title logo on the detail header.
         public var detailLogo: CGSize
+        /// Diameter of a cast portrait, and the width of its card (the caption is wider than the portrait).
+        public var castPortrait: CGFloat
+        public var castCardWidth: CGFloat
 
         /// tvOS, 1920×1080 pt, HIG safe area (80 pt sides, 60 pt top/bottom). Source: ui-plan §3.3 + mockups.
         public static let tv = Metrics(
@@ -37,7 +40,9 @@ extension Design {
             billboardHeight: 665,
             billboardTextWidth: 860,
             detailHeroHeight: 640,
-            detailLogo: CGSize(width: 640, height: 160)
+            detailLogo: CGSize(width: 640, height: 160),
+            castPortrait: 150,
+            castCardWidth: 190
         )
     }
 }

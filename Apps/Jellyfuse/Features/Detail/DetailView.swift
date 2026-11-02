@@ -3,18 +3,21 @@ import HomePresentation
 import SwiftUI
 
 /// Pure detail layout (detail-movie.html / detail-series.html): header with title logo and actions,
-/// then, for a series, the season chips and the episodes of the selected season. Props in, callbacks out.
+/// then, for a series, the season chips and the episodes of the selected season, then the cast. Props in, callbacks out.
 struct DetailView: View {
     @Environment(\.designMetrics) private var metrics
     @Namespace private var focusNamespace
     let content: DetailContent?
     let isLoadingChildren: Bool
     let failureMessage: String?
-    let favoriteFailureMessage: String?
+    let actionFailureMessage: String?
     let onPlay: () -> Void
     let onToggleFavorite: () -> Void
+    let onToggleWatched: () -> Void
     let onSelectSeason: (String) -> Void
     let onPlayEpisode: (String) -> Void
+    /// `(episodeId, watched)`: from the long-press menu of an episode.
+    let onSetEpisodeWatched: (String, Bool) -> Void
 
     var body: some View {
         ScrollView {
@@ -22,6 +25,7 @@ struct DetailView: View {
                 if let content {
                     hero(content)
                     if content.isSeries { episodes(content) }
+                    if !content.people.isEmpty { cast(content.people) }
                 } else {
                     placeholder
                 }
@@ -46,9 +50,16 @@ struct DetailView: View {
                         systemImage: content.isFavorite ? "checkmark" : "plus",
                         action: onToggleFavorite
                     )
+                    if let isWatched = content.isWatched {
+                        PillButton(
+                            isWatched ? String(localized: "Vu") : String(localized: "Marquer vu"),
+                            systemImage: isWatched ? "checkmark" : "eye",
+                            action: onToggleWatched
+                        )
+                    }
                 }
-                if let favoriteFailureMessage {
-                    Text(favoriteFailureMessage)
+                if let actionFailureMessage {
+                    Text(actionFailureMessage)
                         .font(Design.Typography.caption)
                         .foregroundStyle(Design.Palette.textSecondary)
                 }
@@ -68,7 +79,9 @@ struct DetailView: View {
         }
         if !content.episodes.isEmpty {
             Shelf(title: nil, items: content.episodes) { model in
-                LandscapeCard(model) { onPlayEpisode(model.id) }
+                LandscapeCard(model, onToggleWatched: { onSetEpisodeWatched(model.id, !model.isWatched) }) {
+                    onPlayEpisode(model.id)
+                }
             }
         } else if let failureMessage {
             status(failureMessage)
@@ -77,6 +90,11 @@ struct DetailView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, Design.Spacing.xl)
         }
+    }
+
+    private func cast(_ people: [PersonModel]) -> some View {
+        Shelf(title: String(localized: "Distribution"), items: people) { CastCard($0) }
+            .padding(.top, metrics.gridRowGap - 2 * metrics.focusInset)
     }
 
     private var placeholder: some View {

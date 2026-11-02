@@ -24,6 +24,9 @@ public struct BillboardContent: Sendable, Equatable {
     public let detailId: String?
     /// `Reprendre` when there is progress, `Lecture` otherwise.
     public let primaryLabel: String
+
+    /// What « Ma liste » acts on: the detail target (the series for an episode), else the item itself.
+    public var listId: String { detailId ?? model.id }
 }
 
 /// A library as the home screen needs it: the library, and its « Ajouts récents » posters.
@@ -107,6 +110,7 @@ public enum HomeMapper {
         continueWatching: [LibraryEntry],
         nextUp: [LibraryEntry],
         libraries: [LibraryShelfSource],
+        isInList: (String) -> Bool = { _ in false },
         imageURL: ImageURL
     ) -> HomeContent {
         let upNext = upNextEntries(continueWatching: continueWatching, nextUp: nextUp)
@@ -115,10 +119,11 @@ public enum HomeMapper {
 
         let billboard = (upNext.first ?? libraries.lazy.compactMap(\.entries.first).first).map { entry in
             let target = target(for: entry)
+            let detailId = entry.item.kind == .episode ? entry.item.seriesId : entry.item.id
             return BillboardContent(
-                model: billboard(entry, imageURL: imageURL),
+                model: billboard(entry, isInList: isInList(detailId ?? entry.item.id), imageURL: imageURL),
                 target: target,
-                detailId: entry.item.kind == .episode ? entry.item.seriesId : entry.item.id,
+                detailId: detailId,
                 primaryLabel: target.resumeSeconds > 0 ? String(localized: "Reprendre") : String(localized: "Lecture")
             )
         }
@@ -155,7 +160,7 @@ public enum HomeMapper {
         item.seriesName ?? item.name
     }
 
-    static func billboard(_ entry: LibraryEntry, imageURL: ImageURL) -> BillboardModel {
+    static func billboard(_ entry: LibraryEntry, isInList: Bool, imageURL: ImageURL) -> BillboardModel {
         let item = entry.item
         let title = displayTitle(item)
         return BillboardModel(
@@ -164,7 +169,8 @@ public enum HomeMapper {
             // The store carries no synopsis yet: an episode shows its own name, a movie nothing.
             overview: item.seriesName == nil ? "" : item.name,
             backdrop: ArtworkSource(url: imageURL(item.id, item.primaryImageTag, billboardImageWidth), placeholderTitle: title),
-            runtimeMinutes: item.runtimeTicks.map { Int($0 / 600_000_000) }
+            runtimeMinutes: item.runtimeTicks.map { Int($0 / 600_000_000) },
+            isInList: isInList
         )
     }
 

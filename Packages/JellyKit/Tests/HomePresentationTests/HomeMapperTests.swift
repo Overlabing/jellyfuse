@@ -104,4 +104,35 @@ private func films(_ entries: [LibraryEntry]) -> LibraryShelfSource {
         #expect(content.target(for: "b")?.title == "B")
         #expect(content.target(for: "zz") == nil)
     }
+
+    // MARK: Billboard « Ma liste »
+
+    @Test func billboardListStateFollowsTheItemItself() {
+        let content = HomeMapper.content(
+            continueWatching: [], nextUp: [], libraries: [films([entry("r1", "Neuf")])], isInList: { $0 == "r1" }, imageURL: urls
+        )
+        #expect(content.billboard?.model.isInList == true)
+        #expect(content.billboard?.listId == "r1")
+        let other = HomeMapper.content(continueWatching: [], nextUp: [], libraries: [films([entry("r1", "Neuf")])], imageURL: urls)
+        #expect(other.billboard?.model.isInList == false)
+    }
+
+    @Test func billboardOfAnEpisodeActsOnItsSeries() {
+        let episode = LibraryEntry(item: MediaItem(id: "e1", name: "Ep", seriesName: "Nocturne", runtimeTicks: 40 * minute, kind: .episode, seriesId: "s1"))
+        let content = HomeMapper.content(
+            continueWatching: [episode], nextUp: [], libraries: [], isInList: { $0 == "s1" }, imageURL: urls
+        )
+        #expect(content.billboard?.listId == "s1")
+        #expect(content.billboard?.model.isInList == true)
+        // The episode's own flag is irrelevant.
+        let own = HomeMapper.content(continueWatching: [episode], nextUp: [], libraries: [], isInList: { $0 == "e1" }, imageURL: urls)
+        #expect(own.billboard?.model.isInList == false)
+    }
+
+    @Test func billboardOfAnEpisodeOfAnUnknownSeriesActsOnTheEpisode() {
+        let episode = LibraryEntry(item: MediaItem(id: "e1", name: "Ep", seriesName: "Nocturne", kind: .episode))
+        let content = HomeMapper.content(continueWatching: [episode], nextUp: [], libraries: [], isInList: { $0 == "e1" }, imageURL: urls)
+        #expect(content.billboard?.listId == "e1")
+        #expect(content.billboard?.model.isInList == true)
+    }
 }
