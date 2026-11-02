@@ -7,6 +7,7 @@ let package = Package(
     products: [
         .library(name: "PlayerCore", targets: ["PlayerCore"]),
         .library(name: "LibraryKit", targets: ["LibraryKit"]),
+        .library(name: "PlaybackEngine", targets: ["PlaybackEngine"]),
         .library(name: "DesignSystem", targets: ["DesignSystem"]),
         .library(name: "HomePresentation", targets: ["HomePresentation"]),
     ],
@@ -23,11 +24,16 @@ let package = Package(
         .target(name: "LibraryKit", dependencies: [
             .product(name: "JellyfinAPI", package: "jellyfin-sdk-swift"),
         ]),
+        .target(name: "PlaybackEngine", dependencies: [
+            "LibraryKit",
+            .product(name: "JellyfinAPI", package: "jellyfin-sdk-swift"),
+        ]),
         .target(name: "DesignSystem"),
         // LibraryKit entries -> DesignSystem display models (pure mappers, no UI).
         .target(name: "HomePresentation", dependencies: ["LibraryKit", "DesignSystem"]),
         .testTarget(name: "PlayerCoreTests", dependencies: ["PlayerCore"]),
         .testTarget(name: "LibraryKitTests", dependencies: ["LibraryKit"]),
+        .testTarget(name: "PlaybackEngineTests", dependencies: ["PlaybackEngine"]),
         .testTarget(name: "DesignSystemTests", dependencies: ["DesignSystem"]),
         .testTarget(name: "HomePresentationTests", dependencies: ["HomePresentation", "LibraryKit", "DesignSystem"]),
     ]

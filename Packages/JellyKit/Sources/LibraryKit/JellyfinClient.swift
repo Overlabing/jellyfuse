@@ -33,6 +33,7 @@ public actor JellyfinClient {
     private let deviceId: String
     private var userId: String?
     private let hasToken: Bool
+    private let token: String?
     private let onUnauthorized: (@Sendable () -> Void)?
 
     /// Unauthenticated client, used to sign in.
@@ -51,6 +52,7 @@ public actor JellyfinClient {
         self.deviceId = deviceId
         self.userId = userId
         self.hasToken = token != nil
+        self.token = token
         self.onUnauthorized = onUnauthorized
         self.sdk = JellyfinAPI.JellyfinClient(
             configuration: .init(
@@ -145,6 +147,37 @@ public actor JellyfinClient {
             parameters: .init(isStatic: true, mediaSourceID: mediaSourceId)
         )
         return sdk.url(with: request, queryAPIKey: true)
+    }
+
+    // MARK: Generic requests (package-internal, for sibling targets such as PlaybackEngine)
+
+    /// Sends any SDK request through the same error mapping (401 handling included).
+    package func perform<T: Decodable & Sendable>(_ request: Request<T>) async throws -> T {
+        try await call { try await self.sdk.send(request).value }
+    }
+
+    package func perform(_ request: Request<Void>) async throws {
+        try await call { try await self.sdk.send(request).value }
+    }
+
+    /// URL of an SDK request carrying `api_key`: for consumers that cannot set headers (mpv).
+    /// Never log or persist the result.
+    package nonisolated func authenticatedURL(for request: Request<some Any>) -> URL? {
+        sdk.url(with: request, queryAPIKey: true)
+    }
+
+    /// Resolves a server-relative path (e.g. a `TranscodingUrl`) against the server, adding `api_key`
+    /// (as the SDK spells it, `ApiKey`) when the path does not carry one. Never log or persist the result.
+    package nonisolated func authenticatedURL(path: String) -> URL? {
+        var base = serverURL.absoluteString
+        if base.hasSuffix("/") { base.removeLast() }
+        guard var components = URLComponents(string: base + (path.hasPrefix("/") ? path : "/" + path)) else { return nil }
+        var query = components.queryItems ?? []
+        if let token, !query.contains(where: { ["apikey", "api_key"].contains($0.name.lowercased()) }) {
+            query.append(URLQueryItem(name: "ApiKey", value: token))
+        }
+        components.queryItems = query.isEmpty ? nil : query
+        return components.url
     }
 
     // MARK: Plumbing
