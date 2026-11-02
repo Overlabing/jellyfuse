@@ -181,3 +181,14 @@ public struct DetailHeaderModel: Sendable, Equatable, Identifiable {
         return parts
     }
 }
+
+/// Display value of one chip of a `ChipRow` (a season, a filter).
+public struct ChipModel: Sendable, Equatable, Identifiable {
+    public let id: String
+    public let title: String
+
+    public init(id: String, title: String) {
+        self.id = id
+        self.title = title
+    }
+}

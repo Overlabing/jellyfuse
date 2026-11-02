@@ -2,12 +2,6 @@ import DesignSystem
 import Foundation
 import LibraryKit
 
-/// A season selector chip.
-public struct SeasonChip: Sendable, Equatable, Identifiable {
-    public let id: String
-    public let title: String
-}
-
 /// Everything the detail screen shows, as display values.
 public struct DetailContent: Sendable, Equatable {
     public let header: DetailHeaderModel
@@ -19,7 +13,7 @@ public struct DetailContent: Sendable, Equatable {
     public let playLabel: String
     public let isFavorite: Bool
     /// Empty for a movie.
-    public let seasons: [SeasonChip]
+    public let seasons: [ChipModel]
     public let selectedSeasonId: String?
     /// The episodes of the selected season.
     public let episodes: [LandscapeModel]
@@ -27,7 +21,7 @@ public struct DetailContent: Sendable, Equatable {
 
     init(
         header: DetailHeaderModel, isSeries: Bool, playTarget: PlayTarget?, playLabel: String, isFavorite: Bool,
-        seasons: [SeasonChip], selectedSeasonId: String?, episodes: [LandscapeModel], episodeTargets: [String: PlayTarget]
+        seasons: [ChipModel], selectedSeasonId: String?, episodes: [LandscapeModel], episodeTargets: [String: PlayTarget]
     ) {
         self.header = header
         self.isSeries = isSeries
@@ -76,7 +70,7 @@ public enum DetailMapper {
             playTarget: resumeEntry.map(HomeMapper.target(for:)),
             playLabel: playLabel(isSeries: isSeries, entry: resumeEntry, episodes: episodes),
             isFavorite: userData.isFavorite,
-            seasons: isSeries ? seasons.map { SeasonChip(id: $0.id, title: $0.name) } : [],
+            seasons: isSeries ? seasons.map { ChipModel(id: $0.id, title: $0.name) } : [],
             selectedSeasonId: selected,
             episodes: seasonEpisodes.map { episode($0, imageURL: imageURL) },
             episodeTargets: Dictionary(
