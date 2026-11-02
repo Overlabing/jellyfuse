@@ -182,6 +182,18 @@ public final class LibraryStore {
         markStale(kinds)
     }
 
+    /// Local-only patch of one item's user data, kept even offline (data-plan §5.1 rule 5: a stop is
+    /// reflected at once, the server's answer comes later). In-flight loads are cancelled: their answer
+    /// predates the patch. Unknown items are ignored.
+    public func patchUserData(_ id: String, transform: (UserData) -> UserData) {
+        guard items[id] != nil || userData[id] != nil else { return }
+        for (key, task) in inflight {
+            task.cancel()
+            inflight[key] = nil
+        }
+        userData[id] = transform(userData[id] ?? .none)
+    }
+
     // MARK: Persistence
 
     private func hydrate() {

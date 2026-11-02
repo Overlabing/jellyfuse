@@ -207,3 +207,18 @@ import Testing
         #expect(store.entries(.continueWatching).first?.userData.played == true)
     }
 }
+
+@MainActor
+@Suite struct LibraryStorePatchTests {
+    @Test func patchUserDataIsLocalOnlyAndCancelsInFlightLoads() async throws {
+        let api = FakeAPI()
+        await api.setResume([entry("a", position: 100)])
+        let store = LibraryStore(owner: "srv|u1", api: api, storage: temporaryStorage().0, persistDelay: .milliseconds(10), retryDelays: [])
+        try await store.ensureFresh(.continueWatching)
+        store.patchUserData("a") { var data = $0; data.playbackPositionTicks = 500; return data }
+        #expect(store.userData["a"]?.playbackPositionTicks == 500)
+        #expect(!store.isStale(.continueWatching))
+        store.patchUserData("unknown") { var data = $0; data.played = true; return data }
+        #expect(store.userData["unknown"] == nil)
+    }
+}
