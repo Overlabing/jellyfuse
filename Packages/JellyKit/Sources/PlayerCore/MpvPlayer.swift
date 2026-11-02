@@ -25,7 +25,7 @@ public final class MpvPlayer: @unchecked Sendable {
         var status = mpv_set_option(handle, "wid", MPV_FORMAT_INT64, &wid)
         for (name, value) in options.pairs {
             let result = mpv_set_option_string(handle, name, value)
-            if result < 0 { print("[mpv] option \(name)=\(value) rejected: \(MpvError.describe(result))") }
+            if result < 0 { Self.debugLog("option \(name) rejected: \(MpvError.describe(result))") }
         }
         if status >= 0 { status = mpv_initialize(handle) }
         guard status >= 0 else {
@@ -122,11 +122,18 @@ public final class MpvPlayer: @unchecked Sendable {
         ("vo-configured", MPV_FORMAT_FLAG),
     ]
 
+    /// Debug builds only, and never a value: option values and arguments can carry the stream URL with its api_key.
+    private static func debugLog(_ message: @autoclosure () -> String) {
+        #if DEBUG
+        print("[mpv] \(message())")
+        #endif
+    }
+
     private func setProperty(_ name: String, _ value: String) {
         queue.async { [self] in
             guard let handle else { return }
             let status = mpv_set_property_string(handle, name, value)
-            if status < 0 { print("[mpv] set \(name)=\(value) failed: \(MpvError.describe(status))") }
+            if status < 0 { Self.debugLog("set \(name) failed: \(MpvError.describe(status))") }
         }
     }
 
@@ -136,7 +143,7 @@ public final class MpvPlayer: @unchecked Sendable {
             var cargs: [UnsafePointer<CChar>?] = args.map { UnsafePointer(strdup($0)) } + [nil]
             defer { for pointer in cargs { free(UnsafeMutablePointer(mutating: pointer)) } }
             let status = mpv_command(handle, &cargs)
-            if status < 0 { print("[mpv] \(args.first ?? "?") failed: \(MpvError.describe(status))") }
+            if status < 0 { Self.debugLog("\(args.first ?? "?") failed: \(MpvError.describe(status))") }
         }
     }
 
