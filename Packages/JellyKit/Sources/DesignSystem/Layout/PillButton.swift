@@ -37,7 +37,7 @@ public struct FuseChip: View {
         Button(action: action) {
             HStack(spacing: Design.Spacing.xs) {
                 if isSelected {
-                    Image(systemName: "checkmark").foregroundStyle(Design.Palette.accent)
+                    Image(systemName: "checkmark").foregroundStyle(Design.Palette.accent).accessibilityHidden(true)
                 }
                 Text(title)
             }

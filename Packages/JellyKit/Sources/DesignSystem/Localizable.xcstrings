@@ -225,6 +225,22 @@
         }
       }
     },
+    "Lecteur vidéo" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lecteur vidéo"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Video player"
+          }
+        }
+      }
+    },
     "Lecture dans %lld s · cliquer pour lancer" : {
       "localizations" : {
         "fr" : {

@@ -153,6 +153,21 @@ public final class RemoteInputUIView: UIView {
 
     public override var canBecomeFocused: Bool { takesFocus }
 
+    // VoiceOver: this view is the player's only focus target. Direct interaction hands the raw presses
+    // (arrows, select, play/pause) to it instead of VoiceOver's own navigation.
+    public override var isAccessibilityElement: Bool {
+        get { takesFocus }
+        set {}
+    }
+    public override var accessibilityLabel: String? {
+        get { String(localized: "Lecteur vidéo", bundle: .module) }
+        set {}
+    }
+    public override var accessibilityTraits: UIAccessibilityTraits {
+        get { .allowsDirectInteraction }
+        set {}
+    }
+
     public override func didMoveToWindow() {
         super.didMoveToWindow()
         if window == nil { stopRepeating() }

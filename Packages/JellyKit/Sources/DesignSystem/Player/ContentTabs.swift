@@ -167,6 +167,7 @@ public struct ContentTabs: View {
                         .fontWeight(tab == selection ? .bold : .regular)
                         .opacity(tab == selection ? 1 : 0.7)
                         .focused($focusedTab, equals: tab)
+                        .accessibilityAddTraits(tab == selection ? .isSelected : [])
                 }
                 Spacer(minLength: 0)
             }
@@ -255,6 +256,7 @@ public struct ContentTabs: View {
                                 Image(systemName: "checkmark")
                                     .foregroundStyle(Design.Palette.accent)
                                     .opacity(row.isMarked ? 1 : 0)
+                                    .accessibilityHidden(true)
                                 Text(row.title).lineLimit(1)
                                 Spacer(minLength: Design.Spacing.s)
                                 Text(row.detail)
@@ -264,6 +266,7 @@ public struct ContentTabs: View {
                             .frame(maxWidth: .infinity)
                         }
                         .capsuleButtonStyle()
+                        .accessibilityAddTraits(row.isMarked ? .isSelected : [])
                         .id(row.id)
                     }
                 }

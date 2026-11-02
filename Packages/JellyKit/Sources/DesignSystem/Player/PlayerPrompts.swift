@@ -26,6 +26,7 @@ public struct PlayerPrompts: View {
     private let skipLabel: String?
     private let upNext: UpNextCardModel?
     private let isOSDVisible: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// `skipLabel`: « Passer l'intro » or « Passer le générique » while in such a segment, else nil.
     public init(skipLabel: String?, upNext: UpNextCardModel?, isOSDVisible: Bool) {
@@ -38,12 +39,12 @@ public struct PlayerPrompts: View {
         HStack(alignment: .bottom) {
             if let skipLabel { SkipButton(label: skipLabel).transition(.opacity) }
             Spacer()
-            if let upNext { UpNextCard(model: upNext).transition(.move(edge: .trailing).combined(with: .opacity)) }
+            if let upNext { UpNextCard(model: upNext).transition(reduceMotion ? .opacity : .move(edge: .trailing).combined(with: .opacity)) }
         }
         .padding(.horizontal, metrics.screenMargin)
         .padding(.bottom, isOSDVisible ? 320 : 100)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-        .animation(.easeOut(duration: 0.25), value: isOSDVisible)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.25), value: isOSDVisible)
         .animation(.easeOut(duration: 0.25), value: skipLabel)
         .animation(.easeOut(duration: 0.25), value: upNext == nil)
         .allowsHitTesting(false)

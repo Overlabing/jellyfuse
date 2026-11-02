@@ -216,10 +216,12 @@ private struct PanelCover<Content: View>: View {
     @ViewBuilder let content: (@escaping @MainActor () -> Void) -> Content
     @State private var slid = false
     @State private var closing = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         content(close)
-            .offset(y: slid ? 0 : -700)
+            // Reduce Motion: the panel fades instead of travelling.
+            .offset(y: slid || reduceMotion ? 0 : -700)
             .opacity(slid ? 1 : 0)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .presentationBackground(.clear)
