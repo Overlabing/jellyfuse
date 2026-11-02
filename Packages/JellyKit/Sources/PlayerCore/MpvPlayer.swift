@@ -48,6 +48,12 @@ public final class MpvPlayer: @unchecked Sendable {
         }, retained.toOpaque())
     }
 
+    /// Creates the player with the surface matching `options.backend`.
+    @MainActor
+    public convenience init(options: MpvOptions = MpvOptions()) throws {
+        try self.init(surface: options.backend.makeSurface(), options: options)
+    }
+
     deinit { tearDown() }
 
     // MARK: Commands

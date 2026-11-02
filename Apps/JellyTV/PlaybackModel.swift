@@ -18,7 +18,7 @@ final class PlaybackModel {
 
     init() {
         do {
-            player = try MpvPlayer(surface: MetalLayerBackend())
+            player = try MpvPlayer()
         } catch {
             player = nil
             failure = String(describing: error)

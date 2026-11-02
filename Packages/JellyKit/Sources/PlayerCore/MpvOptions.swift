@@ -2,6 +2,8 @@ import Foundation
 
 /// mpv configuration. Defaults are the values validated on Apple TV hardware (Phase 0).
 public struct MpvOptions: Sendable, Equatable {
+    /// Video output pipeline. `.sampleBuffer` carries the production recipe (decode queue, AVFoundation audio).
+    public var backend: VideoBackendKind
     /// Hardware decoders in priority order. mpv tries each in turn, so the zero-copy
     /// `videotoolbox` falls back to `videotoolbox-copy` by itself. Use `["no"]` to force software.
     public var hwdec: [String]
@@ -13,12 +15,14 @@ public struct MpvOptions: Sendable, Equatable {
     public var shaderCacheDirectory: URL?
 
     public init(
+        backend: VideoBackendKind = .sampleBuffer,
         hwdec: [String] = ["videotoolbox", "videotoolbox-copy"],
         demuxerMaxBytes: String = "50MiB",
         demuxerMaxBackBytes: String = "25MiB",
         messageLevel: String = "all=warn",
         shaderCacheDirectory: URL? = MpvOptions.defaultShaderCacheDirectory
     ) {
+        self.backend = backend
         self.hwdec = hwdec
         self.demuxerMaxBytes = demuxerMaxBytes
         self.demuxerMaxBackBytes = demuxerMaxBackBytes
@@ -36,9 +40,6 @@ public struct MpvOptions: Sendable, Equatable {
         var out: [(String, String)] = [
             ("terminal", "yes"),
             ("msg-level", messageLevel),
-            ("vo", "gpu-next"),
-            ("gpu-api", "vulkan"),
-            ("gpu-context", "moltenvk"),
             ("hwdec", hwdec.joined(separator: ",")),
             ("keep-open", "yes"),
             ("cache", "yes"),
@@ -48,8 +49,24 @@ public struct MpvOptions: Sendable, Equatable {
             ("subs-match-os-language", "yes"),
             ("subs-fallback", "yes"),
         ]
-        if let dir = shaderCacheDirectory {
-            out.append(("gpu-shader-cache-dir", dir.path))
+        switch backend {
+        case .sampleBuffer:
+            out += [
+                ("vo", "avsamplebuffer"),
+                ("vd-queue-enable", "yes"),
+                ("vd-queue-max-secs", "2"),
+                ("ao", "avfoundation"),
+                ("audio-channels", "stereo"),
+            ]
+        case .metalLayer:
+            out += [
+                ("vo", "gpu-next"),
+                ("gpu-api", "vulkan"),
+                ("gpu-context", "moltenvk"),
+            ]
+            if let dir = shaderCacheDirectory {
+                out.append(("gpu-shader-cache-dir", dir.path))
+            }
         }
         return out
     }
