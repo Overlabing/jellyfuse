@@ -27,3 +27,15 @@ et une piste d'implémentation pour ne pas re-réfléchir de zéro.
   (Library.videoLibraries) — les collections Jellyfin sont exclues de la v1. Lot à part :
   étendre l'allowlist à boxsets + shelf dédiée + fiche collection (une collection s'ouvre
   sur ses films, pattern proche de la fiche série sans saisons).
+
+## App / système
+
+- **Top Shelf dynamique** (Antonin, 2026-11-02, validé — à lancer après la vague 3.5-3.7) :
+  l'icône Jellyfuse en première rangée du dock doit afficher les posters des médias « À
+  reprendre » (resume + next up) au lieu de l'image statique. Implémentation : extension
+  TV Top Shelf (TVTopShelfContentProvider, TVTopShelfSectionedContent ou carousel),
+  cible xcodegen dédiée + App Group pour partager la session (token Keychain partagé
+  access group), fetch resume/nextUp avec les URLs d'images Jellyfin, deep links
+  jellyfuse://detail/{id} et jellyfuse://play/{id} (le scheme était prévu dans le plan
+  RN) à router dans JellyfuseApp.onOpenURL. Attention signing : entitlements App Group
+  sur les DEUX cibles, team 39TMVBW2CY.
