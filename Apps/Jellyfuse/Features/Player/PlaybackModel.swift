@@ -87,13 +87,15 @@ final class PlaybackModel {
 
         do {
             var options = MpvOptions()
-            // Debug launch args (same as the spike): -mpvopt k=v,k=v and -start <secs>.
+            #if DEBUG
+            // Debug launch args (same as the spike): -mpvopt k=v,k=v and -start <secs>. Not in release builds.
             if let raw = UserDefaults.standard.string(forKey: "mpvopt") {
                 options.extraOptions = raw.split(separator: ",").map(String.init)
             }
             if let start = UserDefaults.standard.string(forKey: "start") {
                 options.extraOptions.append("start=\(start)")
             }
+            #endif
             player = try MpvPlayer(options: options)
         } catch {
             player = nil

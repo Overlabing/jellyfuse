@@ -16,7 +16,11 @@ struct PlayerScreen: View {
     @State private var tab = PlayerTab.info
     @State private var lastPressRawValue: Int?
     /// Debug overlay: launch with `-stats YES`.
+    #if DEBUG
     private let showsStats = UserDefaults.standard.bool(forKey: "stats")
+    #else
+    private let showsStats = false
+    #endif
     @State private var focusProbe = FocusProbe()
 
     init(target: PlayTarget, services: PlaybackServices, onClose: @escaping () -> Void, onPlayNext: @escaping (PlayTarget) -> Void) {
