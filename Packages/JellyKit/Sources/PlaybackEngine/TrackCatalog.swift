@@ -160,6 +160,14 @@ public struct TrackPreferenceStore {
         TrackSelectionInput(preferences: preferences, rememberedAudio: audio(scope: scope), rememberedSubtitle: subtitle(scope: scope))
     }
 
+    /// Forgets every choice remembered for this user; the next playback follows the server's defaults again.
+    public func removeAll() {
+        let prefix = "trackpref|\(owner)|"
+        for key in defaults.dictionaryRepresentation().keys where key.hasPrefix(prefix) {
+            defaults.removeObject(forKey: key)
+        }
+    }
+
     private func key(_ scope: String, _ kind: String) -> String { "trackpref|\(owner)|\(scope)|\(kind)" }
 
     private func read(_ scope: String, _ kind: String) -> TrackPref? {

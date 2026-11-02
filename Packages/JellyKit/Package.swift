@@ -11,6 +11,7 @@ let package = Package(
         .library(name: "DesignSystem", targets: ["DesignSystem"]),
         .library(name: "HomePresentation", targets: ["HomePresentation"]),
         .library(name: "PlayerPresentation", targets: ["PlayerPresentation"]),
+        .library(name: "SettingsKit", targets: ["SettingsKit"]),
     ],
     dependencies: [
         // Only the LGPL product. Never a "-GPL" product.
@@ -34,11 +35,14 @@ let package = Package(
         .target(name: "HomePresentation", dependencies: ["LibraryKit", "DesignSystem"]),
         // Playback state (tracks, chapters, item) -> the player's content panel model (pure mapper, no UI).
         .target(name: "PlayerPresentation", dependencies: ["LibraryKit", "PlaybackEngine", "DesignSystem"]),
+        // Réglages: license manifest + texts (resources), account / build summaries.
+        .target(name: "SettingsKit", dependencies: ["LibraryKit"], resources: [.copy("LicenseData")]),
         .testTarget(name: "PlayerCoreTests", dependencies: ["PlayerCore"]),
         .testTarget(name: "LibraryKitTests", dependencies: ["LibraryKit"]),
         .testTarget(name: "PlaybackEngineTests", dependencies: ["PlaybackEngine"]),
         .testTarget(name: "DesignSystemTests", dependencies: ["DesignSystem"]),
         .testTarget(name: "PlayerPresentationTests", dependencies: ["PlayerPresentation", "PlaybackEngine", "LibraryKit", "DesignSystem"]),
         .testTarget(name: "HomePresentationTests", dependencies: ["HomePresentation", "LibraryKit", "DesignSystem"]),
+        .testTarget(name: "SettingsKitTests", dependencies: ["SettingsKit", "LibraryKit"]),
     ]
 )

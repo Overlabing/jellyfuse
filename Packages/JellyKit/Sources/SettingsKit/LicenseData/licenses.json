@@ -1,0 +1,290 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "id": "jellyfuse",
+      "name": "Jellyfuse",
+      "group": "app",
+      "url": "https://github.com/Overlabing/jellyfuse",
+      "license": "MIT",
+      "textFile": "jellyfuse.txt",
+      "textSource": "LICENSE (dépôt)"
+    },
+    {
+      "id": "mpvkit",
+      "name": "MPVKit (Overlabing)",
+      "group": "playback",
+      "url": "https://github.com/Overlabing/MPVKit",
+      "version": "0.41.0-avsb.2",
+      "license": "LGPL v3",
+      "textFile": "mpvkit.txt",
+      "textSource": "LICENSE du paquet SwiftPM résolu",
+      "note": "Produit LGPL uniquement. Les variantes -GPL de MPVKit ne sont pas liées à l'app."
+    },
+    {
+      "id": "mpv",
+      "name": "mpv (libmpv)",
+      "group": "playback",
+      "url": "https://github.com/mpv-player/mpv",
+      "version": "0.41.0",
+      "license": "LGPL v2.1 ou ultérieure",
+      "textFile": "mpv.txt",
+      "textSource": "https://raw.githubusercontent.com/mpv-player/mpv/v0.41.0/LICENSE.LGPL",
+      "note": "Compilé avec -Dgpl=false : aucun fichier GPL dans le binaire."
+    },
+    {
+      "id": "ffmpeg",
+      "name": "FFmpeg",
+      "group": "playback",
+      "url": "https://github.com/FFmpeg/FFmpeg",
+      "version": "n9.0.2",
+      "license": "LGPL v2.1 ou ultérieure",
+      "textFile": "ffmpeg.txt",
+      "textSource": "https://raw.githubusercontent.com/FFmpeg/FFmpeg/n9.0.2/COPYING.LGPLv2.1",
+      "note": "Compilé sans --enable-gpl."
+    },
+    {
+      "id": "libplacebo",
+      "name": "libplacebo",
+      "group": "playback",
+      "url": "https://github.com/haasn/libplacebo",
+      "version": "7.360.1",
+      "license": "LGPL v2.1 ou ultérieure",
+      "textFile": "libplacebo.txt",
+      "textSource": "https://raw.githubusercontent.com/haasn/libplacebo/v7.360.1/LICENSE"
+    },
+    {
+      "id": "libass",
+      "name": "libass",
+      "group": "playback",
+      "url": "https://github.com/libass/libass",
+      "license": "ISC",
+      "textFile": "libass.txt",
+      "textSource": "https://raw.githubusercontent.com/libass/libass/0.17.4/COPYING"
+    },
+    {
+      "id": "freetype",
+      "name": "FreeType",
+      "group": "playback",
+      "url": "https://github.com/freetype/freetype",
+      "license": "FreeType Project License (FTL)",
+      "textFile": "freetype.txt",
+      "textSource": "https://raw.githubusercontent.com/freetype/freetype/master/docs/FTL.TXT",
+      "note": "FreeType est aussi disponible sous GPL v2 ; la licence FTL est celle retenue."
+    },
+    {
+      "id": "harfbuzz",
+      "name": "HarfBuzz",
+      "group": "playback",
+      "url": "https://github.com/harfbuzz/harfbuzz",
+      "license": "Old MIT",
+      "textFile": "harfbuzz.txt",
+      "textSource": "https://raw.githubusercontent.com/harfbuzz/harfbuzz/main/COPYING"
+    },
+    {
+      "id": "fribidi",
+      "name": "FriBidi",
+      "group": "playback",
+      "url": "https://github.com/fribidi/fribidi",
+      "license": "LGPL v2.1 ou ultérieure",
+      "textFile": "fribidi.txt",
+      "textSource": "https://raw.githubusercontent.com/fribidi/fribidi/master/COPYING"
+    },
+    {
+      "id": "libunibreak",
+      "name": "libunibreak",
+      "group": "playback",
+      "url": "https://github.com/adah1972/libunibreak",
+      "license": "Licence de type zlib",
+      "textFile": "libunibreak.txt",
+      "textSource": "https://raw.githubusercontent.com/adah1972/libunibreak/master/LICENCE"
+    },
+    {
+      "id": "moltenvk",
+      "name": "MoltenVK",
+      "group": "playback",
+      "url": "https://github.com/KhronosGroup/MoltenVK",
+      "version": "1.4.2",
+      "license": "Apache 2.0",
+      "textFile": "moltenvk.txt",
+      "textSource": "https://raw.githubusercontent.com/KhronosGroup/MoltenVK/v1.4.2/LICENSE"
+    },
+    {
+      "id": "shaderc",
+      "name": "shaderc",
+      "group": "playback",
+      "url": "https://github.com/google/shaderc",
+      "version": "2025.5",
+      "license": "Apache 2.0",
+      "textFile": "shaderc.txt",
+      "textSource": "https://raw.githubusercontent.com/google/shaderc/v2025.5/LICENSE"
+    },
+    {
+      "id": "lcms2",
+      "name": "Little CMS (lcms2)",
+      "group": "playback",
+      "url": "https://github.com/mm2/Little-CMS",
+      "version": "2.17",
+      "license": "MIT",
+      "textFile": "lcms2.txt",
+      "textSource": "https://raw.githubusercontent.com/mm2/Little-CMS/lcms2.17/LICENSE"
+    },
+    {
+      "id": "libdovi",
+      "name": "libdovi (dolby_vision)",
+      "group": "playback",
+      "url": "https://github.com/quietvoid/dovi_tool",
+      "version": "3.3.2",
+      "license": "MIT",
+      "textFile": "libdovi.txt",
+      "textSource": "https://raw.githubusercontent.com/quietvoid/dovi_tool/main/dolby_vision/LICENSE",
+      "note": "Texte pris sur la branche principale du dépôt, pas sur l'étiquette 3.3.2."
+    },
+    {
+      "id": "dav1d",
+      "name": "dav1d",
+      "group": "playback",
+      "url": "https://github.com/videolan/dav1d",
+      "version": "1.5.3",
+      "license": "BSD 2 clauses",
+      "textFile": "dav1d.txt",
+      "textSource": "https://raw.githubusercontent.com/videolan/dav1d/1.5.3/COPYING"
+    },
+    {
+      "id": "uavs3d",
+      "name": "uavs3d",
+      "group": "playback",
+      "url": "https://github.com/uavs3/uavs3d",
+      "version": "1.2.1",
+      "license": "BSD 3 clauses",
+      "textFile": "uavs3d.txt",
+      "textSource": "https://raw.githubusercontent.com/uavs3/uavs3d/master/COPYING"
+    },
+    {
+      "id": "openssl",
+      "name": "OpenSSL",
+      "group": "playback",
+      "url": "https://github.com/openssl/openssl",
+      "version": "3.3.5",
+      "license": "Apache 2.0",
+      "textFile": "openssl.txt",
+      "textSource": "https://raw.githubusercontent.com/openssl/openssl/openssl-3.3.5/LICENSE.txt"
+    },
+    {
+      "id": "gnutls",
+      "name": "GnuTLS",
+      "group": "playback",
+      "url": "https://github.com/gnutls/gnutls",
+      "version": "3.8.11",
+      "license": "LGPL v2.1 ou ultérieure (bibliothèques principales)",
+      "note": "Texte intégral : voir le dépôt (COPYING.LESSERv2)."
+    },
+    {
+      "id": "nettle",
+      "name": "Nettle et Hogweed",
+      "group": "playback",
+      "url": "https://github.com/gnutls/nettle",
+      "license": "LGPL v3 ou ultérieure, ou GPL v2 ou ultérieure (double licence)",
+      "textFile": "lgpl-3.0.txt",
+      "textSource": "https://raw.githubusercontent.com/gnutls/nettle/master/COPYING.LESSERv3",
+      "note": "Nous distribuons sous les termes de la LGPL v3, dont le texte suit."
+    },
+    {
+      "id": "gmp",
+      "name": "GMP",
+      "group": "playback",
+      "url": "https://gmplib.org",
+      "license": "LGPL v3 ou ultérieure, ou GPL v2 ou ultérieure (double licence)",
+      "note": "Nous distribuons sous les termes de la LGPL v3 (texte : voir Nettle ci-dessus). Détails : voir le site."
+    },
+    {
+      "id": "uchardet",
+      "name": "uchardet",
+      "group": "playback",
+      "url": "https://www.freedesktop.org/wiki/Software/uchardet/",
+      "version": "0.0.8",
+      "license": "MPL 1.1 / GPL / LGPL (tri-licence)",
+      "textFile": "uchardet.txt",
+      "textSource": "https://gitlab.freedesktop.org/uchardet/uchardet/-/raw/v0.0.8/COPYING",
+      "note": "Fichier COPYING du dépôt, tel quel."
+    },
+    {
+      "id": "libbluray",
+      "name": "libbluray",
+      "group": "playback",
+      "url": "https://github.com/videolan/libbluray",
+      "version": "1.4.0",
+      "note": "Licence non vérifiée ici : voir le dépôt."
+    },
+    {
+      "id": "jellyfin-sdk-swift",
+      "name": "Jellyfin SDK Swift",
+      "group": "sdk",
+      "url": "https://github.com/jellyfin/jellyfin-sdk-swift",
+      "version": "3.4.0",
+      "license": "MPL 2.0",
+      "textFile": "jellyfin-sdk-swift.txt",
+      "textSource": "LICENSE.md du paquet SwiftPM résolu"
+    },
+    {
+      "id": "get",
+      "name": "Get (Alexander Grebenyuk)",
+      "group": "sdk",
+      "url": "https://github.com/kean/Get",
+      "version": "2.2.1",
+      "license": "MIT",
+      "textFile": "get.txt",
+      "textSource": "LICENSE du paquet SwiftPM résolu"
+    },
+    {
+      "id": "swift-nio",
+      "name": "SwiftNIO",
+      "group": "sdk",
+      "url": "https://github.com/apple/swift-nio",
+      "version": "2.104.0",
+      "license": "Apache 2.0",
+      "textFile": "swift-nio.txt",
+      "textSource": "LICENSE.txt + NOTICE.txt du paquet résolu"
+    },
+    {
+      "id": "swift-nio-transport-services",
+      "name": "SwiftNIO Transport Services",
+      "group": "sdk",
+      "url": "https://github.com/apple/swift-nio-transport-services",
+      "version": "1.28.0",
+      "license": "Apache 2.0",
+      "textFile": "swift-nio-transport-services.txt",
+      "textSource": "LICENSE.txt du paquet résolu"
+    },
+    {
+      "id": "swift-atomics",
+      "name": "Swift Atomics",
+      "group": "sdk",
+      "url": "https://github.com/apple/swift-atomics",
+      "version": "1.3.1",
+      "license": "Apache 2.0 avec exception de bibliothèque d'exécution",
+      "textFile": "swift-atomics.txt",
+      "textSource": "LICENSE.txt du paquet résolu"
+    },
+    {
+      "id": "swift-collections",
+      "name": "Swift Collections",
+      "group": "sdk",
+      "url": "https://github.com/apple/swift-collections",
+      "version": "1.7.5",
+      "license": "Apache 2.0 avec exception de bibliothèque d'exécution",
+      "textFile": "swift-collections.txt",
+      "textSource": "LICENSE.txt du paquet résolu"
+    },
+    {
+      "id": "swift-system",
+      "name": "Swift System",
+      "group": "sdk",
+      "url": "https://github.com/apple/swift-system",
+      "version": "1.8.1",
+      "license": "Apache 2.0 avec exception de bibliothèque d'exécution",
+      "textFile": "swift-system.txt",
+      "textSource": "LICENSE.txt du paquet résolu"
+    }
+  ]
+}
