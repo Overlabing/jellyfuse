@@ -1,43 +1,99 @@
+import DesignSystem
 import HomePresentation
 import PlayerCore
 import SwiftUI
 
-/// Plays one item, reporting it to the server. Menu closes it.
+/// Plays one item, reporting it to the server. The Siri Remote drives the transport (see `RemoteInputView`);
+/// Menu closes the display, then the player.
 struct PlayerScreen: View {
     let onClose: () -> Void
     @State private var model: PlaybackModel
+    @State private var transport: TransportController
+    /// Debug overlay: launch with `-stats YES`.
+    private let showsStats = UserDefaults.standard.bool(forKey: "stats")
 
     init(target: PlayTarget, services: PlaybackServices, onClose: @escaping () -> Void) {
         self.onClose = onClose
-        _model = State(initialValue: PlaybackModel(target: target, services: services))
+        let model = PlaybackModel(target: target, services: services)
+        _model = State(initialValue: model)
+        _transport = State(initialValue: TransportController(driver: .init(
+            position: { model.position }, duration: { model.duration }, isPaused: { model.isPaused },
+            seek: { model.seek(to: $0) }, setPaused: { model.setPaused($0) }
+        )))
     }
 
     var body: some View {
-        ZStack(alignment: .topLeading) {
-            if let player = model.player, let url = model.streamURL {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            if let player = model.player, let url = model.streamURL, model.failure == nil {
                 MpvPlayerView(player: player, startURL: url)
                     .ignoresSafeArea()
-                stats
-            } else {
-                Text(message)
-                    .font(.title2)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+            PlayerOSD(state: transport.state, model: osdModel)
+                .ignoresSafeArea()
+            status
+            if showsStats { stats }
         }
-        .focusable()
-        .onPlayPauseCommand { model.togglePause() }
-        .onExitCommand(perform: onClose)
+        .animation(.easeOut(duration: 0.2), value: model.isBuffering)
+        .background(RemoteInputView(handlers: remoteHandlers))
+        .task(id: transport.visibility.deadline) { await hideWhenIdle() }
+        .task(id: transport.skipFeedback?.token) { await clearSkipFeedback() }
+        .onChange(of: model.isPaused) { _, paused in transport.pausedChanged(paused) }
+        .onChange(of: model.phase) { _, phase in if phase == .ended { onClose() } }
         .onDisappear { model.stop() }
     }
 
-    private var message: String {
-        if let failure = model.failure { return "Player failed: \(failure)" }
-        return model.player == nil ? "Player unavailable." : "Loading…"
+    private var osdModel: OSDModel {
+        OSDModel(
+            title: model.heading, position: transport.displayedPosition, duration: model.duration,
+            isScrubbing: transport.isScrubbing
+        )
+    }
+
+    @ViewBuilder private var status: some View {
+        if let failure = model.failure {
+            PlayerStatusView(.failed(title: String(localized: "Lecture impossible"), message: failure))
+        } else if model.player == nil {
+            PlayerStatusView(.failed(title: String(localized: "Lecture impossible"), message: String(localized: "Le lecteur n'est pas disponible.")))
+        } else if model.phase == .loading || model.streamURL == nil {
+            PlayerStatusView(.loading)
+        } else if model.isBuffering {
+            // Short stalls (a seek) stay invisible: the spinner only fades in after 1.5 s.
+            PlayerStatusView(.loading)
+                .transition(.asymmetric(insertion: .opacity.animation(.easeIn(duration: 0.3).delay(1.5)), removal: .opacity))
+        }
+    }
+
+    private var remoteHandlers: RemoteHandlers {
+        RemoteHandlers(
+            onTouch: { transport.reveal() },
+            onSelect: { transport.select() },
+            onPlayPause: { transport.playPause() },
+            onMenu: { if transport.menu() == .exit { onClose() } },
+            onSkip: { transport.skip($0) },
+            onPanBegan: { transport.panBegan() },
+            onPan: { transport.pan(fraction: $0) },
+            onPanEnded: {}
+        )
+    }
+
+    private func hideWhenIdle() async {
+        guard let deadline = transport.visibility.deadline else { return }
+        try? await Task.sleep(for: .seconds(max(deadline.timeIntervalSinceNow, 0)))
+        guard !Task.isCancelled else { return }
+        transport.expire()
+    }
+
+    private func clearSkipFeedback() async {
+        guard let token = transport.skipFeedback?.token else { return }
+        try? await Task.sleep(for: .milliseconds(900))
+        guard !Task.isCancelled else { return }
+        transport.clearSkipFeedback(token: token)
     }
 
     private var stats: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("state: \(model.state)")
+            Text("state: \(model.phase.rawValue)")
             Text(String(format: "time: %.1f / %.1f", model.timePosition, model.duration))
             Text("video-codec: \(model.videoCodec)")
             Text("hwdec-current: \(model.hwdecCurrent)")
@@ -48,5 +104,6 @@ struct PlayerScreen: View {
         .padding(24)
         .background(.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 12))
         .padding(60)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 }

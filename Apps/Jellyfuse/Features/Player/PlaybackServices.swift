@@ -11,9 +11,11 @@ final class PlaybackServices {
     private let resolver: PlaybackResolver
     private let thresholds: ResumeThresholdsCache
     private let userId: String
+    private let store: LibraryStore
 
     init(session: Session, client: JellyfinClient, store: LibraryStore, reachability: ServerReachability) {
         userId = session.userId
+        self.store = store
         resolver = PlaybackResolver(api: client, profile: .jellyfuse())
         let thresholds = ResumeThresholdsCache(fetch: Self.makeThresholdsFetch(client))
         self.thresholds = thresholds
@@ -30,6 +32,9 @@ final class PlaybackServices {
         // Reports a previous run could not send (offline, killed): retried at launch.
         Task { await reporter.drain() }
     }
+
+    /// The item as the library knows it, for the title shown over the video. Nil when it was never listed.
+    func item(_ id: String) -> MediaItem? { store.items[id] }
 
     /// `PlaybackInfo` for the item, from the resume position. Never cached.
     func resolve(itemId: String, startPositionTicks: Int64) async throws -> ResolvedPlayback {
