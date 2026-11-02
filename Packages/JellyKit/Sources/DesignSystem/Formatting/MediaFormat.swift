@@ -18,6 +18,13 @@ public enum MediaFormat {
         return String(localized: "\(runtime) restantes")
     }
 
+    /// A playback position as `0 h 12`, `1 h 05` (minutes rounded down). Nil for non-positive positions.
+    public static func position(seconds: TimeInterval) -> String? {
+        guard seconds > 0 else { return nil }
+        let (hours, minutes) = (Int(seconds) / 60).quotientAndRemainder(dividingBy: 60)
+        return "\(hours) h \(minutes < 10 ? "0" : "")\(minutes)"
+    }
+
     /// `7,8` for fr, `7.8` for en. Nil when the rating is not positive.
     public static func rating(_ value: Double, locale: Locale = .current) -> String? {
         guard value > 0 else { return nil }

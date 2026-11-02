@@ -12,8 +12,15 @@ enum HomeRoute: Hashable {
 /// a poster or the billboard's « Détails » pushes the detail screen; playback starts from there.
 struct HomeScreen: View {
     let model: HomeModel
+    let isPlayerOpen: Bool
     let onPlay: (PlayTarget) -> Void
     @State private var path: [HomeRoute] = []
+    @State private var isVisible = false
+    @Environment(\.scenePhase) private var scenePhase
+
+    private var isPolling: Bool {
+        HomeRefreshPolicy.shouldPoll(sceneIsActive: scenePhase == .active, homeIsVisible: isVisible, playerIsOpen: isPlayerOpen)
+    }
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -38,7 +45,17 @@ struct HomeScreen: View {
                 }
             }
         }
+        .onAppear { isVisible = true }
+        .onDisappear { isVisible = false }
         .task { await model.refresh() }
+        // Settled on the home: revalidate periodically. Stale-only, so a tick on fresh data sends nothing.
+        .task(id: isPolling) {
+            while isPolling {
+                try? await Task.sleep(for: HomeRefreshPolicy.pollInterval)
+                if Task.isCancelled { return }
+                await model.refresh()
+            }
+        }
     }
 
     private static func message(for failure: UserFacingError) -> String {

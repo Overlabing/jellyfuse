@@ -13,6 +13,8 @@ final class AppModel {
     private(set) var playback: PlaybackServices?
     /// What the player screen is showing, if anything.
     var playing: PlayRequest?
+    /// The « Reprendre / Recommencer » question, when a playback with a saved position was requested.
+    var resumePrompt: PlayPrompt?
 
     init() {
         if let stored = SessionStore.load() { start(stored) }
@@ -29,9 +31,21 @@ final class AppModel {
         home = nil
         playback = nil
         playing = nil
+        resumePrompt = nil
     }
 
+    /// Single entry point for every playback: a saved position asks first, otherwise it starts at once.
     func play(_ target: PlayTarget) {
+        if let prompt = PlayPrompt(target) { resumePrompt = prompt } else { start(playing: target) }
+    }
+
+    /// The answer to the prompt (`prompt.resume` or `prompt.restart`).
+    func choose(_ target: PlayTarget) {
+        resumePrompt = nil
+        start(playing: target)
+    }
+
+    private func start(playing target: PlayTarget) {
         playing = PlayRequest(target: target)
     }
 
