@@ -123,7 +123,6 @@ struct OSDProgressBar: View {
                     // bottom-aligned to it, then lifted by the bar's height and a gap.
                     let centre = min(max(x, Self.bubbleWidth / 2), proxy.size.width - Self.bubbleWidth / 2)
                     bubble(preview, chapter: chapterTitle)
-                        .frame(width: Self.bubbleWidth, alignment: .bottom)
                         .offset(x: centre - Self.bubbleWidth / 2, y: -(trackHeight + 28))
                 }
             }
@@ -134,29 +133,41 @@ struct OSDProgressBar: View {
         .accessibilityHidden(true)
     }
 
-    /// The bubble's width with a thumbnail, so it does not resize as the frames change.
+    /// The bubble's fixed width, with or without a thumbnail: nothing inside it can resize it or shift as frames,
+    /// digits or chapter names change.
     private static let bubbleWidth: CGFloat = 336
 
+    /// One box (thumbnail, time, chapter) so a single offset places everything. Its content never animates
+    /// by itself: the box eases to the playhead with the knob, and what is inside stays put in it.
     private func bubble(_ text: String, chapter: String?) -> some View {
-        VStack(spacing: 2) {
+        let inner = Self.bubbleWidth - 2 * Design.Spacing.xs
+        return VStack(spacing: 2) {
             if let thumbnail {
                 thumbnail
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: Self.bubbleWidth - 2 * Design.Spacing.xs)
+                    .frame(width: inner)
                     // The overlay proposes the bar's 10 pt height: without this the frame collapses to it.
                     .fixedSize(horizontal: false, vertical: true)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .padding(.bottom, Design.Spacing.xs)
             }
-            Text(text).font(Design.Typography.callout.weight(.bold).monospacedDigit())
+            Text(text)
+                .font(Design.Typography.callout.weight(.bold).monospacedDigit())
+                .frame(width: inner)
             if let chapter {
-                Text(chapter).font(Design.Typography.caption).foregroundStyle(.white.opacity(0.8)).lineLimit(1)
+                Text(chapter)
+                    .font(Design.Typography.caption)
+                    .foregroundStyle(.white.opacity(0.8))
+                    .lineLimit(1)
+                    .frame(width: inner)
             }
         }
-        .padding(.horizontal, thumbnail == nil ? Design.Spacing.s : Design.Spacing.xs)
-        .padding(.vertical, Design.Spacing.xs)
+        .multilineTextAlignment(.center)
+        .padding(Design.Spacing.xs)
+        .frame(width: Self.bubbleWidth)
         .background(.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 20))
+        .transaction { $0.animation = nil }
     }
 
     private func skipChevrons(_ skip: SkipFeedback) -> some View {
