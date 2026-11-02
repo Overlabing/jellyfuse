@@ -12,15 +12,15 @@ public struct LandscapeCard: View {
     }
 
     public var body: some View {
-        Button(action: onSelect) {
-            VStack(alignment: .leading, spacing: Design.Spacing.s) {
-                CardArtwork(source: model.image, size: metrics.landscape, progress: model.progress) {
+        VStack(alignment: .leading, spacing: Design.Spacing.s) {
+            Button(action: onSelect) {
+                    CardArtwork(source: model.image, size: metrics.landscape, progress: model.progress) {
                     EmptyView()
                 }
-                CardCaption(title: model.title, subtitle: model.subtitle, width: metrics.landscape.width)
             }
+            .cardButtonStyle()
+            CardCaption(title: model.title, subtitle: model.subtitle, width: metrics.landscape.width)
         }
-        .cardButtonStyle()
         .accessibilityLabel(model.accessibilityDescription)
     }
 }

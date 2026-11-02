@@ -3,10 +3,12 @@ import SwiftUI
 /// The only place that knows how a focusable card or section behaves per platform.
 /// Adding iOS / macOS behavior means editing this file, not the components.
 extension View {
-    /// Card-like button: system focus effect on tvOS (lift, shadow, parallax); plain tap target elsewhere.
+    /// Card-like button whose label is the ARTWORK ALONE: `.card` is the Apple TV app behavior —
+    /// the whole platter lifts and tilts with the remote touchpad. `.borderless` is wrong (it zooms
+    /// the image inside its own frame), and the caption must stay OUTSIDE the label.
     func cardButtonStyle() -> some View {
         #if os(tvOS)
-        buttonStyle(.borderless)
+        buttonStyle(.card)
         #else
         buttonStyle(.plain)
         #endif
@@ -26,3 +28,4 @@ extension View {
         #endif
     }
 }
+

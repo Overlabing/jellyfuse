@@ -83,8 +83,13 @@ public enum Design {
     // MARK: Focus
 
     public enum Focus {
-        /// Extra brightness on a focused image, on top of the system effect.
+        /// Extra brightness on a focused image, on top of the lift.
         public static let imageBrightness: Double = 0.06
+        /// Whole-card lift on focus (mockups: ~1.1).
+        public static let scale: Double = 1.1
+        public static let shadowOpacity: Double = 0.55
+        public static let shadowRadius: Double = 22
+        public static let shadowOffsetY: Double = 16
     }
 
     // MARK: Scrims (fixed gradients over backdrops)

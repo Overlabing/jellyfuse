@@ -1,17 +1,15 @@
 import SwiftUI
 
-/// Title and subtitle under a card. The title reaches full brightness when the card is focused.
+/// Title and subtitle under a card (outside the focusable artwork, like the Apple TV app).
 struct CardCaption: View {
     let title: String
     let subtitle: String?
     let width: CGFloat
-    @Environment(\.isFocused) private var isFocused
-
     var body: some View {
         VStack(alignment: .leading, spacing: Design.Spacing.xs) {
             Text(title)
                 .font(Design.Typography.body.weight(.semibold))
-                .foregroundStyle(isFocused ? Design.Palette.textPrimary : Design.Palette.textSecondary)
+                .foregroundStyle(Design.Palette.textPrimary)
                 .lineLimit(1)
             if let subtitle {
                 Text(subtitle)
