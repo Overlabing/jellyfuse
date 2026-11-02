@@ -12,6 +12,8 @@ public struct RemoteHandlers {
     public var onMenu: @MainActor () -> Void
     /// Left / right click; repeats while held.
     public var onSkip: @MainActor (SkipDirection) -> Void
+    /// Down click, or a downward swipe of the pad: the content panel.
+    public var onDown: @MainActor () -> Void
     public var onPanBegan: @MainActor () -> Void
     /// Travel since `onPanBegan`, in pad widths.
     public var onPan: @MainActor (Double) -> Void
@@ -20,7 +22,8 @@ public struct RemoteHandlers {
     public init(
         onTouch: @escaping @MainActor () -> Void, onSelect: @escaping @MainActor () -> Void,
         onPlayPause: @escaping @MainActor () -> Void, onMenu: @escaping @MainActor () -> Void,
-        onSkip: @escaping @MainActor (SkipDirection) -> Void, onPanBegan: @escaping @MainActor () -> Void,
+        onSkip: @escaping @MainActor (SkipDirection) -> Void, onDown: @escaping @MainActor () -> Void,
+        onPanBegan: @escaping @MainActor () -> Void,
         onPan: @escaping @MainActor (Double) -> Void, onPanEnded: @escaping @MainActor () -> Void
     ) {
         self.onTouch = onTouch
@@ -28,6 +31,7 @@ public struct RemoteHandlers {
         self.onPlayPause = onPlayPause
         self.onMenu = onMenu
         self.onSkip = onSkip
+        self.onDown = onDown
         self.onPanBegan = onPanBegan
         self.onPan = onPan
         self.onPanEnded = onPanEnded
@@ -42,17 +46,25 @@ public struct RemoteHandlers {
 /// - Menu, handled here and not passed up the responder chain, so the system does not also dismiss the player.
 public struct RemoteInputView: UIViewControllerRepresentable {
     private let handlers: RemoteHandlers
+    private let isActive: Bool
 
-    public init(handlers: RemoteHandlers) { self.handlers = handlers }
+    /// `isActive` false hands the focus to the SwiftUI surface shown over the player (the content panel);
+    /// true takes it back. Presses reach this view only while it is the focused one.
+    public init(handlers: RemoteHandlers, isActive: Bool = true) {
+        self.handlers = handlers
+        self.isActive = isActive
+    }
 
     public func makeUIViewController(context: Context) -> RemoteInputViewController {
         let controller = RemoteInputViewController()
         controller.remoteView.handlers = handlers
+        controller.remoteView.takesFocus = isActive
         return controller
     }
 
     public func updateUIViewController(_ uiViewController: RemoteInputViewController, context: Context) {
         uiViewController.remoteView.handlers = handlers
+        uiViewController.setActive(isActive)
     }
 }
 
@@ -64,6 +76,14 @@ public final class RemoteInputViewController: UIViewController {
     public override func loadView() { view = remoteView }
 
     public override var preferredFocusEnvironments: [any UIFocusEnvironment] { [remoteView] }
+
+    /// Hands the focus over (`false`) or takes it back (`true`) when it changes.
+    func setActive(_ active: Bool) {
+        guard remoteView.takesFocus != active else { return }
+        remoteView.takesFocus = active
+        setNeedsFocusUpdate()
+        updateFocusIfNeeded()
+    }
 
     public override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
@@ -82,8 +102,13 @@ public final class RemoteInputUIView: UIView {
     private static let simulatorMenu = UIPress.PressType(rawValue: 2041)!
     /// A press delivered both ways must not count twice.
     private static let menuDebounce: TimeInterval = 0.3
+    /// Downward travel, in pad heights, that counts as a swipe down.
+    private static let downSwipe: CGFloat = 0.2
 
     var handlers: RemoteHandlers?
+    /// False while a SwiftUI surface (the content panel) must hold the focus.
+    var takesFocus = true
+    private var panTriggeredDown = false
     private var lastMenu = Date.distantPast
     private var repeatTask: Task<Void, Never>?
 
@@ -103,7 +128,7 @@ public final class RemoteInputUIView: UIView {
     @available(*, unavailable)
     public required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
 
-    public override var canBecomeFocused: Bool { true }
+    public override var canBecomeFocused: Bool { takesFocus }
 
     public override func didMoveToWindow() {
         super.didMoveToWindow()
@@ -128,9 +153,16 @@ public final class RemoteInputUIView: UIView {
     @objc private func panChanged(_ recognizer: UIPanGestureRecognizer) {
         switch recognizer.state {
         case .began:
+            panTriggeredDown = false
             handlers?.onPanBegan()
         case .changed:
-            handlers?.onPan(recognizer.translation(in: self).x / max(bounds.width, 1))
+            let travel = recognizer.translation(in: self)
+            // A mostly vertical swipe down, once per gesture: the content panel (like the system player).
+            if !panTriggeredDown, travel.y / max(bounds.height, 1) > Self.downSwipe, travel.y > 2 * abs(travel.x) {
+                panTriggeredDown = true
+                handlers?.onDown()
+            }
+            handlers?.onPan(travel.x / max(bounds.width, 1))
         case .ended, .cancelled, .failed:
             handlers?.onPanEnded()
         default:
@@ -146,7 +178,7 @@ public final class RemoteInputUIView: UIView {
             switch press.type {
             case .leftArrow: startRepeating(.backward)
             case .rightArrow: startRepeating(.forward)
-            case .select, .playPause: break
+            case .select, .playPause, .downArrow: break
             case Self.simulatorMenu: break
             default: continue
             }
@@ -160,6 +192,7 @@ public final class RemoteInputUIView: UIView {
         for press in presses {
             switch press.type {
             case .leftArrow, .rightArrow: stopRepeating()
+            case .downArrow: handlers?.onDown()
             case .select: handlers?.onSelect()
             case .playPause: handlers?.onPlayPause()
             case Self.simulatorMenu: fireMenu()

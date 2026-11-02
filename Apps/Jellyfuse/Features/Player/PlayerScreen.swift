@@ -1,6 +1,7 @@
 import DesignSystem
 import HomePresentation
 import PlayerCore
+import PlayerPresentation
 import SwiftUI
 
 /// Plays one item, reporting it to the server. The Siri Remote drives the transport (see `RemoteInputView`);
@@ -9,6 +10,7 @@ struct PlayerScreen: View {
     let onClose: () -> Void
     @State private var model: PlaybackModel
     @State private var transport: TransportController
+    @State private var tab = PlayerTab.info
     /// Debug overlay: launch with `-stats YES`.
     private let showsStats = UserDefaults.standard.bool(forKey: "stats")
 
@@ -31,11 +33,14 @@ struct PlayerScreen: View {
             }
             PlayerOSD(state: transport.state, model: osdModel)
                 .ignoresSafeArea()
+            if transport.isPanelOpen { panel }
             status
             if showsStats { stats }
         }
         .animation(.easeOut(duration: 0.2), value: model.isBuffering)
-        .overlay { RemoteInputView(handlers: remoteHandlers).ignoresSafeArea() }
+        .animation(.easeOut(duration: 0.3), value: transport.isPanelOpen)
+        // While the panel is open it owns the focus (it is a SwiftUI surface); the bridge takes it back on close.
+        .overlay { RemoteInputView(handlers: remoteHandlers, isActive: !transport.isPanelOpen).ignoresSafeArea() }
         .task(id: transport.visibility.deadline) { await hideWhenIdle() }
         .task(id: transport.skipFeedback?.token) { await clearSkipFeedback() }
         .onChange(of: model.isPaused) { _, paused in transport.pausedChanged(paused) }
@@ -46,8 +51,26 @@ struct PlayerScreen: View {
     private var osdModel: OSDModel {
         OSDModel(
             title: model.heading, position: transport.displayedPosition, duration: model.duration,
-            isScrubbing: transport.isScrubbing
+            isScrubbing: transport.isScrubbing,
+            chapterMarks: ChapterMarks.fractions(starts: model.chapters.map(\.startSeconds), duration: model.duration)
         )
+    }
+
+    private var panel: some View {
+        ContentTabs(
+            model: model.contentTabs(), selection: tab, onSelectTab: { tab = $0 },
+            onSelectAudio: { model.selectAudio($0) },
+            onSelectSubtitle: { model.selectSubtitle($0 == TrackRow.offID ? nil : $0) },
+            onSelectChapter: { seconds in
+                model.seek(to: seconds)
+                transport.closePanel()
+            },
+            onClose: { transport.closePanel() }
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+        .padding(.trailing, 80)
+        .padding(.bottom, 240)
+        .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 
     @ViewBuilder private var status: some View {
@@ -71,6 +94,7 @@ struct PlayerScreen: View {
             onPlayPause: { transport.playPause() },
             onMenu: { if transport.menu() == .exit { onClose() } },
             onSkip: { transport.skip($0) },
+            onDown: { transport.openPanel() },
             onPanBegan: { transport.panBegan() },
             onPan: { transport.pan(fraction: $0) },
             onPanEnded: {}

@@ -82,6 +82,8 @@ public struct ResolvedPlayback: Sendable, Equatable {
     public let subtitleID: Int?
     /// To `sub-add` in this order, before any `sid` is set. Empty when transcoding.
     public let externalSubtitles: [ExternalSubtitle]
+    /// Every stream of the chosen source, for the track pickers.
+    public let streams: [MediaStream]
 
     public var itemId: String { identity.itemId }
     public var playMethod: PlayMethod { identity.playMethod }
@@ -168,7 +170,8 @@ public struct PlaybackResolver: Sendable {
             url: url, container: source.container,
             runtimeTicks: source.runTimeTicks.map(Int64.init),
             startPositionTicks: request.startPositionTicks,
-            selection: selection, audioID: audioID, subtitleID: subtitleID, externalSubtitles: externals
+            selection: selection, audioID: audioID, subtitleID: subtitleID, externalSubtitles: externals,
+            streams: streams
         )
     }
 

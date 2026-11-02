@@ -5,6 +5,7 @@ import LibraryKit
 import Observation
 import PlaybackEngine
 import PlayerCore
+import PlayerPresentation
 
 /// Plays one item: resolves it, mirrors the player's events into observable state and reports the playback
 /// (Start when it plays, Progress every ~10 s and on pause, Stopped once on exit).
@@ -32,6 +33,14 @@ final class PlaybackModel {
     /// The stream to open, set once resolved. Carries the user's api_key: never log it.
     private(set) var streamURL: URL?
 
+    /// The audio and subtitle tracks that can be switched; empty when transcoding or before resolving.
+    private(set) var catalog = TrackCatalog.empty
+    /// Jellyfin indexes of the tracks playing; no subtitle index = off.
+    private(set) var audioIndex: Int?
+    private(set) var subtitleIndex: Int?
+    /// Synopsis and chapters, once loaded.
+    private(set) var detail: ItemDetail?
+
     let player: MpvPlayer?
 
     private enum Report: Sendable {
@@ -45,6 +54,7 @@ final class PlaybackModel {
     private var resolved: ResolvedPlayback?
     private var eventTask: Task<Void, Never>?
     private var resolveTask: Task<Void, Never>?
+    private var detailTask: Task<Void, Never>?
     private var tickTask: Task<Void, Never>?
     private let reports: AsyncStream<Report>.Continuation
     private var hasStarted = false
@@ -82,11 +92,17 @@ final class PlaybackModel {
             }
         }
         resolveTask = Task { [weak self] in await self?.resolve() }
+        let id = target.id
+        detailTask = Task { [weak self] in
+            let detail = await services.detail(id)
+            self?.detail = detail
+        }
     }
 
     isolated deinit {
         stop()
         resolveTask?.cancel()
+        detailTask?.cancel()
         eventTask?.cancel()
         player?.shutdown()
     }
@@ -103,6 +119,52 @@ final class PlaybackModel {
         guard let player else { return }
         seeks.seek(to: seconds, at: .now)
         player.seek(to: seconds)
+        if hasStarted, !isStopped { reports.yield(.update(snapshot(), .immediate)) }
+    }
+
+    // MARK: Tracks and chapters
+
+    var chapters: [Chapter] { detail?.chapters ?? [] }
+
+    /// Tracks can only be switched on a direct stream: a transcode carries the server's choice.
+    var canSwitchTracks: Bool { resolved.map { $0.playMethod != .transcode } ?? false }
+
+    /// The panel's content for the current state.
+    func contentTabs() -> ContentTabsModel {
+        ContentTabsMapper.model(.init(
+            heading: heading, detail: detail, catalog: catalog, audioIndex: audioIndex, subtitleIndex: subtitleIndex,
+            chapters: chapters, position: position, canSwitchTracks: canSwitchTracks
+        ))
+    }
+
+    /// Switches audio now, remembers the language and tells the server.
+    func selectAudio(_ index: Int) {
+        guard let player, let resolved, let track = catalog.audioTrack(at: index) else { return }
+        player.setTrack(.audio, id: track.mpvID)
+        audioIndex = index
+        services.trackPreferences.rememberAudio(
+            .audio(resolved.streams.first { $0.index == index }), scope: services.trackScope(target.id)
+        )
+        reportTrackChange()
+    }
+
+    /// Switches the subtitles now (`nil` = off), remembers the choice and tells the server.
+    func selectSubtitle(_ index: Int?) {
+        guard let player, let resolved else { return }
+        if let index {
+            guard let track = catalog.subtitleTrack(at: index) else { return }
+            player.setTrack(.subtitle, id: track.mpvID)
+        } else {
+            player.setTrack(.subtitle, id: nil)
+        }
+        subtitleIndex = index
+        services.trackPreferences.rememberSubtitle(
+            .subtitle(index.flatMap { index in resolved.streams.first { $0.index == index } }), scope: services.trackScope(target.id)
+        )
+        reportTrackChange()
+    }
+
+    private func reportTrackChange() {
         if hasStarted, !isStopped { reports.yield(.update(snapshot(), .immediate)) }
     }
 
@@ -125,6 +187,11 @@ final class PlaybackModel {
             )
             guard !Task.isCancelled, !isStopped else { return }
             self.resolved = resolved
+            audioIndex = resolved.selection.audioIndex
+            subtitleIndex = resolved.selection.subtitleIndex
+            if resolved.playMethod != .transcode {
+                catalog = TrackCatalog(streams: resolved.streams, externalIndices: resolved.externalSubtitles.map(\.index))
+            }
             await services.reporter.begin(resolved.identity)
             streamURL = resolved.url
         } catch {
@@ -215,9 +282,9 @@ final class PlaybackModel {
         PlaybackSnapshot(
             positionTicks: PlaybackSnapshot.ticks(seconds: position),
             isPaused: isPaused,
-            audioStreamIndex: resolved?.selection.audioIndex,
+            audioStreamIndex: audioIndex,
             // -1 is « subtitles off » for Jellyfin.
-            subtitleStreamIndex: resolved.map { $0.selection.subtitleIndex ?? -1 }
+            subtitleStreamIndex: resolved == nil ? nil : (subtitleIndex ?? -1)
         )
     }
 

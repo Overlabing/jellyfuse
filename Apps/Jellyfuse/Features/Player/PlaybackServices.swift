@@ -8,6 +8,8 @@ import PlaybackEngine
 @MainActor
 final class PlaybackServices {
     let reporter: PlaybackReporter
+    /// The viewer's remembered audio / subtitle languages, per movie or series.
+    let trackPreferences: TrackPreferenceStore
     private let resolver: PlaybackResolver
     private let thresholds: ResumeThresholdsCache
     private let userId: String
@@ -15,6 +17,7 @@ final class PlaybackServices {
 
     init(session: Session, client: JellyfinClient, store: LibraryStore, reachability: ServerReachability) {
         userId = session.userId
+        trackPreferences = TrackPreferenceStore(owner: session.libraryOwner)
         self.store = store
         resolver = PlaybackResolver(api: client, profile: .jellyfuse())
         let thresholds = ResumeThresholdsCache(fetch: Self.makeThresholdsFetch(client))
@@ -40,7 +43,22 @@ final class PlaybackServices {
     func resolve(itemId: String, startPositionTicks: Int64) async throws -> ResolvedPlayback {
         // Read now, while online, so the local patch at stop does not depend on the network.
         Task { [thresholds] in _ = await thresholds.value() }
-        return try await resolver.resolve(PlaybackRequest(itemId: itemId, userId: userId, startPositionTicks: startPositionTicks))
+        let scope = trackScope(itemId)
+        return try await resolver.resolve(PlaybackRequest(
+            itemId: itemId, userId: userId, startPositionTicks: startPositionTicks,
+            tracks: trackPreferences.input(scope: scope)
+        ))
+    }
+
+    /// Remembered track choices belong to the movie or to the whole series.
+    func trackScope(_ itemId: String) -> String {
+        TrackPreferenceStore.scope(itemId: itemId, seriesId: store.items[itemId]?.seriesId)
+    }
+
+    /// The item's detail (synopsis, chapters), from the library or fetched. Nil offline when never loaded.
+    func detail(_ id: String) async -> ItemDetail? {
+        try? await store.ensureDetailFresh(id)
+        return store.detail(id)
     }
 
     private nonisolated static func makeThresholdsFetch(_ client: JellyfinClient) -> @Sendable () async throws -> ResumeThresholds? {

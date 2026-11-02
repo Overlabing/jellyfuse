@@ -18,7 +18,7 @@ public struct PlayerOSD: View {
             Text(model.title)
                 .font(Design.Typography.callout.weight(.bold))
                 .lineLimit(1)
-            OSDProgressBar(progress: model.progress, preview: model.preview, skip: state.skip, isScrubbing: state.isScrubbing)
+            OSDProgressBar(progress: model.progress, chapterMarks: model.chapterMarks, preview: model.preview, skip: state.skip, isScrubbing: state.isScrubbing)
             times
         }
         .foregroundStyle(.white)
@@ -65,6 +65,7 @@ public struct PlayerOSD: View {
 /// The track, the played part, the playhead, the scrub preview and the skip chevrons.
 struct OSDProgressBar: View {
     let progress: Double
+    let chapterMarks: [Double]
     let preview: String?
     let skip: SkipFeedback?
     let isScrubbing: Bool
@@ -78,6 +79,13 @@ struct OSDProgressBar: View {
             ZStack(alignment: .leading) {
                 Capsule().fill(.white.opacity(0.25))
                 Capsule().fill(.white).frame(width: x)
+                ForEach(chapterMarks, id: \.self) { mark in
+                    // Dark on the played part, light on the rest: visible on both.
+                    Circle()
+                        .fill(mark <= progress ? .black.opacity(0.55) : .white.opacity(0.7))
+                        .frame(width: trackHeight - 4, height: trackHeight - 4)
+                        .position(x: proxy.size.width * mark, y: proxy.size.height / 2)
+                }
                 Circle()
                     .fill(.white)
                     .frame(width: knobSize, height: knobSize)
