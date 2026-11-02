@@ -11,7 +11,7 @@ let package = Package(
     dependencies: [
         // Only the LGPL product. Never a "-GPL" product.
         // Overlabing fork: libmpv + vo_avsamplebuffer (tvOS only binary).
-        .package(url: "https://github.com/Overlabing/MPVKit.git", exact: "0.41.0-avsb.1"),
+        .package(url: "https://github.com/Overlabing/MPVKit.git", exact: "0.41.0-avsb.2"),
         .package(url: "https://github.com/jellyfin/jellyfin-sdk-swift", from: "3.3.0"),
     ],
     targets: [

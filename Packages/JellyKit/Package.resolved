@@ -1,5 +1,5 @@
 {
-  "originHash" : "241b34ac601686dd611bb3aef0af4aa078a82708b30e3204a520c1943adf221a",
+  "originHash" : "e108d9cfdb782a157e897fe580c16cabd1d10aca16ee189caef6f25f4a92e4c2",
   "pins" : [
     {
       "identity" : "get",
@@ -24,8 +24,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Overlabing/MPVKit.git",
       "state" : {
-        "revision" : "bcabe334fd53a2ae822787b7a35db1913c6f8fdd",
-        "version" : "0.41.0-avsb.1"
+        "revision" : "679f4e06b85fb9a5283e497b95b0ea994bb2650a",
+        "version" : "0.41.0-avsb.2"
       }
     },
     {
