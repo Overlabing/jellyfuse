@@ -49,6 +49,11 @@ final class HomeModel {
     /// Cold start: nothing cached and the first load has not answered yet.
     var isLoadingCold: Bool { !hasLoaded && content.isEmpty }
 
+    /// The state of one detail screen, backed by this session's store.
+    func detailModel(for id: String) -> DetailModel {
+        DetailModel(id: id, store: store, client: client)
+    }
+
     /// Revalidates every shelf that is stale; fresh ones are left alone. The library list comes first:
     /// it decides which per-library shelves exist.
     func refresh() async {

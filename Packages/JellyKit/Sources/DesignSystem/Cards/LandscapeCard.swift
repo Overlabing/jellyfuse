@@ -14,8 +14,8 @@ public struct LandscapeCard: View {
     public var body: some View {
         VStack(alignment: .leading, spacing: Design.Spacing.s) {
             Button(action: onSelect) {
-                    CardArtwork(source: model.image, size: metrics.landscape, progress: model.progress) {
-                    EmptyView()
+                CardArtwork(source: model.image, size: metrics.landscape, progress: model.progress) {
+                    if model.isWatched { WatchedFlag() }
                 }
             }
             .cardButtonStyle()

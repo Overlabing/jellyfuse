@@ -39,13 +39,11 @@ private func films(_ entries: [LibraryEntry]) -> LibraryShelfSource {
         #expect(content.isEmpty)
     }
 
-    @Test func gridKeepsOrderAndExposesPlayTargets() {
+    @Test func gridKeepsOrder() {
         let library = Library(id: "films", name: "Films", kind: .movies)
         let grid = HomeMapper.grid(library: library, entries: [entry("b", "B"), entry("a", "A")], imageURL: urls)
         #expect(grid.title == "Films")
         #expect(grid.items.map(\.id) == ["b", "a"])
-        #expect(grid.target(for: "a")?.title == "A")
-        #expect(grid.target(for: "zz") == nil)
     }
 
     @Test func upNextPutsResumesFirstAndDedupesByIdAndSeries() {

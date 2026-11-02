@@ -20,6 +20,8 @@ public struct PlayTarget: Sendable, Equatable, Identifiable {
 public struct BillboardContent: Sendable, Equatable {
     public let model: BillboardModel
     public let target: PlayTarget
+    /// The movie or series whose detail screen the billboard opens; nil for an episode of an unknown series.
+    public let detailId: String?
     /// `Reprendre` when there is progress, `Lecture` otherwise.
     public let primaryLabel: String
 }
@@ -68,17 +70,13 @@ public struct HomeContent: Sendable, Equatable {
 public struct LibraryGridContent: Sendable, Equatable {
     public let title: String
     public let items: [PosterModel]
-    private let targets: [String: PlayTarget]
 
     public var isEmpty: Bool { items.isEmpty }
 
-    init(title: String, items: [PosterModel], targets: [String: PlayTarget]) {
+    init(title: String, items: [PosterModel]) {
         self.title = title
         self.items = items
-        self.targets = targets
     }
-
-    public func target(for id: String) -> PlayTarget? { targets[id] }
 }
 
 /// Pure mapping from `LibraryKit` entries to `DesignSystem` display models (ui-plan §6.2).
@@ -120,6 +118,7 @@ public enum HomeMapper {
             return BillboardContent(
                 model: billboard(entry, imageURL: imageURL),
                 target: target,
+                detailId: entry.item.kind == .episode ? entry.item.seriesId : entry.item.id,
                 primaryLabel: target.resumeSeconds > 0 ? String(localized: "Reprendre") : String(localized: "Lecture")
             )
         }
@@ -141,8 +140,7 @@ public enum HomeMapper {
     public static func grid(library: Library, entries: [LibraryEntry], imageURL: ImageURL) -> LibraryGridContent {
         LibraryGridContent(
             title: library.name,
-            items: entries.map { poster($0, imageURL: imageURL) },
-            targets: Dictionary(entries.map { ($0.item.id, target(for: $0)) }, uniquingKeysWith: { first, _ in first })
+            items: entries.map { poster($0, imageURL: imageURL) }
         )
     }
 
@@ -196,7 +194,7 @@ public enum HomeMapper {
         )
     }
 
-    private static func remainingText(_ entry: LibraryEntry) -> String? {
+    static func remainingText(_ entry: LibraryEntry) -> String? {
         guard let runtime = entry.item.runtimeTicks, entry.userData.playbackPositionTicks > 0, !entry.userData.played else { return nil }
         return MediaFormat.remaining(seconds: Double(runtime - entry.userData.playbackPositionTicks) / ticksPerSecond)
     }

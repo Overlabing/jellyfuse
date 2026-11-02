@@ -26,6 +26,10 @@ actor FakeAPI: LibraryAPI {
     var latestResults: [String: [LibraryEntry]] = [:]
     var gridResults: [String: [LibraryEntry]] = [:]
     var librariesResult: [Library] = []
+    var detailResults: [String: (detail: ItemDetail, userData: UserData)] = [:]
+    var seasonResults: [String: [LibraryEntry]] = [:]
+    var episodeResults: [String: [LibraryEntry]] = [:]
+    private(set) var favoriteCalls: [String] = []
     var errors: [any Error] = []
     private var gate: CheckedContinuation<Void, Never>?
     private var gated = false
@@ -35,6 +39,9 @@ actor FakeAPI: LibraryAPI {
     func setLatest(_ value: [LibraryEntry], in id: String) { latestResults[id] = value }
     func setGrid(_ value: [LibraryEntry], in id: String) { gridResults[id] = value }
     func setLibraries(_ value: [Library]) { librariesResult = value }
+    func setDetail(_ value: ItemDetail, userData: UserData = .none) { detailResults[value.item.id] = (value, userData) }
+    func setSeasons(_ value: [LibraryEntry], of id: String) { seasonResults[id] = value }
+    func setEpisodes(_ value: [LibraryEntry], of id: String) { episodeResults[id] = value }
     func queueErrors(_ list: [any Error]) { errors = list }
     func holdAnswers() { gated = true }
     func releaseAnswers() { gated = false; gate?.resume(); gate = nil }
@@ -68,6 +75,21 @@ actor FakeAPI: LibraryAPI {
     func libraries() async throws -> [Library] {
         try await gate("libraries")
         return librariesResult
+    }
+    func detail(of itemId: String) async throws -> (detail: ItemDetail, userData: UserData) {
+        try await gate("detail:\(itemId)")
+        guard let result = detailResults[itemId] else { throw JellyfinError.http(404) }
+        return result
+    }
+    func seasons(of seriesId: String) async throws -> [LibraryEntry] {
+        try await answer("seasons:\(seriesId)", seasonResults[seriesId] ?? [])
+    }
+    func episodes(of seriesId: String) async throws -> [LibraryEntry] {
+        try await answer("episodes:\(seriesId)", episodeResults[seriesId] ?? [])
+    }
+    func setFavorite(_ isFavorite: Bool, for itemId: String) async throws {
+        try await gate("favorite:\(itemId):\(isFavorite)")
+        favoriteCalls.append("\(itemId):\(isFavorite)")
     }
     func latest(in libraryId: String, limit: Int) async throws -> [LibraryEntry] {
         try await answer("latest:\(libraryId)", latestResults[libraryId] ?? [])

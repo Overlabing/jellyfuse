@@ -8,7 +8,7 @@ struct RecentGridView: View {
     let items: [PosterModel]
     let isLoading: Bool
     let failureMessage: String?
-    let onPlay: (String) -> Void
+    let onOpen: (String) -> Void
 
     var body: some View {
         ScrollView {
@@ -27,7 +27,7 @@ struct RecentGridView: View {
                             ForEach(0..<12, id: \.self) { _ in Skeleton(.poster) }
                         } else {
                             ForEach(items) { model in
-                                PosterCard(model) { onPlay(model.id) }
+                                PosterCard(model) { onOpen(model.id) }
                             }
                         }
                     }

@@ -17,6 +17,10 @@ extension Design {
         public var wordmarkHeight: CGFloat
         public var billboardHeight: CGFloat
         public var billboardTextWidth: CGFloat
+        /// Detail header of a series (a movie's fills the screen): room above the seasons.
+        public var detailHeroHeight: CGFloat
+        /// Largest area of the title logo on the detail header.
+        public var detailLogo: CGSize
 
         /// tvOS, 1920×1080 pt, HIG safe area (80 pt sides, 60 pt top/bottom). Source: ui-plan §3.3 + mockups.
         public static let tv = Metrics(
@@ -31,7 +35,9 @@ extension Design {
             watchedFlag: 44,
             wordmarkHeight: 40,
             billboardHeight: 665,
-            billboardTextWidth: 860
+            billboardTextWidth: 860,
+            detailHeroHeight: 640,
+            detailLogo: CGSize(width: 640, height: 160)
         )
     }
 }

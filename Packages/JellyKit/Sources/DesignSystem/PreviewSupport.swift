@@ -62,6 +62,18 @@ enum PreviewData {
         LandscapeModel(id: "l4", title: "Atlas", subtitle: "S1 E1", image: art("Atlas")),
     ]
 
+    static let detailHeader = DetailHeaderModel(
+        id: "d1",
+        title: "Fréquences",
+        backdrop: art("Fréquences"),
+        overview: "Un signal impossible, venu d'une station arrêtée depuis quarante ans.",
+        rating: 8.4,
+        certification: "12",
+        yearText: "2022 – 2025",
+        seasonCount: 4,
+        genres: ["Science-fiction", "Mystère"]
+    )
+
     static let billboard = BillboardModel(
         id: "b1",
         title: "Nocturne",

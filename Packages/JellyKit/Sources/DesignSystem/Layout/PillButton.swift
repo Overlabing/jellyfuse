@@ -48,6 +48,34 @@ public struct FuseChip: View {
     }
 }
 
+/// Horizontal row of chips, one selected; its own focus section. Room is reserved around the chips for the focus effect.
+public struct ChipRow: View {
+    @Environment(\.designMetrics) private var metrics
+    private let chips: [ChipModel]
+    private let selectedId: String?
+    private let onSelect: (String) -> Void
+
+    public init(_ chips: [ChipModel], selectedId: String?, onSelect: @escaping (String) -> Void) {
+        self.chips = chips
+        self.selectedId = selectedId
+        self.onSelect = onSelect
+    }
+
+    public var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: Design.Spacing.s) {
+                ForEach(chips) { chip in
+                    FuseChip(chip.title, isSelected: chip.id == selectedId) { onSelect(chip.id) }
+                }
+            }
+            .padding(.horizontal, metrics.screenMargin)
+            .padding(.vertical, metrics.focusInset)
+        }
+        .scrollClipDisabled()
+        .focusBlock()
+    }
+}
+
 #if DEBUG
 #Preview("PillButton + FuseChip – normal / focus") {
     PreviewFocusScope { namespace in

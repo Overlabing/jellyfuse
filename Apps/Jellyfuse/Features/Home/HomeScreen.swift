@@ -2,12 +2,18 @@ import HomePresentation
 import LibraryKit
 import SwiftUI
 
-/// Composition layer: wires `HomeModel` to the pure `HomeView`. « Voir tout » pushes the library grid
-/// on this tab's own stack: the Menu button pops it.
+/// Where this tab's stack can go. Both destinations stay on the tab's own stack: Menu pops them.
+enum HomeRoute: Hashable {
+    case grid(Library)
+    case detail(String)
+}
+
+/// Composition layer: wires `HomeModel` to the pure `HomeView`. « Voir tout » pushes the library grid,
+/// a poster or the billboard's « Détails » pushes the detail screen; playback starts from there.
 struct HomeScreen: View {
     let model: HomeModel
     let onPlay: (PlayTarget) -> Void
-    @State private var path: [Library] = []
+    @State private var path: [HomeRoute] = []
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -19,12 +25,18 @@ struct HomeScreen: View {
                 onPlay: { id in
                     if let target = content.target(for: id) { onPlay(target) }
                 },
-                onSeeAll: { path.append($0) },
+                onOpenDetail: { path.append(.detail($0)) },
+                onSeeAll: { path.append(.grid($0)) },
                 // Favorites need a façade mutation (lot 3.3, optimistic patch): not wired yet.
                 onToggleList: {}
             )
-            .navigationDestination(for: Library.self) { library in
-                RecentGridScreen(model: model, library: library, onPlay: onPlay)
+            .navigationDestination(for: HomeRoute.self) { route in
+                switch route {
+                case .grid(let library):
+                    RecentGridScreen(model: model, library: library, onOpen: { path.append(.detail($0)) })
+                case .detail(let id):
+                    DetailScreen(model: model.detailModel(for: id), onPlay: onPlay)
+                }
             }
         }
         .task { await model.refresh() }
