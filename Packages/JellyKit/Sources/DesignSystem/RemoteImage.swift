@@ -68,7 +68,10 @@ struct RemoteImage<Content: View>: View {
     }
 
     var body: some View {
-        content(phase)
+        // The caller's closure may render nothing for a phase (Artwork shows only success). A view that
+        // renders nothing never appears, so a task attached to it never runs: the ZStack is the always-
+        // present node that owns the download task.
+        ZStack { content(phase) }
             .task(id: url) {
                 if let hit = ImageCache.shared.cached(url) {
                     phase = .success(Image(platformImage: hit))
@@ -80,6 +83,9 @@ struct RemoteImage<Content: View>: View {
                 } catch is CancellationError {
                     // Scrolled away: nothing to show, nothing to cache.
                 } catch {
+                    #if DEBUG
+                    print("RemoteImage FAILED \(url.lastPathComponent): \(error)")
+                    #endif
                     phase = .failure
                 }
             }
