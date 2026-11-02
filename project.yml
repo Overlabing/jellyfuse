@@ -17,7 +17,7 @@ targets:
     sources: [Apps/Jellyfuse]
     dependencies:
       - package: JellyKit
-        products: [PlayerCore, LibraryKit]
+        products: [PlayerCore, LibraryKit, PlaybackEngine]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.jellyfusion.app
