@@ -61,16 +61,18 @@ public struct Artwork: View {
     }
 
     public var body: some View {
-        ZStack {
-            PlaceholderArtwork(title: source.placeholderTitle)
-            if let url = source.url {
-                AsyncImage(url: url) { phase in
-                    if let image = phase.image {
-                        image.resizable().scaledToFill().transition(.opacity)
+        // The placeholder dictates the size (it fills the proposal); the image is an overlay so a
+        // scaledToFill image can never inflate the layout size of the view.
+        PlaceholderArtwork(title: source.placeholderTitle)
+            .overlay {
+                if let url = source.url {
+                    AsyncImage(url: url) { phase in
+                        if let image = phase.image {
+                            image.resizable().scaledToFill().transition(.opacity)
+                        }
                     }
                 }
             }
-        }
         .clipped()
     }
 }

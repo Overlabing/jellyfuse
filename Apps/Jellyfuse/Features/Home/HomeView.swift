@@ -6,6 +6,7 @@ import SwiftUI
 /// Pure home layout (home.html): billboard, then « À suivre » then one « Ajouts récents » shelf per library. Props in, callbacks out.
 struct HomeView: View {
     @Environment(\.designMetrics) private var metrics
+    @Namespace private var focusNamespace
     let content: HomeContent
     let isLoadingCold: Bool
     let failureMessage: String?
@@ -21,7 +22,8 @@ struct HomeView: View {
                         billboard.model,
                         primaryLabel: billboard.primaryLabel,
                         onPlay: { onPlay(billboard.target.id) },
-                        onToggleList: onToggleList
+                        onToggleList: onToggleList,
+                        focusNamespace: focusNamespace
                     )
                 } else if isLoadingCold {
                     BillboardSkeleton()
@@ -53,6 +55,7 @@ struct HomeView: View {
             }
             .padding(.bottom, metrics.safeVertical)
         }
+        .focusScope(focusNamespace)
         .ignoresSafeArea(edges: .top)
         .scrollClipDisabled()
     }
