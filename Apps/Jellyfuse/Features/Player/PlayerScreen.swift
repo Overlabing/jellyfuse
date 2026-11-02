@@ -75,8 +75,6 @@ struct PlayerScreen: View {
             },
             onClose: { transport.closePanel() }
         )
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .padding(.top, 60)
         .transition(.move(edge: .top).combined(with: .opacity))
     }
 

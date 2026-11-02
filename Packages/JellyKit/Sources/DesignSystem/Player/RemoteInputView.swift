@@ -75,19 +75,23 @@ public final class RemoteInputViewController: UIViewController {
 
     public override func loadView() { view = remoteView }
 
-    public override var preferredFocusEnvironments: [any UIFocusEnvironment] { [remoteView] }
+    /// Nothing to prefer while a SwiftUI surface holds the focus: the engine then takes the only focusable
+    /// thing left (the panel) by itself.
+    public override var preferredFocusEnvironments: [any UIFocusEnvironment] {
+        remoteView.takesFocus ? [remoteView] : []
+    }
 
-    /// Hands the focus over (`false`) or takes it back (`true`) when it changes.
+    /// Gives the focus up (`false`) or takes it back (`true`). Giving up makes the bridge strictly invisible to
+    /// the focus engine (hidden: not focusable, not hit-testable, not an occluder), so the engine moves the
+    /// focus to the panel on its own. The update request is on this controller, which contains the focused
+    /// item: it is the one environment whose request is always honoured. Next turn, once SwiftUI has applied
+    /// the panel's insertion or removal.
     func setActive(_ active: Bool) {
         guard remoteView.takesFocus != active else { return }
         remoteView.takesFocus = active
-        // A focus update only searches the subtree of the environment it is requested on: ask the root, or the
-        // panel (a sibling of this controller) is never found. Next turn, so SwiftUI has inserted or removed it.
         DispatchQueue.main.async { [weak self] in
-            guard let self else { return }
-            let root: any UIFocusEnvironment = self.view.window ?? self
-            root.setNeedsFocusUpdate()
-            root.updateFocusIfNeeded()
+            self?.setNeedsFocusUpdate()
+            self?.updateFocusIfNeeded()
         }
     }
 
@@ -114,9 +118,11 @@ public final class RemoteInputUIView: UIView {
     var handlers: RemoteHandlers?
     /// False while a SwiftUI surface (the content panel) must hold the focus.
     var takesFocus = true {
-        // The focus engine skips a view another one covers: the full-screen bridge must let touches (hit tests)
-        // through while the panel is up, or the panel's buttons are never focusable.
-        didSet { isUserInteractionEnabled = takesFocus }
+        didSet {
+            isHidden = !takesFocus
+            isUserInteractionEnabled = takesFocus
+            if !takesFocus { stopRepeating() }
+        }
     }
     private var panTriggeredDown = false
     private var lastMenu = Date.distantPast
@@ -237,9 +243,11 @@ public final class RemoteInputUIView: UIView {
     }
 }
 
-/// Hosts SwiftUI content and catches Menu (the real one and the simulator's private press type) on its way up
-/// the responder chain from whatever inside is focused. `onExitCommand` misses the simulator's press, and the
-/// system would then dismiss the whole player.
+/// Hosts the content panel full screen (the SwiftUI content pins itself to the top; a representable fills the
+/// space it is offered, so it must not be left to size itself) and catches Menu on its way up the responder
+/// chain from whatever inside is focused. Both ways Menu can arrive are handled: a `.menu` press recognizer (the
+/// real remote) and the responder's `pressesEnded` (also the simulator's private press type, which would
+/// otherwise dismiss the whole player). Closing twice is harmless.
 struct MenuInterceptor<Content: View>: UIViewControllerRepresentable {
     let onMenu: @MainActor () -> Void
     let content: Content
@@ -247,8 +255,6 @@ struct MenuInterceptor<Content: View>: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> MenuHostController<Content> {
         let controller = MenuHostController(rootView: content)
         controller.onMenu = onMenu
-        controller.view.backgroundColor = .clear
-        controller.sizingOptions = .intrinsicContentSize
         return controller
     }
 
@@ -260,6 +266,26 @@ struct MenuInterceptor<Content: View>: UIViewControllerRepresentable {
 
 final class MenuHostController<Content: View>: UIHostingController<Content> {
     var onMenu: @MainActor () -> Void = {}
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        view.backgroundColor = .clear
+        // The panel pins itself 60 pt from the top edge; the system safe area must not add to it.
+        safeAreaRegions = []
+        let menu = UITapGestureRecognizer(target: self, action: #selector(menuRecognized))
+        menu.allowedPressTypes = [NSNumber(value: UIPress.PressType.menu.rawValue)]
+        view.addGestureRecognizer(menu)
+    }
+
+    /// Asks for the focus on the panel itself (scoped to this controller's subtree: the panel's own first
+    /// focusable view), in case the engine has not moved there already.
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        setNeedsFocusUpdate()
+        updateFocusIfNeeded()
+    }
+
+    @objc private func menuRecognized() { onMenu() }
 
     private func isMenu(_ press: UIPress) -> Bool {
         press.type == .menu || press.type == RemoteInputUIView.simulatorMenu
