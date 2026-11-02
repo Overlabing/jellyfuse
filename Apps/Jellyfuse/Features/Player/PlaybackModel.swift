@@ -40,6 +40,9 @@ final class PlaybackModel {
     private(set) var subtitleIndex: Int?
     /// Synopsis and chapters, once loaded.
     private(set) var detail: ItemDetail?
+    /// The scrub thumbnails of the source playing, loaded once resolved (never from the detail screen: a playback
+    /// started from « À suivre », the billboard or an auto-play never opened it). Arrives after the stream starts.
+    private(set) var trickplay: TrickplaySheet?
     /// The intro and credits the server marked, if any.
     private(set) var segments = ItemSegments.none
     /// The following episode, when this is an episode that has one.
@@ -65,6 +68,7 @@ final class PlaybackModel {
     private var resolveTask: Task<Void, Never>?
     private var detailTask: Task<Void, Never>?
     private var extrasTask: Task<Void, Never>?
+    private var trickplayTask: Task<Void, Never>?
     private var tickTask: Task<Void, Never>?
     private let reports: AsyncStream<Report>.Continuation
     private var hasStarted = false
@@ -123,6 +127,7 @@ final class PlaybackModel {
         resolveTask?.cancel()
         detailTask?.cancel()
         extrasTask?.cancel()
+        trickplayTask?.cancel()
         countdownTask?.cancel()
         eventTask?.cancel()
         player?.shutdown()
@@ -149,7 +154,6 @@ final class PlaybackModel {
     // MARK: Segments and next episode
 
     /// The scrub thumbnails, when the server generated them.
-    var trickplay: TrickplaySheet? { detail?.trickplay }
 
     /// The « Passer l'intro / le générique » segment the viewer is in.
     var skippableSegment: MediaSegment? { segments.skippable(at: position, hasNext: nextEpisode != nil) }
@@ -285,6 +289,12 @@ final class PlaybackModel {
             }
             await services.reporter.begin(resolved.identity)
             streamURL = resolved.url
+            // Not awaited: the stream must not wait for the thumbnails, the bubble improves when they arrive.
+            trickplayTask = Task { [weak self, services, identity = resolved.identity] in
+                let sheet = await services.trickplay(itemId: identity.itemId, mediaSourceId: identity.mediaSourceId)
+                guard !Task.isCancelled else { return }
+                self?.trickplay = sheet
+            }
         } catch {
             guard !Task.isCancelled else { return }
             failure = Self.message(for: error)

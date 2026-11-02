@@ -108,14 +108,12 @@ public struct ItemDetail: Sendable, Equatable {
     public let people: [Person]
     /// Chapter marks, by start time.
     public let chapters: [Chapter]
-    /// The scrub thumbnails, when the server generated them.
-    public let trickplay: TrickplaySheet?
 
     public init(
         item: MediaItem, overview: String? = nil, productionYear: Int? = nil, endYear: Int? = nil,
         communityRating: Double? = nil, officialRating: String? = nil, genres: [String] = [],
         backdropImageTag: String? = nil, logoImageTag: String? = nil, people: [Person] = [],
-        chapters: [Chapter] = [], trickplay: TrickplaySheet? = nil
+        chapters: [Chapter] = []
     ) {
         self.item = item
         self.overview = overview
@@ -128,7 +126,6 @@ public struct ItemDetail: Sendable, Equatable {
         self.logoImageTag = logoImageTag
         self.people = people
         self.chapters = chapters
-        self.trickplay = trickplay
     }
 }
 
@@ -222,8 +219,7 @@ extension ItemDetail {
             backdropImageTag: dto.backdropImageTags?.first,
             logoImageTag: dto.imageTags?["Logo"],
             people: (dto.people ?? []).compactMap(Person.init(dto:)),
-            chapters: (dto.chapters ?? []).compactMap(Chapter.init(dto:)).sorted { $0.startSeconds < $1.startSeconds },
-            trickplay: TrickplaySheet.preferred(from: dto.trickplay, mediaSourceId: dto.id)
+            chapters: (dto.chapters ?? []).compactMap(Chapter.init(dto:)).sorted { $0.startSeconds < $1.startSeconds }
         )
     }
 }

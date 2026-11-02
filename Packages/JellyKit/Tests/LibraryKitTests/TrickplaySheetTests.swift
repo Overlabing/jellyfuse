@@ -67,4 +67,17 @@ import Testing
         #expect(TrickplaySheet.preferred(from: [:], mediaSourceId: "a") == nil)
         #expect(TrickplaySheet.preferred(from: ["a": ["x": info(width: 320)]], mediaSourceId: "a") == nil)
     }
+
+    /// A playback started without the detail screen reads the manifest of `/Items/{id}` with the resolved source id.
+    @Test func theResolvedMediaSourceIdSelectsTheManifestEntryOfAnItemDecodedFromTheServer() throws {
+        let json = """
+        {"Id": "item1", "Trickplay": {
+            "item1": {"320": {"Width": 320, "Height": 180, "TileWidth": 10, "TileHeight": 10, "Interval": 10000, "ThumbnailCount": 100}},
+            "other": {"160": {"Width": 160, "Height": 90, "TileWidth": 10, "TileHeight": 10, "Interval": 10000, "ThumbnailCount": 100}}
+        }}
+        """
+        let dto = try JSONDecoder().decode(BaseItemDto.self, from: Data(json.utf8))
+        #expect(TrickplaySheet.preferred(from: dto.trickplay, mediaSourceId: "item1")?.width == 320)
+        #expect(TrickplaySheet.preferred(from: dto.trickplay, mediaSourceId: "other")?.width == 160)
+    }
 }
