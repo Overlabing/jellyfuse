@@ -86,6 +86,19 @@ import Testing
         #expect(store.audio(scope: "m") == .language("fre", isExternal: false))
     }
 
+    @Test func removeAllForgetsOnlyThisOwnersChoices() {
+        let defaults = defaults()
+        let mine = TrackPreferenceStore(owner: "srv|u1", defaults: defaults)
+        let other = TrackPreferenceStore(owner: "srv|u2", defaults: defaults)
+        mine.rememberAudio(.language("jpn", isExternal: false), scope: "a")
+        mine.rememberSubtitle(.off, scope: "b")
+        other.rememberAudio(.language("fre", isExternal: false), scope: "a")
+        mine.removeAll()
+        #expect(mine.audio(scope: "a") == nil)
+        #expect(mine.subtitle(scope: "b") == nil)
+        #expect(other.audio(scope: "a") == .language("fre", isExternal: false))
+    }
+
     @Test func scopeIsTheSeriesForAnEpisode() {
         #expect(TrackPreferenceStore.scope(itemId: "ep1", seriesId: "s1") == "s1")
         #expect(TrackPreferenceStore.scope(itemId: "m1", seriesId: nil) == "m1")
