@@ -11,6 +11,7 @@ struct PlayerScreen: View {
     @State private var model: PlaybackModel
     @State private var transport: TransportController
     @State private var tab = PlayerTab.info
+    @State private var lastPressRawValue: Int?
     /// Debug overlay: launch with `-stats YES`.
     private let showsStats = UserDefaults.standard.bool(forKey: "stats")
     @State private var focusProbe = FocusProbe()
@@ -133,6 +134,8 @@ struct PlayerScreen: View {
             Text("hwdec-current: \(model.hwdecCurrent)")
             Text("focus: \(focusProbe.description)")
             Text("panel presented: \(transport.isPanelOpen)")
+            Text("osd visible: \(transport.visibility.isVisible)")
+            Text("last press: \(lastPressRawValue.map(String.init) ?? "-")")
             if let error = model.lastError { Text("error: \(error)") }
         }
         .font(.system(size: 28, weight: .medium, design: .monospaced))
@@ -141,6 +144,8 @@ struct PlayerScreen: View {
         .background(.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 12))
         .padding(60)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .onAppear { RemoteInputUIView.debugPressSink = { lastPressRawValue = $0 } }
+        .onDisappear { RemoteInputUIView.debugPressSink = nil }
     }
 }
 

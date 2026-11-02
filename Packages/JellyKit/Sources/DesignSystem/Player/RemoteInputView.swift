@@ -115,6 +115,9 @@ public final class RemoteInputUIView: UIView {
     /// Downward travel, in pad heights, that counts as a swipe down.
     private static let downSwipe: CGFloat = 0.2
 
+    /// Diagnostic tap (`-stats`): raw type of every press that reaches the bridge.
+    public static var debugPressSink: (@MainActor (Int) -> Void)?
+
     var handlers: RemoteHandlers?
     /// False while a SwiftUI surface (the content panel) must hold the focus.
     var takesFocus = true {
@@ -130,6 +133,14 @@ public final class RemoteInputUIView: UIView {
 
     public override init(frame: CGRect) {
         super.init(frame: frame)
+        // The system's presentation-dismissal recognizer sees Menu BEFORE responder presses: only a
+        // recognizer of our own wins that race on hardware. It must keep its default allowedTouchTypes
+        // (emptying them kills press delivery); cancelsTouchesInView = false alone protects pad navigation.
+        let menu = UITapGestureRecognizer(target: self, action: #selector(menuPressed))
+        menu.allowedPressTypes = [NSNumber(value: UIPress.PressType.menu.rawValue)]
+        menu.cancelsTouchesInView = false
+        addGestureRecognizer(menu)
+
         let pan = UIPanGestureRecognizer(target: self, action: #selector(panChanged(_:)))
         pan.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.indirect.rawValue)]
         // The pad touch must also reach touchesBegan, which reveals the display before any movement.
@@ -153,6 +164,8 @@ public final class RemoteInputUIView: UIView {
         super.touchesBegan(touches, with: event)
         if touches.contains(where: { $0.type == .indirect }) { handlers?.onTouch() }
     }
+
+    @objc private func menuPressed() { fireMenu() }
 
     private func fireMenu() {
         guard Date.now.timeIntervalSince(lastMenu) > Self.menuDebounce else { return }
@@ -200,6 +213,7 @@ public final class RemoteInputUIView: UIView {
     }
 
     public override func pressesEnded(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+        if let sink = Self.debugPressSink, let press = presses.first { sink(press.type.rawValue) }
         var unhandled = presses
         for press in presses {
             switch press.type {
