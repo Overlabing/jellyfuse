@@ -36,21 +36,37 @@ final class LoginModel {
     var quickConnectLink: URL? { serverURL?.appending(path: "web/#/quickconnect") }
 
     func connect() async {
-        guard let url = Self.normalize(serverText) else {
+        let candidates = Self.candidates(serverText)
+        guard !candidates.isEmpty else {
             errorMessage = String(localized: "Adresse invalide.")
             return
         }
         isBusy = true
         errorMessage = nil
-        let candidate = JellyfinClient(serverURL: url, deviceId: SessionStore.deviceId())
-        let reachable = await candidate.ping()
-        isBusy = false
-        guard reachable else {
+        defer { isBusy = false }
+        // Probe every candidate in parallel; among the ones that answer, HTTPS wins.
+        let deviceId = SessionStore.deviceId()
+        let reachable = await withTaskGroup(of: (Int, JellyfinClient)?.self) { group in
+            for (rank, url) in candidates.enumerated() {
+                group.addTask { @Sendable in
+                    let candidate = JellyfinClient(serverURL: url, deviceId: deviceId)
+                    return await candidate.ping() ? (rank, candidate) : nil
+                }
+            }
+            var best: (Int, JellyfinClient)?
+            for await hit in group {
+                guard let hit else { continue }
+                if best == nil || hit.0 < best!.0 { best = hit }
+                if hit.0 == 0 { group.cancelAll() }
+            }
+            return best?.1
+        }
+        guard let reachable else {
             errorMessage = String(localized: "Serveur injoignable.")
             return
         }
-        client = candidate
-        serverURL = url
+        client = reachable
+        serverURL = reachable.serverURL
         startQuickConnect()
     }
 
@@ -103,15 +119,18 @@ final class LoginModel {
         }
     }
 
-    /// `salon.local` and `192.168.1.5:8096` get `http://`; anything else must already carry a scheme.
-    static func normalize(_ text: String) -> URL? {
+    /// Without a scheme, candidates to probe in order: HTTPS first (public hostnames), then HTTP
+    /// (LAN servers, `.local`, raw IPs, explicit ports). With a scheme, that URL only.
+    static func candidates(_ text: String) -> [URL] {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return nil }
-        let withScheme = trimmed.contains("://") ? trimmed : "http://\(trimmed)"
-        guard let url = URL(string: withScheme), let scheme = url.scheme?.lowercased(),
-              scheme == "http" || scheme == "https", url.host() != nil
-        else { return nil }
-        return url
+        guard !trimmed.isEmpty else { return [] }
+        let raws = trimmed.contains("://") ? [trimmed] : ["https://\(trimmed)", "http://\(trimmed)"]
+        return raws.compactMap { raw in
+            guard let url = URL(string: raw), let scheme = url.scheme?.lowercased(),
+                  scheme == "http" || scheme == "https", url.host() != nil
+            else { return nil }
+            return url
+        }
     }
 
     private static func message(for error: any Error) -> String {

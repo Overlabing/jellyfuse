@@ -29,7 +29,7 @@ public actor JellyfinClient {
     public typealias QuickConnectEvent = QuickConnect.Event
 
     private let sdk: JellyfinAPI.JellyfinClient
-    private let serverURL: URL
+    public nonisolated let serverURL: URL
     private let deviceId: String
     private var userId: String?
     private let hasToken: Bool
