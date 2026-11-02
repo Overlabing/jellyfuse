@@ -60,7 +60,7 @@ struct HomeView: View {
             .padding(.bottom, metrics.safeVertical)
         }
         .focusScope(focusNamespace)
-        .ignoresSafeArea(edges: .top)
+        .ignoresSafeArea(edges: [.top, .horizontal])
         .scrollClipDisabled()
     }
 }
