@@ -35,7 +35,7 @@ private struct MainTabs: View {
                 .tabItem { Text("Séries") }
             PlaceholderScreen(title: String(localized: "Recherche"))
                 .tabItem { Text("Recherche") }
-            PlaceholderScreen(title: String(localized: "Réglages"))
+            SettingsScreen(session: model.session, playback: playback, onSignOut: { model.signOut() })
                 .tabItem { Text("Réglages") }
         }
         .confirmationDialog(
