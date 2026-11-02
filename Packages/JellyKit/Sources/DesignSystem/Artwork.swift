@@ -66,8 +66,8 @@ public struct Artwork: View {
         PlaceholderArtwork(title: source.placeholderTitle)
             .overlay {
                 if let url = source.url {
-                    AsyncImage(url: url) { phase in
-                        if let image = phase.image {
+                    RemoteImage(url: url) { phase in
+                        if case .success(let image) = phase {
                             image.resizable().scaledToFill().transition(.opacity)
                         }
                     }

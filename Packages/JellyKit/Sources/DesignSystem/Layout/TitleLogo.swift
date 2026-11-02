@@ -15,11 +15,11 @@ public struct TitleLogo: View {
     public var body: some View {
         Group {
             if let logo {
-                AsyncImage(url: logo) { phase in
+                RemoteImage(url: logo) { phase in
                     switch phase {
                     case .success(let image): image.resizable().scaledToFit()
                     case .failure: TitleText(title: title)
-                    default: Color.clear
+                    case .loading: Color.clear
                     }
                 }
                 .frame(maxWidth: metrics.detailLogo.width, maxHeight: metrics.detailLogo.height, alignment: .bottomLeading)
