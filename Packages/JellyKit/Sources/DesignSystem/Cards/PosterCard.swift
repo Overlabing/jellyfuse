@@ -3,6 +3,7 @@ import SwiftUI
 /// 2:3 poster card. Focus is the system borderless effect (lift, shadow, parallax) plus a slight brightness boost.
 public struct PosterCard: View {
     @Environment(\.designMetrics) private var metrics
+    @FocusState private var isFocused: Bool
     private let model: PosterModel
     private let onSelect: () -> Void
 
@@ -19,7 +20,11 @@ public struct PosterCard: View {
                 }
             }
             .cardButtonStyle()
-            CardCaption(title: model.title, subtitle: model.subtitle, width: metrics.poster.width)
+            .focused($isFocused)
+            CardCaption(
+                title: model.title, subtitle: model.subtitle, width: metrics.poster.width,
+                isFocused: isFocused, focusShift: metrics.poster.height * (Design.Focus.scale - 1) / 2
+            )
         }
         .accessibilityLabel(model.accessibilityDescription)
     }

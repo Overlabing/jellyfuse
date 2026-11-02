@@ -1,15 +1,21 @@
 import SwiftUI
 
 /// Title and subtitle under a card (outside the focusable artwork, like the Apple TV app).
+/// Focused, the caption slides down as if pushed by the growing artwork, and the title lights up
+/// from the subtitle's gray to white.
 struct CardCaption: View {
     let title: String
     let subtitle: String?
     let width: CGFloat
+    var isFocused = false
+    /// How far the growing artwork pushes the caption down: half the artwork's extra height.
+    var focusShift: CGFloat = 0
+
     var body: some View {
         VStack(alignment: .leading, spacing: Design.Spacing.xs) {
             Text(title)
                 .font(Design.Typography.body.weight(.semibold))
-                .foregroundStyle(Design.Palette.textPrimary)
+                .foregroundStyle(isFocused ? Design.Palette.textPrimary : Design.Palette.textSecondary)
                 .lineLimit(1)
             if let subtitle {
                 Text(subtitle)
@@ -19,6 +25,8 @@ struct CardCaption: View {
             }
         }
         .frame(width: width, alignment: .leading)
+        .offset(y: isFocused ? focusShift : 0)
+        .animation(.easeOut(duration: 0.15), value: isFocused)
     }
 }
 

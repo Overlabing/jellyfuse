@@ -3,6 +3,7 @@ import SwiftUI
 /// 16:9 card for continue watching, next up and episodes, with a progress bar.
 public struct LandscapeCard: View {
     @Environment(\.designMetrics) private var metrics
+    @FocusState private var isFocused: Bool
     private let model: LandscapeModel
     private let onSelect: () -> Void
     private let onToggleWatched: (() -> Void)?
@@ -22,6 +23,7 @@ public struct LandscapeCard: View {
                 }
             }
             .cardButtonStyle()
+            .focused($isFocused)
             .contextMenu {
                 if let onToggleWatched {
                     Button(
@@ -31,7 +33,10 @@ public struct LandscapeCard: View {
                     )
                 }
             }
-            CardCaption(title: model.title, subtitle: model.subtitle, width: metrics.landscape.width)
+            CardCaption(
+                title: model.title, subtitle: model.subtitle, width: metrics.landscape.width,
+                isFocused: isFocused, focusShift: metrics.landscape.height * (Design.Focus.scale - 1) / 2
+            )
         }
         .accessibilityLabel(model.accessibilityDescription)
     }

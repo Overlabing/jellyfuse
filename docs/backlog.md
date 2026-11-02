@@ -19,3 +19,11 @@ et une piste d'implémentation pour ne pas re-réfléchir de zéro.
   backdrop + logo + boutons qui changent au fil de la navigation, avec un léger debounce
   (~300 ms) pour ne pas recharger à chaque cran. Toucher HomeView/Billboard +
   @FocusState remonté des cartes.
+
+## Bibliothèques
+
+- **Bibliothèque « Collections » (boxsets)** (Antonin, 2026-11-02) : les /UserViews sont
+  fetchées dynamiquement mais filtrées par une allowlist movies/tvshows
+  (Library.videoLibraries) — les collections Jellyfin sont exclues de la v1. Lot à part :
+  étendre l'allowlist à boxsets + shelf dédiée + fiche collection (une collection s'ouvre
+  sur ses films, pattern proche de la fiche série sans saisons).
