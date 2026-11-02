@@ -7,6 +7,8 @@ import SwiftUI
 struct DetailScreen: View {
     let model: DetailModel
     let onPlay: (PlayTarget) -> Void
+    /// `(personId, name)`: a cast card was selected.
+    let onOpenPerson: (String, String) -> Void
 
     var body: some View {
         let content = model.content
@@ -24,7 +26,8 @@ struct DetailScreen: View {
             onPlayEpisode: { id in
                 if let target = content?.target(forEpisode: id) { onPlay(target) }
             },
-            onSetEpisodeWatched: { id, watched in Task { await model.setWatched(watched, for: id) } }
+            onSetEpisodeWatched: { id, watched in Task { await model.setWatched(watched, for: id) } },
+            onOpenPerson: { onOpenPerson($0.personId, $0.name) }
         )
         .task { await model.refresh() }
     }

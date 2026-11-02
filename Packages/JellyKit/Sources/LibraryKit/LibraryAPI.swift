@@ -8,6 +8,8 @@ public protocol LibraryAPI: Sendable {
     func latest(in libraryId: String, limit: Int) async throws -> [LibraryEntry]
     /// The top-level items of a library, newest added first.
     func recentlyAdded(in libraryId: String, limit: Int) async throws -> [LibraryEntry]
+    /// One page of a paginated item query (library grids, collections, a person's credits).
+    func items(_ query: ItemsQuery, startIndex: Int, limit: Int) async throws -> ItemsPage
     /// The detail screen's item (`/Users/{id}/Items/{itemId}`) with the user's own data.
     func detail(of itemId: String) async throws -> (detail: ItemDetail, userData: UserData)
     /// The seasons of a series, in the server's order.

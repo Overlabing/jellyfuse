@@ -14,6 +14,21 @@ extension View {
         #endif
     }
 
+    /// Button whose label is a circle (cast portraits): the system `.card` platter would show square
+    /// corners behind a round image, so tvOS uses `.borderless` (the label itself lifts) with a circular hover shape.
+    @ViewBuilder
+    func roundButtonStyle() -> some View {
+        #if os(tvOS)
+        if #available(tvOS 18, *) {
+            buttonStyle(.borderless).contentShape(.hoverEffect, Circle())
+        } else {
+            buttonStyle(.borderless)
+        }
+        #else
+        buttonStyle(.plain)
+        #endif
+    }
+
     /// Chip / pill button: system capsule style (focus inversion on tvOS).
     func capsuleButtonStyle() -> some View {
         buttonStyle(.bordered).buttonBorderShape(.capsule)

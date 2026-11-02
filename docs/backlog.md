@@ -22,11 +22,12 @@ et une piste d'implémentation pour ne pas re-réfléchir de zéro.
 
 ## Bibliothèques
 
-- **Bibliothèque « Collections » (boxsets)** (Antonin, 2026-11-02) : les /UserViews sont
-  fetchées dynamiquement mais filtrées par une allowlist movies/tvshows
-  (Library.videoLibraries) — les collections Jellyfin sont exclues de la v1. Lot à part :
-  étendre l'allowlist à boxsets + shelf dédiée + fiche collection (une collection s'ouvre
-  sur ses films, pattern proche de la fiche série sans saisons).
+- **Bibliothèque « Collections » (boxsets)** (Antonin, 2026-11-02) : FAIT au lot 3.5.
+  L'allowlist `Library.videoLibraries` inclut `boxsets` (jamais de shelf d'accueil :
+  `Library.showsOnHome`). Rangée « Collections » en tête de l'onglet Films (masquée quand un
+  filtre ou un saut de lettre est actif, limitée à une page de 120) ; une carte ouvre une
+  grille paginée de ses films/séries (tri année croissant), les items ouvrent leur fiche.
+  Reste : un « Voir tout » des collections au-delà de 120, une fiche collection avec synopsis.
 
 ## App / système
 

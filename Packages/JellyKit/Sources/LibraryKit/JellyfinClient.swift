@@ -137,6 +137,14 @@ public actor JellyfinClient {
         return (result.items ?? []).compactMap(LibraryEntry.init(dto:))
     }
 
+    public func items(_ query: ItemsQuery, startIndex: Int, limit: Int) async throws -> ItemsPage {
+        let userId = try requireUserId()
+        let request = Paths.getItems(parameters: query.parameters(userID: userId, startIndex: startIndex, limit: limit, imageTypes: Self.shelfImageTypes))
+        let result = try await call { try await self.sdk.send(request).value }
+        let entries = (result.items ?? []).compactMap(LibraryEntry.init(dto:))
+        return ItemsPage(entries: entries, total: result.totalRecordCount ?? (startIndex + entries.count))
+    }
+
     public func resume(limit: Int = 20) async throws -> [LibraryEntry] {
         let userId = try requireUserId()
         let request = Paths.getResumeItems(parameters: .init(userID: userId, limit: limit, mediaTypes: [.video], enableImageTypes: Self.shelfImageTypes))

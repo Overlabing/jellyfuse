@@ -104,7 +104,7 @@ import Testing
     }
 
     @Test func unsupportedKindsHaveNoKind() throws {
-        let entry = try #require(LibraryEntry(dto: BaseItemDto(id: "x", name: "x", type: .boxSet)))
+        let entry = try #require(LibraryEntry(dto: BaseItemDto(id: "x", name: "x", type: .audio)))
         #expect(entry.item.kind == nil)
     }
 

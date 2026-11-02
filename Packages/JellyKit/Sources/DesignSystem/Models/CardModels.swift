@@ -80,13 +80,16 @@ public struct LandscapeModel: Sendable, Equatable, Identifiable {
 /// Display value of a cast card (round portrait, name and role underneath).
 public struct PersonModel: Sendable, Equatable, Identifiable {
     public let id: String
+    /// The Jellyfin person id (`id` also carries the credit kind, so one person can appear twice).
+    public let personId: String
     public let name: String
     /// The character, or « Réalisation » for a director.
     public let role: String?
     public let image: ArtworkSource
 
-    public init(id: String, name: String, role: String? = nil, image: ArtworkSource) {
+    public init(id: String, personId: String? = nil, name: String, role: String? = nil, image: ArtworkSource) {
         self.id = id
+        self.personId = personId ?? id
         self.name = name
         self.role = role
         self.image = image

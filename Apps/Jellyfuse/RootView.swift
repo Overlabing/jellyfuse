@@ -29,9 +29,9 @@ private struct MainTabs: View {
         TabView {
             HomeScreen(model: home, isPlayerOpen: model.playing != nil, onPlay: { model.play($0) })
                 .tabItem { Text("Accueil") }
-            PlaceholderScreen(title: String(localized: "Films"))
+            LibraryScreen(home: home, kind: .movies, onPlay: { model.play($0) })
                 .tabItem { Text("Films") }
-            PlaceholderScreen(title: String(localized: "Séries"))
+            LibraryScreen(home: home, kind: .tvshows, onPlay: { model.play($0) })
                 .tabItem { Text("Séries") }
             SearchScreen(home: home, onPlay: { model.play($0) })
                 .tabItem { Text("Recherche") }

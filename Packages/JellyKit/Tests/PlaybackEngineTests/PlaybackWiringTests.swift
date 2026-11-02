@@ -18,6 +18,7 @@ private actor StubLibraryAPI: LibraryAPI {
     func libraries() async throws -> [Library] { [] }
     func latest(in libraryId: String, limit: Int) async throws -> [LibraryEntry] { [] }
     func recentlyAdded(in libraryId: String, limit: Int) async throws -> [LibraryEntry] { [] }
+    func items(_ query: ItemsQuery, startIndex: Int, limit: Int) async throws -> ItemsPage { ItemsPage(entries: [], total: 0) }
     func detail(of itemId: String) async throws -> (detail: ItemDetail, userData: UserData) {
         (ItemDetail(item: MediaItem(id: itemId, name: "Movie", runtimeTicks: Self.runtime)), .none)
     }
