@@ -35,3 +35,11 @@ Antonin : les détails de la fiche film RN ne doivent pas se perdre au reboot �
 de Jellyfin, le logo du film/de la série), fallback texte seulement si le serveur n'a
 pas de logo. À spécifier dans le lot fiche détail (3.2/3.3) ; la référence visuelle
 est l'écran détail de l'app RN (`~/projects/jellyfuse`, features/detail).
+
+## Métadonnées dans la langue du device — impossible côté Jellyfin (2026-11-02)
+
+Souhait d'Antonin : titres/synopsis dans la langue du device. Vérifié : l'API Jellyfin
+n'a pas de langue de métadonnées par requête ni par utilisateur — c'est un réglage par
+bibliothèque (preferredMetadataLanguage), demande communautaire ouverte depuis des années.
+Décision : l'UI de Jellyfuse suit la langue du device (déjà fait) ; pour les métadonnées,
+régler la langue des bibliothèques côté serveur. Pas de contournement applicatif.
