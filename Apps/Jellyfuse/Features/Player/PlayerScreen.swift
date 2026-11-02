@@ -57,6 +57,9 @@ struct PlayerScreen: View {
             PlayerStatusView(.failed(title: String(localized: "Lecture impossible"), message: String(localized: "Le lecteur n'est pas disponible.")))
         } else if model.phase == .loading || model.streamURL == nil {
             PlayerStatusView(.loading)
+        } else if model.isSeeking {
+            // An intentional jump: the press must be acknowledged at once, unlike a passive stall.
+            PlayerStatusView(.loading)
         } else if model.isBuffering {
             // Short stalls (a seek) stay invisible: the spinner only fades in after 1.5 s.
             PlayerStatusView(.loading)

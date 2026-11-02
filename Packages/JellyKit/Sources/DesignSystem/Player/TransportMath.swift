@@ -44,11 +44,15 @@ public struct SeekTracker: Sendable, Equatable {
 
     /// The position to show and report: the pending target, or the player's own position once it has settled.
     public func position(playerPosition: Double, at now: Date) -> Double {
-        guard let pending,
-              now.timeIntervalSince(pending.at) < Self.settleTimeout,
-              abs(playerPosition - pending.target) > Self.tolerance
-        else { return playerPosition }
+        guard let pending, isSettling(playerPosition: playerPosition, at: now) else { return playerPosition }
         return pending.target
+    }
+
+    /// True while a seek is in flight: the player has not landed near the target yet. The screen shows a
+    /// loading hint during it, so an intentional jump visibly acknowledges the press.
+    public func isSettling(playerPosition: Double, at now: Date) -> Bool {
+        guard let pending, now.timeIntervalSince(pending.at) < Self.settleTimeout else { return false }
+        return abs(playerPosition - pending.target) > Self.tolerance
     }
 
     public static func == (lhs: SeekTracker, rhs: SeekTracker) -> Bool {

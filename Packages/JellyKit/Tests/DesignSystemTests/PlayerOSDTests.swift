@@ -225,6 +225,16 @@ import Testing
         #expect(transport.visibility.deadline != nil)
     }
 
+    @Test func aPendingSeekIsSettlingUntilThePlayerLands() {
+        var tracker = SeekTracker()
+        let start = Date(timeIntervalSinceReferenceDate: 0)
+        #expect(!tracker.isSettling(playerPosition: 100, at: start))
+        tracker.seek(to: 300, at: start)
+        #expect(tracker.isSettling(playerPosition: 100, at: start))
+        #expect(!tracker.isSettling(playerPosition: 299, at: start.addingTimeInterval(0.5)))
+        #expect(!tracker.isSettling(playerPosition: 100, at: start.addingTimeInterval(SeekTracker.settleTimeout + 0.1)))
+    }
+
     @Test func playPauseCommitsAScrubInOnePress() {
         let player = Player()
         let transport = player.controller()

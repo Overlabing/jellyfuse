@@ -94,6 +94,9 @@ final class PlaybackModel {
     /// Where the viewer is: a seek still in flight counts, so the bar and the reports do not lag behind it.
     var position: Double { seeks.position(playerPosition: timePosition, at: .now) }
 
+    /// A requested jump is still in flight: the screen acknowledges it with an immediate loading hint.
+    var isSeeking: Bool { seeks.isSettling(playerPosition: timePosition, at: .now) }
+
     func setPaused(_ paused: Bool) {
         if paused { player?.pause() } else { player?.play() }
     }
