@@ -20,7 +20,7 @@ targets:
         products: [PlayerCore, LibraryKit]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: dev.antonin.jellyfuse
+        PRODUCT_BUNDLE_IDENTIFIER: com.jellyfusion.app
         INFOPLIST_KEY_CFBundleDisplayName: Jellyfuse
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
