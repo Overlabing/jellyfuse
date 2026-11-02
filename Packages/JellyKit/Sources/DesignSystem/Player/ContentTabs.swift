@@ -125,12 +125,12 @@ public struct ContentTabs: View {
     /// `TrackRow.offID` turns the subtitles off.
     private let onSelectSubtitle: (Int) -> Void
     private let onSelectChapter: (Double) -> Void
-    private let onClose: () -> Void
+    private let onClose: @MainActor () -> Void
 
     public init(
         model: ContentTabsModel, selection: PlayerTab, onSelectTab: @escaping (PlayerTab) -> Void,
         onSelectAudio: @escaping (Int) -> Void, onSelectSubtitle: @escaping (Int) -> Void,
-        onSelectChapter: @escaping (Double) -> Void, onClose: @escaping () -> Void
+        onSelectChapter: @escaping (Double) -> Void, onClose: @escaping @MainActor () -> Void
     ) {
         self.model = model
         self.selection = selection
@@ -141,12 +141,26 @@ public struct ContentTabs: View {
         self.onClose = onClose
     }
 
+    @FocusState private var focusedTab: PlayerTab?
+
     public var body: some View {
         #if os(tvOS)
-        MenuInterceptor(onMenu: onClose, content: panel)
+        MenuInterceptor(onMenu: onClose, content: pinned)
+            .ignoresSafeArea()
         #else
-        panel
+        pinned
         #endif
+    }
+
+    /// Glued to the top edge, centered horizontally; the rest of the screen stays empty (video behind).
+    private var pinned: some View {
+        panel
+            .padding(.top, 60)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            #if os(tvOS)
+            // Third way Menu reaches the panel, from any focused row or tab: SwiftUI's own exit command.
+            .onExitCommand { onClose() }
+            #endif
     }
 
     private var panel: some View {
@@ -160,6 +174,7 @@ public struct ContentTabs: View {
                         .fixedSize()
                         .fontWeight(tab == selection ? .bold : .regular)
                         .opacity(tab == selection ? 1 : 0.7)
+                        .focused($focusedTab, equals: tab)
                 }
                 Spacer(minLength: 0)
             }
@@ -168,7 +183,8 @@ public struct ContentTabs: View {
         .padding(Design.Spacing.l)
         .frame(width: 1400, alignment: .topLeading)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 28))
-        .focusBlock()
+        .focusSection()
+        .defaultFocus($focusedTab, selection)
     }
 
     @ViewBuilder private var content: some View {
