@@ -6,13 +6,19 @@ public struct OSDState: Sendable, Equatable {
     public var isVisible: Bool
     public var isPaused: Bool
     public var isScrubbing: Bool
+    /// The content panel covers the top: the swipe-down hint makes no sense then.
+    public var isPanelOpen: Bool
     /// The last ±10 s skip, until it is cleared.
     public var skip: SkipFeedback?
 
-    public init(isVisible: Bool = false, isPaused: Bool = false, isScrubbing: Bool = false, skip: SkipFeedback? = nil) {
+    public init(
+        isVisible: Bool = false, isPaused: Bool = false, isScrubbing: Bool = false,
+        isPanelOpen: Bool = false, skip: SkipFeedback? = nil
+    ) {
         self.isVisible = isVisible
         self.isPaused = isPaused
         self.isScrubbing = isScrubbing
+        self.isPanelOpen = isPanelOpen
         self.skip = skip
     }
 }
@@ -79,7 +85,7 @@ public final class TransportController {
     public var displayedPosition: Double { scrub?.target ?? driver.position() }
 
     public var state: OSDState {
-        OSDState(isVisible: visibility.isVisible, isPaused: driver.isPaused(), isScrubbing: isScrubbing, skip: skipFeedback)
+        OSDState(isVisible: visibility.isVisible, isPaused: driver.isPaused(), isScrubbing: isScrubbing, isPanelOpen: isPanelOpen, skip: skipFeedback)
     }
 
     // MARK: Display

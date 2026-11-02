@@ -14,6 +14,16 @@ public struct PlayerOSD: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: Design.Spacing.s) {
+            if !state.isPanelOpen {
+                Text("Balayez vers le bas pour plus d'informations")
+                    .font(Design.Typography.caption)
+                    .foregroundStyle(.white.opacity(0.75))
+                    .padding(.horizontal, Design.Spacing.m)
+                    .padding(.vertical, Design.Spacing.s)
+                    .background(.black.opacity(0.35), in: Capsule())
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 60)
+            }
             Spacer()
             Text(model.title)
                 .font(Design.Typography.callout.weight(.bold))
