@@ -41,7 +41,7 @@ struct PlayerScreen: View {
         // The panel is a presentation: the platform gives its content the focus and Menu dismisses it (not the
         // player under it). The bridge steps aside while it is up and takes the focus back when it goes.
         .fullScreenCover(isPresented: Binding(get: { transport.isPanelOpen }, set: { if !$0 { transport.closePanel() } })) {
-            PanelCover { panel }
+            PanelCover(onDismiss: { transport.closePanel() }) { close in panel(close: close) }
         }
         .overlay { RemoteInputView(handlers: remoteHandlers, isActive: !transport.isPanelOpen).ignoresSafeArea() }
         .task(id: transport.visibility.deadline) { await hideWhenIdle() }
@@ -67,15 +67,16 @@ struct PlayerScreen: View {
         return ChapterRow.rows(names: chapters.map(\.name), starts: chapters.map(\.startSeconds), position: 0)[index].title
     }
 
-    private var panel: some View {
+    private func panel(close: @escaping @MainActor () -> Void) -> some View {
         ContentTabs(
             model: model.contentTabs(), selection: tab, onSelectTab: { tab = $0 },
             onSelectAudio: { model.selectAudio($0) },
             onSelectSubtitle: { model.selectSubtitle($0 == TrackRow.offID ? nil : $0) },
             onSelectChapter: { seconds in
                 model.seek(to: seconds)
-                transport.closePanel()
-            }
+                close()
+            },
+            onClose: close
         )
     }
 
@@ -143,17 +144,30 @@ struct PlayerScreen: View {
     }
 }
 
-/// The panel's presentation: clear, so the video stays visible behind, and the panel drops in from the top.
+/// The panel's presentation: clear, so the video stays visible behind. It drops in from the top and, on close,
+/// climbs back out the same way before the presentation is dismissed (invisibly: the content is already gone).
 private struct PanelCover<Content: View>: View {
-    @ViewBuilder let content: Content
+    let onDismiss: @MainActor () -> Void
+    @ViewBuilder let content: (@escaping @MainActor () -> Void) -> Content
     @State private var slid = false
+    @State private var closing = false
 
     var body: some View {
-        content
+        content(close)
             .offset(y: slid ? 0 : -700)
             .opacity(slid ? 1 : 0)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .presentationBackground(.clear)
             .onAppear { withAnimation(.easeOut(duration: 0.3)) { slid = true } }
+    }
+
+    private func close() {
+        guard !closing else { return }
+        closing = true
+        withAnimation(.easeIn(duration: 0.3)) {
+            slid = false
+        } completion: {
+            onDismiss()
+        }
     }
 }

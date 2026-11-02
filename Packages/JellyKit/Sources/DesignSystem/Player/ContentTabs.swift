@@ -125,11 +125,13 @@ public struct ContentTabs: View {
     /// `TrackRow.offID` turns the subtitles off.
     private let onSelectSubtitle: (Int) -> Void
     private let onSelectChapter: (Double) -> Void
+    /// Menu or up from the tab row: the screen animates the panel away, then dismisses it.
+    private let onClose: @MainActor () -> Void
 
     public init(
         model: ContentTabsModel, selection: PlayerTab, onSelectTab: @escaping (PlayerTab) -> Void,
         onSelectAudio: @escaping (Int) -> Void, onSelectSubtitle: @escaping (Int) -> Void,
-        onSelectChapter: @escaping (Double) -> Void
+        onSelectChapter: @escaping (Double) -> Void, onClose: @escaping @MainActor () -> Void
     ) {
         self.model = model
         self.selection = selection
@@ -137,6 +139,7 @@ public struct ContentTabs: View {
         self.onSelectAudio = onSelectAudio
         self.onSelectSubtitle = onSelectSubtitle
         self.onSelectChapter = onSelectChapter
+        self.onClose = onClose
     }
 
     @FocusState private var focusedTab: PlayerTab?
@@ -167,7 +170,18 @@ public struct ContentTabs: View {
                 }
                 Spacer(minLength: 0)
             }
+            #if os(tvOS)
+            // Nothing is above the tab row: Menu and up close the panel (the list below climbs back here first).
+            .onExitCommand { onClose() }
+            .onMoveCommand { if $0 == .up { onClose() } }
+            #endif
             content
+                #if os(tvOS)
+                // Menu from inside the list climbs back to the tab (like the system tab bar) instead of closing
+                // the panel: the event is consumed here, so the presentation never sees it. From the tabs, which
+                // are outside this view, Menu is not consumed and dismisses the panel.
+                .onExitCommand { focusedTab = selection }
+                #endif
         }
         .padding(Design.Spacing.l)
         .frame(width: 1400, alignment: .topLeading)
