@@ -14,6 +14,8 @@ final class HomeModel {
     private(set) var hasLoaded = false
     private(set) var failure: UserFacingError?
     private var isUpdatingList = false
+    /// The Recherche tab's state; its results feed `store` so their detail screens open instantly.
+    let search: SearchModel
 
     init(session: Session, client: JellyfinClient) {
         self.client = client
@@ -22,7 +24,9 @@ final class HomeModel {
         self.reachability = reachability
         let storage = (try? FileSnapshotStorage.inCaches())
             ?? FileSnapshotStorage(root: FileManager.default.temporaryDirectory.appending(path: "jellyfuse"))
-        store = LibraryStore(owner: session.libraryOwner, api: client, storage: storage, reachability: reachability)
+        let store = LibraryStore(owner: session.libraryOwner, api: client, storage: storage, reachability: reachability)
+        self.store = store
+        search = SearchModel(api: client, ingest: { store.ingest($0) }, imageURL: Self.makeImageURL(client))
     }
 
     /// Display content, recomputed from the store (observed): a patch anywhere repaints the shelves.

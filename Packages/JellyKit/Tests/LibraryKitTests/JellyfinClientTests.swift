@@ -48,3 +48,26 @@ import Testing
         #expect(data.progress(runtimeTicks: nil) == nil)
     }
 }
+
+@Suite struct SearchParametersTests {
+    @Test func searchRequestIsRecursiveOneKindWithTermAndImages() throws {
+        let query = try #require(SearchQuery(" la  nuit "))
+        let parameters = JellyfinClient.searchParameters(userId: "u1", query: query, kind: .series, limit: 12)
+        #expect(parameters.searchTerm == "la nuit")
+        #expect(parameters.isRecursive == true)
+        #expect(parameters.limit == 12)
+        #expect(parameters.userID == "u1")
+        #expect(parameters.includeItemTypes == [.series])
+        #expect(parameters.enableImageTypes == [.primary, .logo])
+    }
+
+    @Test func everyKindMapsToItsOwnItemType() {
+        #expect(SearchKind.allCases.map(\.sdkType) == [.movie, .series, .episode])
+    }
+
+    @Test func searchRequiresSignIn() async throws {
+        let client = JellyfinClient(serverURL: URL(string: "https://jf.example.com")!, deviceId: "dev")
+        let query = try #require(SearchQuery("nuit"))
+        await #expect(throws: JellyfinError.self) { try await client.search(query, kind: .movie, limit: 12) }
+    }
+}

@@ -326,6 +326,15 @@ public final class LibraryStore {
         schedulePersist(for: key.kind)
     }
 
+    /// Makes items the server returned outside a shelf (search results) known to the store, so their
+    /// detail screen opens from memory. Shelves and their freshness are untouched.
+    public func ingest(_ entries: [LibraryEntry]) {
+        for entry in entries {
+            items[entry.item.id] = entry.item
+            userData[entry.item.id] = entry.userData
+        }
+    }
+
     // MARK: Invalidation and mutation
 
     /// Marks the shelves of these kinds stale; the next `ensureFresh` refetches them.
