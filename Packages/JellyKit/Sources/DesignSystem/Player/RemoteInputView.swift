@@ -39,20 +39,36 @@ public struct RemoteHandlers {
 /// focusable thing of the player; it reads:
 /// - presses (`UIPress`): arrows = pad edge clicks, select, play/pause, hold-to-repeat on the arrows;
 /// - a pan recognizer restricted to indirect touches (the pad): the swipe;
-/// - a Menu press recognizer, which keeps the system from dismissing the player behind our back.
-public struct RemoteInputView: UIViewRepresentable {
+/// - Menu, handled here and not passed up the responder chain, so the system does not also dismiss the player.
+public struct RemoteInputView: UIViewControllerRepresentable {
     private let handlers: RemoteHandlers
 
     public init(handlers: RemoteHandlers) { self.handlers = handlers }
 
-    public func makeUIView(context: Context) -> RemoteInputUIView {
-        let view = RemoteInputUIView()
-        view.handlers = handlers
-        return view
+    public func makeUIViewController(context: Context) -> RemoteInputViewController {
+        let controller = RemoteInputViewController()
+        controller.remoteView.handlers = handlers
+        return controller
     }
 
-    public func updateUIView(_ uiView: RemoteInputUIView, context: Context) {
-        uiView.handlers = handlers
+    public func updateUIViewController(_ uiViewController: RemoteInputViewController, context: Context) {
+        uiViewController.remoteView.handlers = handlers
+    }
+}
+
+/// A bare `UIView` in a SwiftUI `.background` is never offered to the focus engine. A view controller that
+/// names the input view as its preferred focus environment is, and it asks for the focus once on screen.
+public final class RemoteInputViewController: UIViewController {
+    let remoteView = RemoteInputUIView()
+
+    public override func loadView() { view = remoteView }
+
+    public override var preferredFocusEnvironments: [any UIFocusEnvironment] { [remoteView] }
+
+    public override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        setNeedsFocusUpdate()
+        updateFocusIfNeeded()
     }
 }
 
@@ -61,7 +77,14 @@ public final class RemoteInputUIView: UIView {
     private static let repeatDelay: Duration = .milliseconds(500)
     private static let repeatInterval: Duration = .milliseconds(300)
 
+    /// The tvOS simulator's Menu / Back key arrives as this private press type instead of `.menu`, and the
+    /// system would then dismiss the player: it is handled like Menu.
+    private static let simulatorMenu = UIPress.PressType(rawValue: 2041)!
+    /// A press delivered both ways must not count twice.
+    private static let menuDebounce: TimeInterval = 0.3
+
     var handlers: RemoteHandlers?
+    private var lastMenu = Date.distantPast
     private var repeatTask: Task<Void, Never>?
 
     public override init(frame: CGRect) {
@@ -84,12 +107,7 @@ public final class RemoteInputUIView: UIView {
 
     public override func didMoveToWindow() {
         super.didMoveToWindow()
-        if window == nil {
-            stopRepeating()
-        } else {
-            setNeedsFocusUpdate()
-            updateFocusIfNeeded()
-        }
+        if window == nil { stopRepeating() }
     }
 
     // MARK: Pad touch
@@ -98,6 +116,14 @@ public final class RemoteInputUIView: UIView {
         super.touchesBegan(touches, with: event)
         if touches.contains(where: { $0.type == .indirect }) { handlers?.onTouch() }
     }
+
+    private func fireMenu() {
+        guard Date.now.timeIntervalSince(lastMenu) > Self.menuDebounce else { return }
+        lastMenu = .now
+        handlers?.onMenu()
+    }
+
+    @objc private func menuPressed() { fireMenu() }
 
     @objc private func panChanged(_ recognizer: UIPanGestureRecognizer) {
         switch recognizer.state {
@@ -112,8 +138,6 @@ public final class RemoteInputUIView: UIView {
         }
     }
 
-    @objc private func menuPressed() { handlers?.onMenu() }
-
     // MARK: Presses
 
     public override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
@@ -123,6 +147,7 @@ public final class RemoteInputUIView: UIView {
             case .leftArrow: startRepeating(.backward)
             case .rightArrow: startRepeating(.forward)
             case .select, .playPause: break
+            case Self.simulatorMenu: break
             default: continue
             }
             unhandled.remove(press)
@@ -137,6 +162,7 @@ public final class RemoteInputUIView: UIView {
             case .leftArrow, .rightArrow: stopRepeating()
             case .select: handlers?.onSelect()
             case .playPause: handlers?.onPlayPause()
+            case Self.simulatorMenu: fireMenu()
             default: continue
             }
             unhandled.remove(press)
