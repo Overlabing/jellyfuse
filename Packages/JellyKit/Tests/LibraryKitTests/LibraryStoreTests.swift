@@ -57,10 +57,10 @@ import Testing
         let api = FakeAPI()
         let store = makeStore(api)
         try await store.ensureFresh(.continueWatching)
-        try await store.ensureFresh(.recentlyAdded)
+        try await store.ensureFresh(.latestIn(libraryId: "films"))
         store.markStale([.continueWatching])
         #expect(store.isStale(.continueWatching))
-        #expect(!store.isStale(.recentlyAdded))
+        #expect(!store.isStale(.latestIn(libraryId: "films")))
     }
 
     // MARK: Loading plumbing
@@ -131,7 +131,7 @@ import Testing
         await api.setResume([entry("a", position: 500)])
         let store = makeStore(api)
         try await store.ensureFresh(.continueWatching)
-        try await store.ensureFresh(.recentlyAdded)
+        try await store.ensureFresh(.latestIn(libraryId: "films"))
 
         var duringCall: UserData?
         try await store.mutateUserData(["a"], invalidating: [.continueWatching]) {
@@ -144,7 +144,7 @@ import Testing
         #expect(duringCall?.played == true)
         #expect(store.userData["a"]?.played == true)
         #expect(store.isStale(.continueWatching))
-        #expect(!store.isStale(.recentlyAdded))
+        #expect(!store.isStale(.latestIn(libraryId: "films")))
     }
 
     @Test func failedMutationRestoresTheSnapshotWithoutInvalidating() async throws {
@@ -220,5 +220,97 @@ import Testing
         #expect(!store.isStale(.continueWatching))
         store.patchUserData("unknown") { var data = $0; data.played = true; return data }
         #expect(store.userData["unknown"] == nil)
+    }
+}
+
+@MainActor
+@Suite struct LibraryShelvesTests {
+    private func makeStore(_ api: FakeAPI, clock: Clock = Clock()) -> LibraryStore {
+        LibraryStore(
+            owner: "srv|u1", api: api, storage: temporaryStorage().0,
+            now: { clock.now }, persistDelay: .milliseconds(10), retryDelays: []
+        )
+    }
+
+    @Test func eachLibraryHasItsOwnShelfLoadedWithItsId() async throws {
+        let api = FakeAPI()
+        await api.setLatest([entry("f1")], in: "films")
+        await api.setLatest([entry("s1"), entry("s2")], in: "series")
+        let store = makeStore(api)
+        try await store.ensureFresh(.latestIn(libraryId: "films"))
+        try await store.ensureFresh(.latestIn(libraryId: "series"))
+        #expect(store.shelf(.latestIn(libraryId: "films")) == ["f1"])
+        #expect(store.shelf(.latestIn(libraryId: "series")) == ["s1", "s2"])
+        #expect(store.isStale(.latestIn(libraryId: "other")))
+        #expect(await api.callCount("latest:films") == 1)
+        #expect(await api.callCount("latest:series") == 1)
+    }
+
+    @Test func libraryShelvesShareTheRecentlyAddedStalenessAndMarkStaleHitsAllOfThem() async throws {
+        let clock = Clock()
+        let api = FakeAPI()
+        let store = makeStore(api, clock: clock)
+        try await store.ensureFresh(.latestIn(libraryId: "films"))
+        try await store.ensureFresh(.latestIn(libraryId: "series"))
+        clock.advance(299)
+        #expect(!store.isStale(.latestIn(libraryId: "films")))
+        clock.advance(2)
+        #expect(store.isStale(.latestIn(libraryId: "films")))
+
+        try await store.ensureFresh(.latestIn(libraryId: "films"))
+        store.markStale([.recentlyAdded])
+        #expect(store.isStale(.latestIn(libraryId: "films")))
+        #expect(store.isStale(.latestIn(libraryId: "series")))
+    }
+
+    @Test func gridLoadsAFullPageAndHasItsOwnKey() async throws {
+        let api = FakeAPI()
+        await api.setGrid([entry("a"), entry("b"), entry("c")], in: "films")
+        let store = makeStore(api)
+        try await store.ensureFresh(.recentGrid(libraryId: "films"))
+        #expect(store.shelf(.recentGrid(libraryId: "films")) == ["a", "b", "c"])
+        #expect(store.shelf(.latestIn(libraryId: "films")).isEmpty)
+        #expect(await api.callCount("grid:films") == 1)
+    }
+
+    @Test func libraryListUsesTheViewsStalenessAndIsSharedWhileInFlight() async throws {
+        let clock = Clock()
+        let api = FakeAPI()
+        let films = Library(id: "films", name: "Films", kind: .movies)
+        await api.setLibraries([films])
+        let store = makeStore(api, clock: clock)
+        #expect(store.isLibrariesStale())
+        try await store.ensureLibrariesFresh()
+        #expect(store.libraries == [films])
+        try await store.ensureLibrariesFresh()
+        #expect(await api.callCount("libraries") == 1)
+        clock.advance(3601)
+        #expect(store.isLibrariesStale())
+        store.markStale([.views])
+        try await store.ensureLibrariesFresh()
+        #expect(await api.callCount("libraries") == 2)
+        #expect(ResourceKind.views.staleTime == .seconds(3600))
+    }
+
+    @Test func markStaleOfViewsInvalidatesTheLibraryList() async throws {
+        let api = FakeAPI()
+        let store = makeStore(api)
+        try await store.ensureLibrariesFresh()
+        #expect(!store.isLibrariesStale())
+        store.markStale([.continueWatching])
+        #expect(!store.isLibrariesStale())
+        store.markStale([.views])
+        #expect(store.isLibrariesStale())
+    }
+
+    @Test func libraryListFailureLeavesTheCachedListInPlace() async throws {
+        let api = FakeAPI()
+        let films = Library(id: "films", name: "Films", kind: .movies)
+        await api.setLibraries([films])
+        let store = makeStore(api)
+        try await store.ensureLibrariesFresh()
+        await api.queueErrors([JellyfinError.http(500)])
+        await #expect(throws: JellyfinError.self) { try await store.ensureLibrariesFresh(force: true) }
+        #expect(store.libraries == [films])
     }
 }

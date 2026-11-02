@@ -29,7 +29,18 @@ final class HomeModel {
         return HomeMapper.content(
             continueWatching: store.entries(.continueWatching),
             nextUp: store.entries(.nextUp),
-            recentlyAdded: store.entries(.recentlyAdded),
+            libraries: store.libraries.map {
+                LibraryShelfSource(library: $0, entries: store.entries(.latestIn(libraryId: $0.id)))
+            },
+            imageURL: Self.makeImageURL(client)
+        )
+    }
+
+    /// The « Voir tout » grid of a library, from the store.
+    func grid(for library: Library) -> LibraryGridContent {
+        HomeMapper.grid(
+            library: library,
+            entries: store.entries(.recentGrid(libraryId: library.id)),
             imageURL: Self.makeImageURL(client)
         )
     }
@@ -41,14 +52,40 @@ final class HomeModel {
         client.streamURL(itemId: target.id, mediaSourceId: target.id)
     }
 
-    /// Revalidates every shelf that is stale; fresh ones are left alone.
+    /// Revalidates every shelf that is stale; fresh ones are left alone. The library list comes first:
+    /// it decides which per-library shelves exist.
     func refresh() async {
         async let resume = load(.continueWatching)
         async let next = load(.nextUp)
-        async let recent = load(.recentlyAdded)
-        let errors = await [resume, next, recent].compactMap { $0 }
+        async let libraries = loadLibraries()
+        var errors = await [resume, next, libraries].compactMap { $0 }
+        errors += await loadLibraryShelves()
         hasLoaded = true
         failure = errors.first.map(UserFacingError.init)
+    }
+
+    /// Revalidates the « Voir tout » grid of one library.
+    func refreshGrid(for library: Library) async -> UserFacingError? {
+        await load(.recentGrid(libraryId: library.id)).map(UserFacingError.init)
+    }
+
+    private func loadLibraryShelves() async -> [any Error] {
+        let keys = store.libraries.map { ShelfKey.latestIn(libraryId: $0.id) }
+        return await withTaskGroup(of: (any Error)?.self) { group in
+            for key in keys { group.addTask { await self.load(key) } }
+            var errors: [any Error] = []
+            for await error in group { if let error { errors.append(error) } }
+            return errors
+        }
+    }
+
+    private func loadLibraries() async -> (any Error)? {
+        do {
+            try await store.ensureLibrariesFresh()
+            return nil
+        } catch {
+            return error
+        }
     }
 
     private func load(_ key: ShelfKey) async -> (any Error)? {

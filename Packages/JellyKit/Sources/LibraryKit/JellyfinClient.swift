@@ -93,11 +93,29 @@ public actor JellyfinClient {
 
     // MARK: Library
 
-    public func latestMedia(limit: Int = 20) async throws -> [LibraryEntry] {
+    /// The user's views reduced to the video libraries (`/UserViews`), in the server's order.
+    public func libraries() async throws -> [Library] {
         let userId = try requireUserId()
-        let request = Paths.getLatestMedia(parameters: .init(userID: userId, limit: limit))
+        let request = Paths.getUserViews(parameters: .init(userID: userId))
+        let result = try await call { try await self.sdk.send(request).value }
+        return Library.videoLibraries(from: result.items ?? [])
+    }
+
+    public func latest(in libraryId: String, limit: Int = 20) async throws -> [LibraryEntry] {
+        let userId = try requireUserId()
+        let request = Paths.getLatestMedia(parameters: .init(userID: userId, parentID: libraryId, limit: limit))
         let result = try await call { try await self.sdk.send(request).value }
         return result.compactMap(LibraryEntry.init(dto:))
+    }
+
+    public func recentlyAdded(in libraryId: String, limit: Int = 100) async throws -> [LibraryEntry] {
+        let userId = try requireUserId()
+        let request = Paths.getItems(parameters: .init(
+            userID: userId, limit: limit, isRecursive: true, sortOrder: [.descending],
+            parentID: libraryId, includeItemTypes: [.movie, .series], sortBy: [.dateCreated]
+        ))
+        let result = try await call { try await self.sdk.send(request).value }
+        return (result.items ?? []).compactMap(LibraryEntry.init(dto:))
     }
 
     public func resume(limit: Int = 20) async throws -> [LibraryEntry] {

@@ -33,6 +33,13 @@ import Testing
         }
     }
 
+    @Test func shelfKeysMapToTheirResourceKind() {
+        #expect(ShelfKey.latestIn(libraryId: "a").kind == .recentlyAdded)
+        #expect(ShelfKey.recentGrid(libraryId: "a").kind == .shelfPage)
+        #expect(ShelfKey.continueWatching.kind == .continueWatching)
+        #expect(ShelfKey.nextUp.kind == .nextUp)
+    }
+
     @Test func onlyHomeShelvesAndViewsArePersisted() {
         let persisted = Set(ResourceKind.allCases.filter(\.isPersisted))
         #expect(persisted == [.continueWatching, .nextUp, .recentlyAdded, .latestMovies, .latestTV, .views])

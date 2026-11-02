@@ -23,13 +23,18 @@ actor FakeAPI: LibraryAPI {
     private(set) var calls: [String] = []
     var resumeResult: [LibraryEntry] = []
     var nextUpResult: [LibraryEntry] = []
-    var latestResult: [LibraryEntry] = []
+    var latestResults: [String: [LibraryEntry]] = [:]
+    var gridResults: [String: [LibraryEntry]] = [:]
+    var librariesResult: [Library] = []
     var errors: [any Error] = []
     private var gate: CheckedContinuation<Void, Never>?
     private var gated = false
     private var arrived: CheckedContinuation<Void, Never>?
 
     func setResume(_ value: [LibraryEntry]) { resumeResult = value }
+    func setLatest(_ value: [LibraryEntry], in id: String) { latestResults[id] = value }
+    func setGrid(_ value: [LibraryEntry], in id: String) { gridResults[id] = value }
+    func setLibraries(_ value: [Library]) { librariesResult = value }
     func queueErrors(_ list: [any Error]) { errors = list }
     func holdAnswers() { gated = true }
     func releaseAnswers() { gated = false; gate?.resume(); gate = nil }
@@ -42,6 +47,11 @@ actor FakeAPI: LibraryAPI {
     }
 
     private func answer(_ name: String, _ value: [LibraryEntry]) async throws -> [LibraryEntry] {
+        try await gate(name)
+        return value
+    }
+
+    private func gate(_ name: String) async throws {
         calls.append(name)
         if !errors.isEmpty { throw errors.removeFirst() }
         if gated {
@@ -51,12 +61,20 @@ actor FakeAPI: LibraryAPI {
                 arrived = nil
             }
         }
-        return value
     }
 
     func resume(limit: Int) async throws -> [LibraryEntry] { try await answer("resume", resumeResult) }
     func nextUp(limit: Int) async throws -> [LibraryEntry] { try await answer("nextUp", nextUpResult) }
-    func latestMedia(limit: Int) async throws -> [LibraryEntry] { try await answer("latest", latestResult) }
+    func libraries() async throws -> [Library] {
+        try await gate("libraries")
+        return librariesResult
+    }
+    func latest(in libraryId: String, limit: Int) async throws -> [LibraryEntry] {
+        try await answer("latest:\(libraryId)", latestResults[libraryId] ?? [])
+    }
+    func recentlyAdded(in libraryId: String, limit: Int) async throws -> [LibraryEntry] {
+        try await answer("grid:\(libraryId)", gridResults[libraryId] ?? [])
+    }
 }
 
 func temporaryStorage(maxOwners: Int = FileSnapshotStorage.maxOwners) -> (FileSnapshotStorage, URL) {

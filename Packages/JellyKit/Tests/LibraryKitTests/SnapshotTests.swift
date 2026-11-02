@@ -76,11 +76,50 @@ import Testing
         defer { try? FileManager.default.removeItem(at: root) }
         let old = LibrarySnapshot(
             schemaVersion: LibrarySnapshot.currentVersion + 1, savedAt: Clock().now, owner: "srv|u1",
-            shelves: [.init(key: .continueWatching, ids: ["a"])], items: ["a": entry("a").item], userData: [:]
+            libraries: [], shelves: [.init(key: .continueWatching, ids: ["a"])], items: ["a": entry("a").item], userData: [:]
         )
         try SnapshotStore(storage: storage).save(old)
         let fresh = store(FakeAPI(), owner: "srv|u1", storage: storage)
         #expect(fresh.shelf(.continueWatching).isEmpty)
+        #expect(try storage.read(owner: "srv|u1") == nil)
+    }
+
+    @Test func perLibraryShelvesAndLibraryListRoundTripAndComeBackStale() async throws {
+        let (storage, root) = temporaryStorage()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let films = Library(id: "films", name: "Films", kind: .movies)
+        let api = FakeAPI()
+        await api.setLibraries([films])
+        await api.setLatest([entry("f1"), entry("f2")], in: "films")
+        await api.setGrid([entry("g1")], in: "films")
+        let s = store(api, owner: "srv|u1", storage: storage)
+        try await s.ensureLibrariesFresh()
+        try await s.ensureFresh(.latestIn(libraryId: "films"))
+        try await s.ensureFresh(.recentGrid(libraryId: "films"))
+        s.persistNow()
+
+        let again = store(FakeAPI(), owner: "srv|u1", storage: storage)
+        #expect(again.libraries == [films])
+        #expect(again.isLibrariesStale())
+        #expect(again.shelf(.latestIn(libraryId: "films")) == ["f1", "f2"])
+        #expect(again.isStale(.latestIn(libraryId: "films")))
+        // The grid is memory only.
+        #expect(again.shelf(.recentGrid(libraryId: "films")).isEmpty)
+        #expect(again.items["g1"] == nil)
+    }
+
+    @Test func snapshotFromBeforePerLibraryShelvesIsIgnoredAndDeleted() throws {
+        let (storage, root) = temporaryStorage()
+        defer { try? FileManager.default.removeItem(at: root) }
+        // Shape written by v1: string shelf keys, no library list.
+        let legacy = """
+        {"schemaVersion":1,"savedAt":"2027-01-15T08:00:00Z","owner":"srv|u1",
+         "shelves":[{"key":"recentlyAdded","ids":["a"]}],"items":{},"userData":{}}
+        """
+        try storage.write(Data(legacy.utf8), owner: "srv|u1")
+        let fresh = store(FakeAPI(), owner: "srv|u1", storage: storage)
+        #expect(fresh.libraries.isEmpty)
+        #expect(fresh.isLibrariesStale())
         #expect(try storage.read(owner: "srv|u1") == nil)
     }
 
@@ -109,7 +148,7 @@ import Testing
         defer { try? FileManager.default.removeItem(at: root) }
         let foreign = LibrarySnapshot(
             schemaVersion: LibrarySnapshot.currentVersion, savedAt: Clock().now, owner: "srv|someone-else",
-            shelves: [.init(key: .continueWatching, ids: ["a"])], items: ["a": entry("a").item], userData: [:]
+            libraries: [], shelves: [.init(key: .continueWatching, ids: ["a"])], items: ["a": entry("a").item], userData: [:]
         )
         try storage.write(JSONEncoder().encode(foreign), owner: "srv|u1")
         #expect(store(FakeAPI(), owner: "srv|u1", storage: storage).shelf(.continueWatching).isEmpty)

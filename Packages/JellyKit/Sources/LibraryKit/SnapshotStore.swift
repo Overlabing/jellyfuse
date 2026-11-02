@@ -8,13 +8,17 @@ struct LibrarySnapshot: Codable, Equatable {
     }
 
     /// Bump when any persisted model changes shape: the cache is disposable, old snapshots are dropped, never migrated.
-    static let currentVersion = 1
+    ///
+    /// v2: `ShelfKey` became an enum with per-library cases and the library list joined the snapshot.
+    /// A v1 snapshot fails the version check (and would fail to decode its keys): dropped, cold start.
+    static let currentVersion = 2
     /// Snapshots older than this are ignored (RN `PERSIST_MAX_AGE_MS`).
     static let maxAge: TimeInterval = 30 * 24 * 3600
 
     var schemaVersion: Int
     var savedAt: Date
     var owner: String
+    var libraries: [Library]
     var shelves: [Shelf]
     var items: [String: MediaItem]
     var userData: [String: UserData]
