@@ -126,11 +126,13 @@ public struct ContentTabs: View {
     private let onSelectSubtitle: (Int) -> Void
     private let onSelectChapter: (Double) -> Void
     private let onClose: @MainActor () -> Void
+    private let focusToken: Int
 
     public init(
         model: ContentTabsModel, selection: PlayerTab, onSelectTab: @escaping (PlayerTab) -> Void,
         onSelectAudio: @escaping (Int) -> Void, onSelectSubtitle: @escaping (Int) -> Void,
-        onSelectChapter: @escaping (Double) -> Void, onClose: @escaping @MainActor () -> Void
+        onSelectChapter: @escaping (Double) -> Void, onClose: @escaping @MainActor () -> Void,
+        focusToken: Int = 0
     ) {
         self.model = model
         self.selection = selection
@@ -139,13 +141,14 @@ public struct ContentTabs: View {
         self.onSelectSubtitle = onSelectSubtitle
         self.onSelectChapter = onSelectChapter
         self.onClose = onClose
+        self.focusToken = focusToken
     }
 
     @FocusState private var focusedTab: PlayerTab?
 
     public var body: some View {
         #if os(tvOS)
-        MenuInterceptor(onMenu: onClose, content: pinned)
+        MenuInterceptor(onMenu: onClose, focusToken: focusToken, content: pinned)
             .ignoresSafeArea()
         #else
         pinned

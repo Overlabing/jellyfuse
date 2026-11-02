@@ -272,11 +272,11 @@ public final class FocusProbe {
 
     private static func describe(_ item: (any UIFocusItem)?) -> String {
         guard let item else { return "none" }
-        var responder = item as? UIResponder
-        while let current = responder {
+        var environment: (any UIFocusEnvironment)? = item
+        while let current = environment {
             if current is RemoteInputUIView { return "bridge (\(type(of: item)))" }
             if current is FocusPanelMarker { return "panel (\(type(of: item)))" }
-            responder = current.next
+            environment = current.parentFocusEnvironment
         }
         return "other (\(type(of: item)))"
     }
@@ -289,22 +289,45 @@ public final class FocusProbe {
 /// otherwise dismiss the whole player). Closing twice is harmless.
 struct MenuInterceptor<Content: View>: UIViewControllerRepresentable {
     let onMenu: @MainActor () -> Void
+    /// Changes when the panel has settled on screen: the focus is requested again (see `MenuHostController`).
+    let focusToken: Int
     let content: Content
 
     func makeUIViewController(context: Context) -> MenuHostController<Content> {
         let controller = MenuHostController(rootView: content)
         controller.onMenu = onMenu
+        controller.focusToken = focusToken
         return controller
     }
 
     func updateUIViewController(_ controller: MenuHostController<Content>, context: Context) {
         controller.rootView = content
         controller.onMenu = onMenu
+        controller.focusToken = focusToken
     }
 }
 
 final class MenuHostController<Content: View>: UIHostingController<Content>, FocusPanelMarker {
     var onMenu: @MainActor () -> Void = {}
+    /// The panel slides in from off screen: its buttons cannot take the focus until they are on screen, so
+    /// `viewDidAppear` is too early. The screen bumps the token once the slide is done.
+    var focusToken = 0 {
+        didSet { if focusToken != oldValue { requestFocus() } }
+    }
+
+    /// Asks the focus system for the panel's first focusable item (top-left: the tab). Naming the item itself is
+    /// what makes it land when nothing holds the focus: asking for the controller alone leaves it on none, and
+    /// only a later arrow press would resolve it (a pad touch never does).
+    private func requestFocus() {
+        let container: any UIFocusItemContainer = view
+        let first = container.focusItems(in: view.bounds)
+            .filter(\.canBecomeFocused)
+            .min { ($0.frame.minY, $0.frame.minX) < ($1.frame.minY, $1.frame.minX) }
+        guard let system = UIFocusSystem.focusSystem(for: self) else { return }
+        system.requestFocusUpdate(to: first ?? self)
+        setNeedsFocusUpdate()
+        updateFocusIfNeeded()
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -324,11 +347,9 @@ final class MenuHostController<Content: View>: UIHostingController<Content>, Foc
     /// focusable view), in case the engine has not moved there already.
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        setNeedsFocusUpdate()
-        updateFocusIfNeeded()
-        // Explicit, targeted request through the public focus system: the bridge that held the focus has just
-        // been hidden, so nothing else forces a resolution on hardware (the pad does not, unlike an arrow press).
-        UIFocusSystem.focusSystem(for: self)?.requestFocusUpdate(to: self)
+        // Targeted request through the public focus system: the bridge that held the focus has just been hidden,
+        // so nothing else forces a resolution on hardware (the pad does not, unlike an arrow press).
+        requestFocus()
     }
 
     @objc private func menuRecognized() { onMenu() }

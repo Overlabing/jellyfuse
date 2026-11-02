@@ -15,6 +15,8 @@ struct PlayerScreen: View {
     /// so both directions are an explicit offset animation.
     @State private var panelMounted = false
     @State private var panelSlid = false
+    /// Bumped once the panel is on screen, which is when it can take the focus.
+    @State private var panelFocusToken = 0
     /// Debug overlay: launch with `-stats YES`.
     private let showsStats = UserDefaults.standard.bool(forKey: "stats")
     @State private var focusProbe = FocusProbe()
@@ -69,7 +71,13 @@ struct PlayerScreen: View {
         if open {
             panelMounted = true
             // Next turn, so the first frame is drawn off screen and the move animates.
-            DispatchQueue.main.async { withAnimation(.easeOut(duration: 0.3)) { panelSlid = true } }
+            DispatchQueue.main.async {
+                withAnimation(.easeOut(duration: 0.3)) {
+                    panelSlid = true
+                } completion: {
+                    if transport.isPanelOpen { panelFocusToken += 1 }
+                }
+            }
         } else {
             withAnimation(.easeIn(duration: 0.3)) {
                 panelSlid = false
@@ -95,7 +103,8 @@ struct PlayerScreen: View {
                 model.seek(to: seconds)
                 transport.closePanel()
             },
-            onClose: { transport.closePanel() }
+            onClose: { transport.closePanel() },
+            focusToken: panelFocusToken
         )
         .offset(y: panelSlid ? 0 : -Self.panelTravel)
         .opacity(panelSlid ? 1 : 0)
