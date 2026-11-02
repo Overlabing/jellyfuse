@@ -201,7 +201,7 @@ public struct DetailHeaderModel: Sendable, Equatable, Identifiable {
         if let certification, !certification.isEmpty { parts.append(.text(certification)) }
         if let yearText { parts.append(.text(yearText)) }
         if let seasonCount, seasonCount > 0 {
-            parts.append(.text(String(localized: "\(seasonCount) saisons")))
+            parts.append(.text(seasonCount == 1 ? String(localized: "1 saison") : String(localized: "\(seasonCount) saisons")))
         } else if let runtimeMinutes, let text = MediaFormat.runtime(minutes: runtimeMinutes) {
             parts.append(.text(text))
         }
