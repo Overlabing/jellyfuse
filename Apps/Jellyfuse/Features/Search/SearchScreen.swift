@@ -25,6 +25,9 @@ struct SearchScreen: View {
                 onOpenDetail: { path.append(.detail($0)) },
                 onRetry: { model.retry() }
             )
+            // Inside the stack, on the root content: that placement gives the header its native
+            // material when content scrolls underneath (outside, the field floats with no background).
+            .searchable(text: $model.query, prompt: String(localized: "Films, séries, épisodes"))
             .navigationDestination(for: SearchRoute.self) { route in
                 switch route {
                 case .detail(let id):
@@ -40,6 +43,5 @@ struct SearchScreen: View {
                 }
             }
         }
-        .searchable(text: $model.query, prompt: String(localized: "Films, séries, épisodes"))
     }
 }
