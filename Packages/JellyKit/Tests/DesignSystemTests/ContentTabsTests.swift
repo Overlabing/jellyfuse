@@ -112,3 +112,25 @@ import Testing
         #expect(transport.isScrubbing)
     }
 }
+
+@Suite struct SegmentedBarTests {
+    @Test func segmentsSplitAtTheMarks() {
+        #expect(ChapterMarks.segments(marks: [0.2, 0.6]) == [0...0.2, 0.2...0.6, 0.6...1])
+        #expect(ChapterMarks.segments(marks: []) == [0...1])
+    }
+
+    @Test func widthsLeaveRoomForTheGaps() {
+        let segments = ChapterMarks.segments(marks: [0.5])
+        let widths = ChapterMarks.segmentWidths(segments, width: 1006, gap: 6)
+        #expect(widths == [500, 500])
+    }
+
+    @Test func playheadSkipsTheGapsBeforeItsSegment() {
+        let segments = ChapterMarks.segments(marks: [0.5])
+        // 1006 wide, 6 gap: segments are 500 each; the second starts at 506.
+        #expect(ChapterMarks.playheadX(progress: 0.25, segments: segments, width: 1006, gap: 6) == 250)
+        #expect(ChapterMarks.playheadX(progress: 0.75, segments: segments, width: 1006, gap: 6) == 756)
+        #expect(ChapterMarks.playheadX(progress: 1, segments: segments, width: 1006, gap: 6) == 1006)
+        #expect(ChapterMarks.playheadX(progress: 0, segments: segments, width: 1006, gap: 6) == 0)
+    }
+}

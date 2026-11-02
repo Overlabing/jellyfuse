@@ -52,8 +52,16 @@ struct PlayerScreen: View {
         OSDModel(
             title: model.heading, position: transport.displayedPosition, duration: model.duration,
             isScrubbing: transport.isScrubbing,
-            chapterMarks: ChapterMarks.fractions(starts: model.chapters.map(\.startSeconds), duration: model.duration)
+            chapterMarks: ChapterMarks.fractions(starts: model.chapters.map(\.startSeconds), duration: model.duration),
+            chapterTitle: chapterTitle
         )
+    }
+
+    /// The chapter under the playhead (or the scrub preview), for the scrub bubble.
+    private var chapterTitle: String? {
+        let chapters = model.chapters
+        guard let index = ChapterMarks.currentIndex(starts: chapters.map(\.startSeconds), position: transport.displayedPosition) else { return nil }
+        return ChapterRow.rows(names: chapters.map(\.name), starts: chapters.map(\.startSeconds), position: 0)[index].title
     }
 
     private var panel: some View {
@@ -67,10 +75,9 @@ struct PlayerScreen: View {
             },
             onClose: { transport.closePanel() }
         )
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-        .padding(.trailing, 80)
-        .padding(.bottom, 240)
-        .transition(.move(edge: .bottom).combined(with: .opacity))
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .padding(.top, 60)
+        .transition(.move(edge: .top).combined(with: .opacity))
     }
 
     @ViewBuilder private var status: some View {

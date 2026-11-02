@@ -1,6 +1,7 @@
 # Generated project: `xcodegen generate` (the .xcodeproj is not committed).
 name: Jellyfuse
 options:
+  developmentLanguage: fr
   bundleIdPrefix: dev.antonin
   deploymentTarget:
     tvOS: "17.0"

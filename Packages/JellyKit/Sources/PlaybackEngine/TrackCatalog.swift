@@ -1,6 +1,11 @@
 import Foundation
 import JellyfinAPI
 
+extension Locale {
+    /// The language the app is shown in (its resolved localization), not the device's region settings.
+    public static var app: Locale { Locale(identifier: Bundle.main.preferredLocalizations.first ?? "fr") }
+}
+
 /// One selectable track, with the two ids it lives under: Jellyfin's stream index (reports, memory) and
 /// mpv's own id (`setTrack`). Already named for the viewer.
 public struct TrackOption: Sendable, Equatable, Identifiable {
@@ -34,7 +39,7 @@ public struct TrackCatalog: Sendable, Equatable {
     }
 
     /// `externalIndices`: the sidecar subtitles `sub-add`ed, in order (`ResolvedPlayback.externalSubtitles`).
-    public init(streams: [MediaStream], externalIndices: [Int], locale: Locale = .current) {
+    public init(streams: [MediaStream], externalIndices: [Int], locale: Locale = .app) {
         let ordered = streams.sorted { ($0.index ?? 0) < ($1.index ?? 0) }
         audio = ordered.compactMap { stream in
             guard stream.type == .audio, let index = stream.index,

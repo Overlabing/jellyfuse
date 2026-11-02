@@ -152,6 +152,7 @@ public struct ContentTabs: View {
     private var panel: some View {
         VStack(alignment: .leading, spacing: Design.Spacing.m) {
             HStack(spacing: Design.Spacing.s) {
+                Spacer(minLength: 0)
                 ForEach(model.tabs) { tab in
                     Button(tab.title) { onSelectTab(tab) }
                         .capsuleButtonStyle()
@@ -160,11 +161,12 @@ public struct ContentTabs: View {
                         .fontWeight(tab == selection ? .bold : .regular)
                         .opacity(tab == selection ? 1 : 0.7)
                 }
+                Spacer(minLength: 0)
             }
             content
         }
         .padding(Design.Spacing.l)
-        .frame(width: 960, alignment: .topLeading)
+        .frame(width: 1400, alignment: .topLeading)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 28))
         .focusBlock()
     }
@@ -242,7 +244,7 @@ public struct ContentTabs: View {
                 }
                 .padding(.vertical, Design.Spacing.xs)
             }
-            .frame(maxHeight: 520)
+            .frame(maxHeight: 460)
             .onAppear {
                 if let marked = rows.first(where: \.isMarked) { proxy.scrollTo(marked.id, anchor: .center) }
             }
