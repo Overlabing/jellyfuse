@@ -107,7 +107,12 @@ public final class TransportController {
 
     // MARK: Buttons
 
+    /// ▶︎⏸ validates a scrub like the system player does, so resuming never needs a second press.
     public func playPause() {
+        if isScrubbing {
+            commitScrub()
+            return
+        }
         let paused = !driver.isPaused()
         driver.setPaused(paused)
         pausedChanged(paused)

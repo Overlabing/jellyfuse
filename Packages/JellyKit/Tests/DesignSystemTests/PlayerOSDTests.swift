@@ -225,6 +225,20 @@ import Testing
         #expect(transport.visibility.deadline != nil)
     }
 
+    @Test func playPauseCommitsAScrubInOnePress() {
+        let player = Player()
+        let transport = player.controller()
+        transport.playPause()
+        #expect(player.isPaused)
+        transport.panBegan()
+        transport.pan(fraction: 0.1)
+        let target = transport.displayedPosition
+        transport.playPause()
+        #expect(!transport.isScrubbing)
+        #expect(player.seeks.last == target)
+        #expect(!player.isPaused)
+    }
+
     @Test func clicksSkipTenSecondsAndBuildOnEachOther() {
         let player = Player()
         let transport = player.controller()
