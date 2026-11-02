@@ -37,10 +37,12 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: Jellyfuse
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        # TestFlight: HTTPS-only exempt encryption, no custom crypto.
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         # Open ATS while developing against plain-HTTP LAN servers.
         INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsArbitraryLoads: YES
-        MARKETING_VERSION: "0.1"
-        CURRENT_PROJECT_VERSION: "1"
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "2"
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: 39TMVBW2CY
         CODE_SIGN_ENTITLEMENTS: Apps/Jellyfuse/Jellyfuse.entitlements
@@ -69,8 +71,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.jellyfusion.app.TopShelf
         GENERATE_INFOPLIST_FILE: YES
-        MARKETING_VERSION: "0.1"
-        CURRENT_PROJECT_VERSION: "1"
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "2"
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: 39TMVBW2CY
         CODE_SIGN_ENTITLEMENTS: Apps/TopShelf/TopShelf.entitlements
