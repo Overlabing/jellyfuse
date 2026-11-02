@@ -1,0 +1,28 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Jellyfuse - maquettes tvOS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#07070B;color:#F4F4F8;font-family:-apple-system,"SF Pro Display","Helvetica Neue",Inter,Arial,sans-serif;padding:56px 64px 80px}
+h1{font-size:44px;font-weight:800;letter-spacing:-1px} h1 b{background:linear-gradient(135deg,#8A6CFF,#C65BDB 55%,#FF5C8A);-webkit-background-clip:text;background-clip:text;color:transparent}
+p.lead{color:#A6A6B8;font-size:18px;line-height:1.5;max-width:860px;margin:14px 0 40px}
+.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:28px}
+.c{display:block;text-decoration:none;color:inherit;background:#101018;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.08);transition:transform .2s,box-shadow .2s}
+.c:hover,.c:focus{transform:scale(1.03);box-shadow:0 0 0 3px #fff,0 24px 60px rgba(0,0,0,.6);outline:none}
+.th{width:100%;aspect-ratio:16/9;position:relative;overflow:hidden;background:#000;container-type:inline-size}
+.th iframe{position:absolute;left:0;top:0;width:1920px;height:1080px;border:0;transform-origin:0 0;transform:scale(calc(100cqw / 1920px));pointer-events:none}
+.tx{padding:16px 20px 20px;display:flex;flex-direction:column;gap:6px} .tx b{font-size:20px} .tx span{font-size:15px;color:#A6A6B8;line-height:1.4} .tx i{font-style:normal;font-size:13px;color:#6E6E82;font-family:ui-monospace,Menlo,monospace}
+</style></head><body>
+<h1>jelly<b>fuse</b> · maquettes tvOS</h1>
+<p class="lead">Maquettes statiques 1920×1080 de la Phase 3 (voir <code>../ui-plan.md</code>). Placeholders colorés, aucune image ni requête réseau. Révision KISS / HIG : marges 80/60, focus système, barre d'onglets native. Chaque écran montre un état de focus. Les titres, personnes et serveurs sont fictifs.</p>
+<div class="g">
+<a class="c" href="home.html"><div class="th"><iframe src="home.html" tabindex="-1" loading="lazy"></iframe></div><div class="tx"><b>Accueil</b><span>Barre d'onglets native, un billboard, une shelf « À suivre ». État montré : focus descendu dans la shelf.</span><i>home.html</i></div></a>
+<a class="c" href="detail-movie.html"><div class="th"><iframe src="detail-movie.html" tabindex="-1" loading="lazy"></iframe></div><div class="tx"><b>Fiche film</b><span>Une ligne de méta, trois boutons, distribution. Audio et sous-titres se choisissent dans le lecteur.</span><i>detail-movie.html</i></div></a>
+<a class="c" href="detail-series.html"><div class="th"><iframe src="detail-series.html" tabindex="-1" loading="lazy"></iframe></div><div class="tx"><b>Fiche série</b><span>Bouton Reprendre S2 · E5, saisons, rangée d'épisodes.</span><i>detail-series.html</i></div></a>
+<a class="c" href="player-osd.html"><div class="th"><iframe src="player-osd.html" tabindex="-1" loading="lazy"></iframe></div><div class="tx"><b>Lecteur · OSD</b><span>Calqué sur le lecteur système : titre, deux icônes, barre, trickplay, Passer l'intro.</span><i>player-osd.html</i></div></a>
+<a class="c" href="player-tracks.html"><div class="th"><iframe src="player-tracks.html" tabindex="-1" loading="lazy"></iframe></div><div class="tx"><b>Lecteur · pistes</b><span>Onglets Infos / Audio / Sous-titres / Chapitres.</span><i>player-tracks.html</i></div></a>
+<a class="c" href="library.html"><div class="th"><iframe src="library.html" tabindex="-1" loading="lazy"></iframe></div><div class="tx"><b>Bibliothèque</b><span>Grille 6 colonnes (260 pt, 40 pt, 100 pt), un seul bouton « Filtres et tri ».</span><i>library.html</i></div></a>
+<a class="c" href="search.html"><div class="th"><iframe src="search.html" tabindex="-1" loading="lazy"></iframe></div><div class="tx"><b>Recherche</b><span>Clavier tvOS, résultats groupés Films / Séries.</span><i>search.html</i></div></a>
+<a class="c" href="login.html"><div class="th"><iframe src="login.html" tabindex="-1" loading="lazy"></iframe></div><div class="tx"><b>Connexion rapide</b><span>Un code, un QR (illustratif), repli mot de passe.</span><i>login.html</i></div></a>
+<a class="c" href="profiles.html"><div class="th"><iframe src="profiles.html" tabindex="-1" loading="lazy"></iframe></div><div class="tx"><b>Choix du profil</b><span>Multi-utilisateurs, verrou PIN local.</span><i>profiles.html</i></div></a>
+<a class="c" href="settings.html"><div class="th"><iframe src="settings.html" tabindex="-1" loading="lazy"></iframe></div><div class="tx"><b>Réglages</b><span>Une seule liste groupée, sans barre latérale.</span><i>settings.html</i></div></a>
+<a class="c" href="licenses.html"><div class="th"><iframe src="licenses.html" tabindex="-1" loading="lazy"></iframe></div><div class="tx"><b>Licences</b><span>Attribution LGPL et consorts.</span><i>licenses.html</i></div></a>
+</div></body></html>
