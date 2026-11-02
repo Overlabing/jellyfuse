@@ -18,6 +18,7 @@ struct DetailView: View {
     let onPlayEpisode: (String) -> Void
     /// `(episodeId, watched)`: from the long-press menu of an episode.
     let onSetEpisodeWatched: (String, Bool) -> Void
+    let onOpenPerson: (PersonModel) -> Void
 
     var body: some View {
         ScrollView {
@@ -93,7 +94,9 @@ struct DetailView: View {
     }
 
     private func cast(_ people: [PersonModel]) -> some View {
-        Shelf(title: String(localized: "Distribution"), items: people) { CastCard($0) }
+        Shelf(title: String(localized: "Distribution"), items: people) { person in
+            CastCard(person) { onOpenPerson(person) }
+        }
             .padding(.top, metrics.gridRowGap - 2 * metrics.focusInset)
     }
 

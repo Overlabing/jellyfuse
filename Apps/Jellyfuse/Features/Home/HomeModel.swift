@@ -31,7 +31,7 @@ final class HomeModel {
         return HomeMapper.content(
             continueWatching: store.entries(.continueWatching),
             nextUp: store.entries(.nextUp),
-            libraries: store.libraries.map {
+            libraries: store.libraries.filter(\.showsOnHome).map {
                 LibraryShelfSource(library: $0, entries: store.entries(.latestIn(libraryId: $0.id)))
             },
             isInList: { [store] in store.userData[$0]?.isFavorite ?? false },
@@ -55,6 +55,16 @@ final class HomeModel {
             entries: store.entries(.recentGrid(libraryId: library.id)),
             imageURL: Self.makeImageURL(client)
         )
+    }
+
+    /// A paginated grid state over this session's store (library tab, collection, person).
+    func gridModel() -> GridModel {
+        GridModel(store: store, client: client)
+    }
+
+    /// The state of the Films (`.movies`) or Séries (`.tvshows`) tab.
+    func libraryTabModel(kind: Library.Kind) -> LibraryTabModel {
+        LibraryTabModel(kind: kind, store: store, grid: gridModel())
     }
 
     /// Cold start: nothing cached and the first load has not answered yet.
@@ -91,7 +101,7 @@ final class HomeModel {
     }
 
     private func loadLibraryShelves() async -> [any Error] {
-        let keys = store.libraries.map { ShelfKey.latestIn(libraryId: $0.id) }
+        let keys = store.libraries.filter(\.showsOnHome).map { ShelfKey.latestIn(libraryId: $0.id) }
         return await withTaskGroup(of: (any Error)?.self) { group in
             for key in keys { group.addTask { await self.load(key) } }
             var errors: [any Error] = []
@@ -122,7 +132,7 @@ final class HomeModel {
         { @Sendable in await client.ping() }
     }
 
-    private nonisolated static func makeImageURL(_ client: JellyfinClient) -> HomeMapper.ImageURL {
+    nonisolated static func makeImageURL(_ client: JellyfinClient) -> HomeMapper.ImageURL {
         { @Sendable id, kind, tag, width in client.imageURL(itemId: id, kind: kind, tag: tag, maxWidth: width) }
     }
 }

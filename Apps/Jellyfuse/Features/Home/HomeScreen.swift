@@ -6,6 +6,7 @@ import SwiftUI
 enum HomeRoute: Hashable {
     case grid(Library)
     case detail(String)
+    case person(id: String, name: String)
 }
 
 /// Composition layer: wires `HomeModel` to the pure `HomeView`. « Voir tout » pushes the library grid,
@@ -41,7 +42,15 @@ struct HomeScreen: View {
                 case .grid(let library):
                     RecentGridScreen(model: model, library: library, onOpen: { path.append(.detail($0)) })
                 case .detail(let id):
-                    DetailScreen(model: model.detailModel(for: id), onPlay: onPlay)
+                    DetailScreen(
+                        model: model.detailModel(for: id), onPlay: onPlay,
+                        onOpenPerson: { path.append(.person(id: $0, name: $1)) }
+                    )
+                case .person(let id, let name):
+                    FixedGridScreen(
+                        title: name, key: GridKey(.person(id: id), sort: LibrarySort(.year)),
+                        model: model.gridModel(), onOpen: { path.append(.detail($0)) }
+                    )
                 }
             }
         }

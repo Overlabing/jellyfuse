@@ -155,6 +155,7 @@ public enum DetailMapper {
             .map { person in
                 PersonModel(
                     id: "\(person.kind.rawValue)-\(person.id)",
+                    personId: person.id,
                     name: person.name,
                     role: person.kind == .director ? String(localized: "Réalisation") : person.role,
                     image: ArtworkSource(url: imageURL(person.id, .primary, person.primaryImageTag, personImageWidth), placeholderTitle: person.name)
