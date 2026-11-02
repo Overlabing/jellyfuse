@@ -130,14 +130,6 @@ public final class RemoteInputUIView: UIView {
 
     public override init(frame: CGRect) {
         super.init(frame: frame)
-        let menu = UITapGestureRecognizer(target: self, action: #selector(menuPressed))
-        menu.allowedPressTypes = [NSNumber(value: UIPress.PressType.menu.rawValue)]
-        // A press recognizer only: left to its defaults it would also listen to the pad's touches and cancel
-        // them in the view, which kills the pad navigation of the real remote.
-        menu.allowedTouchTypes = []
-        menu.cancelsTouchesInView = false
-        addGestureRecognizer(menu)
-
         let pan = UIPanGestureRecognizer(target: self, action: #selector(panChanged(_:)))
         pan.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.indirect.rawValue)]
         // The pad touch must also reach touchesBegan, which reveals the display before any movement.
@@ -168,8 +160,6 @@ public final class RemoteInputUIView: UIView {
         handlers?.onMenu()
     }
 
-    @objc private func menuPressed() { fireMenu() }
-
     @objc private func panChanged(_ recognizer: UIPanGestureRecognizer) {
         switch recognizer.state {
         case .began:
@@ -199,7 +189,9 @@ public final class RemoteInputUIView: UIView {
             case .leftArrow: startRepeating(.backward)
             case .rightArrow: startRepeating(.forward)
             case .select, .playPause, .downArrow: break
-            case Self.simulatorMenu: break
+            // The real remote's Menu, consumed here so the system never suspends the app; the recognizer
+            // route died on hardware once it stopped listening to touches.
+            case .menu, Self.simulatorMenu: break
             default: continue
             }
             unhandled.remove(press)
@@ -215,7 +207,7 @@ public final class RemoteInputUIView: UIView {
             case .downArrow: handlers?.onDown()
             case .select: handlers?.onSelect()
             case .playPause: handlers?.onPlayPause()
-            case Self.simulatorMenu: fireMenu()
+            case .menu, Self.simulatorMenu: fireMenu()
             default: continue
             }
             unhandled.remove(press)
