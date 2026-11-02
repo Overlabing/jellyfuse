@@ -1,14 +1,16 @@
 import DesignSystem
 import HomePresentation
+import LibraryKit
 import SwiftUI
 
-/// Pure home layout (home.html): billboard, then « À suivre » and « Ajouts récents ». Props in, callbacks out.
+/// Pure home layout (home.html): billboard, then « À suivre » then one « Ajouts récents » shelf per library. Props in, callbacks out.
 struct HomeView: View {
     @Environment(\.designMetrics) private var metrics
     let content: HomeContent
     let isLoadingCold: Bool
     let failureMessage: String?
     let onPlay: (String) -> Void
+    let onSeeAll: (Library) -> Void
     let onToggleList: () -> Void
 
     var body: some View {
@@ -33,13 +35,20 @@ struct HomeView: View {
                 } else if isLoadingCold {
                     SkeletonShelf(title: String(localized: "À suivre"), kind: .landscape)
                 }
-                if !content.recent.isEmpty {
-                    Shelf(title: String(localized: "Ajouts récents"), items: content.recent) { model in
-                        PosterCard(model) { onPlay(model.id) }
-                    }
-                    .padding(.top, metrics.gridRowGap - 2 * metrics.focusInset)
-                } else if isLoadingCold {
+                if content.libraryShelves.isEmpty, isLoadingCold {
                     SkeletonShelf(title: String(localized: "Ajouts récents"), kind: .poster)
+                }
+                ForEach(content.libraryShelves) { shelf in
+                    if !shelf.items.isEmpty {
+                        Shelf(title: shelf.title, items: shelf.items) { model in
+                            PosterCard(model) { onPlay(model.id) }
+                        } trailing: {
+                            SeeAllCard { onSeeAll(shelf.library) }
+                        }
+                        .padding(.top, metrics.gridRowGap - 2 * metrics.focusInset)
+                    } else if isLoadingCold {
+                        SkeletonShelf(title: shelf.title, kind: .poster)
+                    }
                 }
             }
             .padding(.bottom, metrics.safeVertical)
