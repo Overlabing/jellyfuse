@@ -132,6 +132,10 @@ public final class RemoteInputUIView: UIView {
         super.init(frame: frame)
         let menu = UITapGestureRecognizer(target: self, action: #selector(menuPressed))
         menu.allowedPressTypes = [NSNumber(value: UIPress.PressType.menu.rawValue)]
+        // A press recognizer only: left to its defaults it would also listen to the pad's touches and cancel
+        // them in the view, which kills the pad navigation of the real remote.
+        menu.allowedTouchTypes = []
+        menu.cancelsTouchesInView = false
         addGestureRecognizer(menu)
 
         let pan = UIPanGestureRecognizer(target: self, action: #selector(panChanged(_:)))
@@ -243,6 +247,41 @@ public final class RemoteInputUIView: UIView {
     }
 }
 
+/// Tags the panel's hosting controller so the focus probe can tell where the focus is.
+protocol FocusPanelMarker {}
+
+/// Where the focus is, for the `-stats` overlay: the class of the focused item and whether it is the remote
+/// bridge, the content panel, or something else (nothing focused = the pad does nothing).
+@MainActor @Observable
+public final class FocusProbe {
+    public private(set) var description = "none"
+    @ObservationIgnored private var observer: (any NSObjectProtocol)?
+
+    public init() {
+        observer = NotificationCenter.default.addObserver(forName: UIFocusSystem.didUpdateNotification, object: nil, queue: .main) { [weak self] note in
+            // Delivered on the main queue; the notification is only read here.
+            nonisolated(unsafe) let note = note
+            MainActor.assumeIsolated {
+                let item = (note.userInfo?[UIFocusSystem.focusUpdateContextUserInfoKey] as? UIFocusUpdateContext)?.nextFocusedItem
+                self?.description = Self.describe(item)
+            }
+        }
+    }
+
+    isolated deinit { observer.map(NotificationCenter.default.removeObserver) }
+
+    private static func describe(_ item: (any UIFocusItem)?) -> String {
+        guard let item else { return "none" }
+        var environment: (any UIFocusEnvironment)? = item
+        while let current = environment {
+            if current is RemoteInputUIView { return "bridge (\(type(of: item)))" }
+            if current is FocusPanelMarker { return "panel (\(type(of: item)))" }
+            environment = current.parentFocusEnvironment
+        }
+        return "other (\(type(of: item)))"
+    }
+}
+
 /// Hosts the content panel full screen (the SwiftUI content pins itself to the top; a representable fills the
 /// space it is offered, so it must not be left to size itself) and catches Menu on its way up the responder
 /// chain from whatever inside is focused. Both ways Menu can arrive are handled: a `.menu` press recognizer (the
@@ -250,22 +289,45 @@ public final class RemoteInputUIView: UIView {
 /// otherwise dismiss the whole player). Closing twice is harmless.
 struct MenuInterceptor<Content: View>: UIViewControllerRepresentable {
     let onMenu: @MainActor () -> Void
+    /// Changes when the panel has settled on screen: the focus is requested again (see `MenuHostController`).
+    let focusToken: Int
     let content: Content
 
     func makeUIViewController(context: Context) -> MenuHostController<Content> {
         let controller = MenuHostController(rootView: content)
         controller.onMenu = onMenu
+        controller.focusToken = focusToken
         return controller
     }
 
     func updateUIViewController(_ controller: MenuHostController<Content>, context: Context) {
         controller.rootView = content
         controller.onMenu = onMenu
+        controller.focusToken = focusToken
     }
 }
 
-final class MenuHostController<Content: View>: UIHostingController<Content> {
+final class MenuHostController<Content: View>: UIHostingController<Content>, FocusPanelMarker {
     var onMenu: @MainActor () -> Void = {}
+    /// The panel slides in from off screen: its buttons cannot take the focus until they are on screen, so
+    /// `viewDidAppear` is too early. The screen bumps the token once the slide is done.
+    var focusToken = 0 {
+        didSet { if focusToken != oldValue { requestFocus() } }
+    }
+
+    /// Asks the focus system for the panel's first focusable item (top-left: the tab). Naming the item itself is
+    /// what makes it land when nothing holds the focus: asking for the controller alone leaves it on none, and
+    /// only a later arrow press would resolve it (a pad touch never does).
+    private func requestFocus() {
+        let container: any UIFocusItemContainer = view
+        let first = container.focusItems(in: view.bounds)
+            .filter(\.canBecomeFocused)
+            .min { ($0.frame.minY, $0.frame.minX) < ($1.frame.minY, $1.frame.minX) }
+        guard let system = UIFocusSystem.focusSystem(for: self) else { return }
+        system.requestFocusUpdate(to: first ?? self)
+        setNeedsFocusUpdate()
+        updateFocusIfNeeded()
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -274,6 +336,10 @@ final class MenuHostController<Content: View>: UIHostingController<Content> {
         safeAreaRegions = []
         let menu = UITapGestureRecognizer(target: self, action: #selector(menuRecognized))
         menu.allowedPressTypes = [NSNumber(value: UIPress.PressType.menu.rawValue)]
+        // Press only: with default touch types and cancelsTouchesInView it would swallow the pad's touches that
+        // the focus engine turns into navigation (this was the hardware-only "cannot navigate the panel").
+        menu.allowedTouchTypes = []
+        menu.cancelsTouchesInView = false
         view.addGestureRecognizer(menu)
     }
 
@@ -281,8 +347,9 @@ final class MenuHostController<Content: View>: UIHostingController<Content> {
     /// focusable view), in case the engine has not moved there already.
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        setNeedsFocusUpdate()
-        updateFocusIfNeeded()
+        // Targeted request through the public focus system: the bridge that held the focus has just been hidden,
+        // so nothing else forces a resolution on hardware (the pad does not, unlike an arrow press).
+        requestFocus()
     }
 
     @objc private func menuRecognized() { onMenu() }
