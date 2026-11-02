@@ -2,7 +2,9 @@ import SwiftUI
 
 @main
 struct JellyfuseApp: App {
+    @State private var model = AppModel()
+
     var body: some Scene {
-        WindowGroup { PlayerScreen() }
+        WindowGroup { RootView(model: model) }
     }
 }
