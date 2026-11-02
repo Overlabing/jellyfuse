@@ -3,10 +3,11 @@ import PackageDescription
 
 let package = Package(
     name: "JellyKit",
-    platforms: [.tvOS(.v17)],
+    platforms: [.tvOS(.v17), .iOS(.v17), .macOS(.v14)],
     products: [
         .library(name: "PlayerCore", targets: ["PlayerCore"]),
         .library(name: "LibraryKit", targets: ["LibraryKit"]),
+        .library(name: "DesignSystem", targets: ["DesignSystem"]),
     ],
     dependencies: [
         // Only the LGPL product. Never a "-GPL" product.
@@ -21,7 +22,9 @@ let package = Package(
         .target(name: "LibraryKit", dependencies: [
             .product(name: "JellyfinAPI", package: "jellyfin-sdk-swift"),
         ]),
+        .target(name: "DesignSystem"),
         .testTarget(name: "PlayerCoreTests", dependencies: ["PlayerCore"]),
         .testTarget(name: "LibraryKitTests", dependencies: ["LibraryKit"]),
+        .testTarget(name: "DesignSystemTests", dependencies: ["DesignSystem"]),
     ]
 )
