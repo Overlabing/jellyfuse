@@ -271,6 +271,8 @@ public actor JellyfinClient {
 
     // MARK: Plumbing
 
+    package func currentUserId() throws -> String { try requireUserId() }
+
     private func requireUserId() throws -> String {
         guard let userId else { throw JellyfinError.notSignedIn }
         return userId

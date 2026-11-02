@@ -33,7 +33,7 @@ private struct MainTabs: View {
                 .tabItem { Text("Films") }
             PlaceholderScreen(title: String(localized: "Séries"))
                 .tabItem { Text("Séries") }
-            PlaceholderScreen(title: String(localized: "Recherche"))
+            SearchScreen(home: home, onPlay: { model.play($0) })
                 .tabItem { Text("Recherche") }
             PlaceholderScreen(title: String(localized: "Réglages"))
                 .tabItem { Text("Réglages") }
