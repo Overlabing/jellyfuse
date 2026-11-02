@@ -32,6 +32,7 @@ public struct Billboard: View {
     private let primaryLabel: String
     private let onPlay: () -> Void
     private let onToggleList: () -> Void
+    private let onOpenDetail: (() -> Void)?
     private let focusNamespace: Namespace.ID
 
     public init(
@@ -39,12 +40,14 @@ public struct Billboard: View {
         primaryLabel: String,
         onPlay: @escaping () -> Void,
         onToggleList: @escaping () -> Void,
+        onOpenDetail: (() -> Void)? = nil,
         focusNamespace: Namespace.ID
     ) {
         self.model = model
         self.primaryLabel = primaryLabel
         self.onPlay = onPlay
         self.onToggleList = onToggleList
+        self.onOpenDetail = onOpenDetail
         self.focusNamespace = focusNamespace
     }
 
@@ -65,6 +68,9 @@ public struct Billboard: View {
                 PillButton(primaryLabel, systemImage: "play.fill", action: onPlay)
                     .prefersDefaultFocus(true, in: focusNamespace)
                 PillButton(String(localized: "Ma liste"), systemImage: "plus", action: onToggleList)
+                if let onOpenDetail {
+                    PillButton(String(localized: "Détails"), systemImage: "info.circle", action: onOpenDetail)
+                }
             }
             .padding(.top, Design.Spacing.s)
             .focusBlock()
@@ -79,7 +85,7 @@ public struct Billboard: View {
     }
 }
 
-private struct BillboardMeta: View {
+struct BillboardMeta: View {
     let parts: [BillboardModel.MetaPart]
 
     var body: some View {

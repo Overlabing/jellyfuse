@@ -1,16 +1,16 @@
 import SwiftUI
 
-/// Horizontal titled row of cards. Its own focus section; the next card peeks at the edge.
+/// Horizontal row of cards, titled unless `title` is nil. Its own focus section; the next card peeks at the edge.
 public struct Shelf<Item: Identifiable, Card: View, Trailing: View>: View {
     @Environment(\.designMetrics) private var metrics
-    private let title: String
+    private let title: String?
     private let items: [Item]
     private let card: (Item) -> Card
     private let trailing: Trailing
 
     /// `trailing` ends the row after the last card (e.g. a « Voir tout » card).
     public init(
-        title: String, items: [Item],
+        title: String?, items: [Item],
         @ViewBuilder card: @escaping (Item) -> Card,
         @ViewBuilder trailing: () -> Trailing
     ) {
@@ -22,11 +22,13 @@ public struct Shelf<Item: Identifiable, Card: View, Trailing: View>: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(title)
-                .font(Design.Typography.sectionTitle)
-                .foregroundStyle(Design.Palette.textPrimary)
-                .padding(.leading, metrics.screenMargin)
-                .accessibilityAddTraits(.isHeader)
+            if let title {
+                Text(title)
+                    .font(Design.Typography.sectionTitle)
+                    .foregroundStyle(Design.Palette.textPrimary)
+                    .padding(.leading, metrics.screenMargin)
+                    .accessibilityAddTraits(.isHeader)
+            }
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(alignment: .top, spacing: metrics.shelfGap) {
                     ForEach(items) { card($0) }
@@ -42,7 +44,7 @@ public struct Shelf<Item: Identifiable, Card: View, Trailing: View>: View {
 }
 
 extension Shelf where Trailing == EmptyView {
-    public init(title: String, items: [Item], @ViewBuilder card: @escaping (Item) -> Card) {
+    public init(title: String?, items: [Item], @ViewBuilder card: @escaping (Item) -> Card) {
         self.init(title: title, items: items, card: card, trailing: { EmptyView() })
     }
 }
