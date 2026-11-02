@@ -39,8 +39,11 @@ import Testing
         await #expect(throws: JellyfinError.self) { try await client.latestMedia() }
     }
 
-    @Test func mediaItemProgressIsWatchedFraction() {
-        #expect(MediaItem(id: "a", name: "A", runtimeTicks: 1000, playbackPositionTicks: 250).progress == 0.25)
-        #expect(MediaItem(id: "a", name: "A", runtimeTicks: 1000).progress == nil)
+    @Test func progressIsWatchedFraction() {
+        var data = UserData.none
+        data.playbackPositionTicks = 250
+        #expect(data.progress(runtimeTicks: 1000) == 0.25)
+        #expect(UserData.none.progress(runtimeTicks: 1000) == nil)
+        #expect(data.progress(runtimeTicks: nil) == nil)
     }
 }

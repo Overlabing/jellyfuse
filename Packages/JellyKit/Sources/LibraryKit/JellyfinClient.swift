@@ -32,26 +32,32 @@ public actor JellyfinClient {
     private let serverURL: URL
     private let deviceId: String
     private var userId: String?
+    private let hasToken: Bool
+    private let onUnauthorized: (@Sendable () -> Void)?
 
     /// Unauthenticated client, used to sign in.
-    public init(serverURL: URL, deviceId: String, urlSession: URLSession = .shared) {
-        self.init(serverURL: serverURL, deviceId: deviceId, token: nil, userId: nil, configuration: urlSession.configuration)
+    public init(serverURL: URL, deviceId: String, deviceName: String = "Apple TV", urlSession: URLSession = .shared) {
+        self.init(serverURL: serverURL, deviceId: deviceId, deviceName: deviceName, token: nil, userId: nil, configuration: urlSession.configuration, onUnauthorized: nil)
     }
 
-    public init(session: Session, urlSession: URLSession = .shared) {
-        self.init(serverURL: session.serverURL, deviceId: session.deviceId, token: session.token, userId: session.userId, configuration: urlSession.configuration)
+    /// `onUnauthorized` fires when a signed request is answered 401: the server revoked the token.
+    /// `deviceName` is how the server lists this device; the app passes the platform's own name.
+    public init(session: Session, deviceName: String = "Apple TV", urlSession: URLSession = .shared, onUnauthorized: (@Sendable () -> Void)? = nil) {
+        self.init(serverURL: session.serverURL, deviceId: session.deviceId, deviceName: deviceName, token: session.token, userId: session.userId, configuration: urlSession.configuration, onUnauthorized: onUnauthorized)
     }
 
-    private init(serverURL: URL, deviceId: String, token: String?, userId: String?, configuration: URLSessionConfiguration) {
+    private init(serverURL: URL, deviceId: String, deviceName: String, token: String?, userId: String?, configuration: URLSessionConfiguration, onUnauthorized: (@Sendable () -> Void)?) {
         self.serverURL = serverURL
         self.deviceId = deviceId
         self.userId = userId
+        self.hasToken = token != nil
+        self.onUnauthorized = onUnauthorized
         self.sdk = JellyfinAPI.JellyfinClient(
             configuration: .init(
                 url: serverURL,
                 accessToken: token,
                 client: Self.clientName,
-                deviceName: "Apple TV",
+                deviceName: deviceName,
                 deviceID: deviceId,
                 version: Self.clientVersion
             ),
@@ -85,25 +91,40 @@ public actor JellyfinClient {
 
     // MARK: Library
 
-    public func latestMedia(limit: Int = 20) async throws -> [MediaItem] {
+    public func latestMedia(limit: Int = 20) async throws -> [LibraryEntry] {
         let userId = try requireUserId()
         let request = Paths.getLatestMedia(parameters: .init(userID: userId, limit: limit))
         let result = try await call { try await self.sdk.send(request).value }
-        return result.compactMap(MediaItem.init(dto:))
+        return result.compactMap(LibraryEntry.init(dto:))
     }
 
-    public func resume(limit: Int = 20) async throws -> [MediaItem] {
+    public func resume(limit: Int = 20) async throws -> [LibraryEntry] {
         let userId = try requireUserId()
         let request = Paths.getResumeItems(parameters: .init(userID: userId, limit: limit, mediaTypes: [.video]))
         let result = try await call { try await self.sdk.send(request).value }
-        return (result.items ?? []).compactMap(MediaItem.init(dto:))
+        return (result.items ?? []).compactMap(LibraryEntry.init(dto:))
     }
 
-    public func nextUp(limit: Int = 20) async throws -> [MediaItem] {
+    public func nextUp(limit: Int = 20) async throws -> [LibraryEntry] {
         let userId = try requireUserId()
         let request = Paths.getNextUp(parameters: .init(userID: userId, limit: limit))
         let result = try await call { try await self.sdk.send(request).value }
-        return (result.items ?? []).compactMap(MediaItem.init(dto:))
+        return (result.items ?? []).compactMap(LibraryEntry.init(dto:))
+    }
+
+    /// Unauthenticated reachability probe (`/System/Info/Public`), 5 s budget, no retry.
+    public func ping() async -> Bool {
+        let request = Paths.getPublicSystemInfo
+        return await withTaskGroup(of: Bool.self) { group in
+            group.addTask { (try? await self.sdk.send(request).value) != nil }
+            group.addTask {
+                try? await Task.sleep(for: .seconds(5))
+                return false
+            }
+            let first = await group.next() ?? false
+            group.cancelAll()
+            return first
+        }
     }
 
     // MARK: URLs
@@ -144,7 +165,11 @@ public actor JellyfinClient {
             return try await body()
         } catch let error as APIError {
             if case .unacceptableStatusCode(let code) = error {
-                throw code == 401 ? JellyfinError.unauthorized : JellyfinError.http(code)
+                if code == 401 {
+                    if hasToken { onUnauthorized?() }
+                    throw JellyfinError.unauthorized
+                }
+                throw JellyfinError.http(code)
             }
             throw JellyfinError.badResponse
         } catch is DecodingError {
