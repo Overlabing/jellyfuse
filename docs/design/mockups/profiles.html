@@ -87,15 +87,34 @@ body{width:1920px;height:1080px;overflow:hidden;background:var(--canvas);color:v
 .toggle:after{content:"";position:absolute;left:6px;top:6px;width:44px;height:44px;border-radius:50%;background:#fff}
 .toggle.on{background:var(--ok)} .toggle.on:after{left:46px}
 
-.who{position:absolute;left:0;right:0;top:330px;display:flex;justify-content:center;gap:64px}
+/* ---- revision HIG : marges 80/60, focus système (échelle + ombre, ni liseré ni lueur), styles de texte tvOS ---- */
+.t-large{font-size:76px;font-weight:700;letter-spacing:-.5px;line-height:1.05}
+.tabbar{position:absolute;left:50%;top:46px;transform:translateX(-50%);height:68px;padding:0 6px;border-radius:34px;display:flex;align-items:center;gap:4px;background:rgba(60,60,75,.55);backdrop-filter:blur(30px);z-index:30}
+.tabbar div{height:56px;padding:0 30px;border-radius:28px;display:flex;align-items:center;font-size:29px;font-weight:500;color:rgba(255,255,255,.7)}
+.tabbar div.on{background:rgba(255,255,255,.22);color:#fff;font-weight:700}
+.btn{height:80px;padding:0 40px;border-radius:40px;font-size:31px;font-weight:700}
+.btn.focus{transform:scale(1.06);box-shadow:0 20px 44px rgba(0,0,0,.5)}
+.btn.round{width:80px;padding:0}
+.chip.focus{transform:scale(1.06);box-shadow:0 14px 30px rgba(0,0,0,.5)}
+.poster{width:260px;height:390px}
+.land{width:410px;height:231px}
+.card.focus{transform:scale(1.1)}
+.card.focus .art,.card.focus .still{box-shadow:0 34px 60px rgba(0,0,0,.65);filter:brightness(1.12)}
+.card .cap{font-size:29px;font-weight:600}
+.card .cap2{font-size:25px}
+.shelf h3{margin:0 0 24px 80px;font-size:38px}
+.row{padding-left:80px}
+.meta{font-size:29px}
+
+.who{position:absolute;left:0;right:0;top:340px;display:flex;justify-content:center;gap:64px}
 .pf{width:230px;text-align:center}
-.pf .av{width:230px;height:230px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:110px;font-weight:800;position:relative}
+.pf .av{width:230px;height:230px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:110px;font-weight:700;position:relative}
 .pf .nm{margin-top:24px;font-size:31px;font-weight:600;color:var(--text2)}
-.pf.focus{transform:scale(1.14)}
-.pf.focus .av{box-shadow:0 0 0 8px #fff,0 30px 70px rgba(0,0,0,.6),0 0 100px rgba(138,108,255,.5)}
+.pf.focus{transform:scale(1.1)}
+.pf.focus .av{box-shadow:0 30px 60px rgba(0,0,0,.6)}
 .pf.focus .nm{color:#fff;font-weight:700}
 .lock{position:absolute;right:-6px;bottom:-6px;width:70px;height:70px;border-radius:50%;background:var(--surface);border:4px solid var(--canvas);display:flex;align-items:center;justify-content:center;font-size:32px}
 </style></head>
-<body><div class="tv"><div class="back" style="background:radial-gradient(60% 60% at 50% 40%,hsl(262 50% 18% / .8),transparent 70%)"></div><div class="abs" style="left:0;right:0;top:70px;display:flex;justify-content:center"><div class="logo" style="font-size:48px"><span style="display:inline-block;width:48px;height:48px"><svg viewBox="0 0 40 40"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8A6CFF"/><stop offset=".55" stop-color="#C65BDB"/><stop offset="1" stop-color="#FF5C8A"/></linearGradient></defs><path fill="url(#g)" d="M20 1c1.6 10.6 8.4 17.4 19 19-10.6 1.6-17.4 8.4-19 19-1.6-10.6-8.4-17.4-19-19C11.6 18.4 18.4 11.6 20 1z"/></svg></span><span>jelly<b>fuse</b></span></div></div><div class="abs t-title1" style="left:0;right:0;top:210px;text-align:center;font-size:66px">Qui regarde&nbsp;?</div><div class="who"><div class="pf focus"><div class="av" style="background:linear-gradient(155deg,hsl(262 70% 48%),hsl(300 62% 28%))">A<div class="lock">🔒</div></div><div class="nm">Antonin</div></div><div class="pf"><div class="av" style="background:linear-gradient(155deg,hsl(350 70% 48%),hsl(14 62% 28%))">C</div><div class="nm">Camille</div></div><div class="pf"><div class="av" style="background:linear-gradient(155deg,hsl(200 70% 48%),hsl(240 62% 28%))">L<div class="lock">🔒</div></div><div class="nm">Léo</div></div><div class="pf"><div class="av" style="background:linear-gradient(155deg,hsl(310 70% 48%),hsl(262 62% 28%))">I</div><div class="nm">Invité</div></div><div class="pf"><div class="av" style="background:rgba(255,255,255,.07);border:3px dashed rgba(255,255,255,.25);font-size:90px;color:var(--text3)">+</div><div class="nm">Ajouter</div></div></div><div class="abs" style="left:0;right:0;bottom:90px;display:flex;justify-content:center;gap:18px"><div class="chip"><span style="color:var(--ok)">●</span>Salon · salon.local</div><div class="chip">Changer de serveur ▾</div><div class="chip">Gérer les profils</div></div></div>
+<body><div class="tv"><div class="abs" style="left:0;right:0;top:70px;display:flex;justify-content:center"><div class="logo" style="font-size:44px"><span style="display:inline-block;width:44px;height:44px"><svg viewBox="0 0 40 40"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8A6CFF"/><stop offset=".55" stop-color="#C65BDB"/><stop offset="1" stop-color="#FF5C8A"/></linearGradient></defs><path fill="url(#g)" d="M20 1c1.6 10.6 8.4 17.4 19 19-10.6 1.6-17.4 8.4-19 19-1.6-10.6-8.4-17.4-19-19C11.6 18.4 18.4 11.6 20 1z"/></svg></span><span>jelly<b>fuse</b></span></div></div><div class="abs t-large" style="left:0;right:0;top:210px;text-align:center">Qui regarde&nbsp;?</div><div class="who"><div class="pf focus"><div class="av" style="background:linear-gradient(155deg,hsl(262 70% 48%),hsl(300 62% 28%))">A<div class="lock">🔒</div></div><div class="nm">Antonin</div></div><div class="pf"><div class="av" style="background:linear-gradient(155deg,hsl(350 70% 48%),hsl(14 62% 28%))">C</div><div class="nm">Camille</div></div><div class="pf"><div class="av" style="background:linear-gradient(155deg,hsl(200 70% 48%),hsl(240 62% 28%))">L<div class="lock">🔒</div></div><div class="nm">Léo</div></div><div class="pf"><div class="av" style="background:linear-gradient(155deg,hsl(310 70% 48%),hsl(262 62% 28%))">I</div><div class="nm">Invité</div></div><div class="pf"><div class="av" style="background:rgba(255,255,255,.07);font-size:90px;color:var(--text3)">+</div><div class="nm">Autre</div></div></div><div class="abs" style="left:0;right:0;bottom:60px;text-align:center"><span class="t-cap dim">Salon · salon.local  ·  </span><span class="t-cap" style="font-weight:700">Changer de serveur</span></div></div>
 <script>/* optionnel : met l'écran 1920x1080 à l'échelle de la fenêtre */(function(){function f(){var s=Math.min(innerWidth/1920,innerHeight/1080);document.body.style.transform='scale('+s+')';document.documentElement.style.width='1920px'}if(innerWidth<1920||innerHeight<1080){f();addEventListener('resize',f)}})();</script>
 </body></html>

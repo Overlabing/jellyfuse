@@ -87,18 +87,34 @@ body{width:1920px;height:1080px;overflow:hidden;background:var(--canvas);color:v
 .toggle:after{content:"";position:absolute;left:6px;top:6px;width:44px;height:44px;border-radius:50%;background:#fff}
 .toggle.on{background:var(--ok)} .toggle.on:after{left:46px}
 
-.side{position:absolute;left:0;top:0;bottom:0;width:560px;background:var(--surface);padding:70px 40px}
-.si{display:flex;align-items:center;gap:20px;height:84px;padding:0 28px;border-radius:20px;font-size:31px;color:var(--text2);margin-bottom:8px}
-.si i{font-style:normal;width:36px;text-align:center}
-.si.on{background:rgba(255,255,255,.10);color:#fff}
-.set{position:absolute;left:660px;right:90px;top:90px}
-.sr{display:flex;align-items:center;justify-content:space-between;height:112px;padding:0 36px;border-radius:22px;margin-bottom:10px;background:rgba(255,255,255,.04)}
-.sr .l{font-size:31px;font-weight:600}.sr .d{font-size:23px;color:var(--text2);margin-top:6px;font-weight:400}
-.sr .v{font-size:29px;color:var(--text2);display:flex;gap:14px;align-items:center}
-.sr.focus{background:#fff;color:#0a0a10;transform:scale(1.025);box-shadow:0 24px 60px rgba(0,0,0,.55)}
-.sr.focus .d,.sr.focus .v{color:#4a4a60}
-.grp{font-size:23px;letter-spacing:2px;color:var(--text3);font-weight:700;margin:34px 0 16px 8px}
-</style></head>
-<body><div class="tv"><div class="side"><div class="logo" style="margin:0 0 50px 20px;font-size:36px"><svg viewBox="0 0 40 40"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8A6CFF"/><stop offset=".55" stop-color="#C65BDB"/><stop offset="1" stop-color="#FF5C8A"/></linearGradient></defs><path fill="url(#g)" d="M20 1c1.6 10.6 8.4 17.4 19 19-10.6 1.6-17.4 8.4-19 19-1.6-10.6-8.4-17.4-19-19C11.6 18.4 18.4 11.6 20 1z"/></svg><span>jelly<b>fuse</b></span></div><div class="si"><i>👤</i>Compte</div><div class="si on"><i>▶</i>Lecture</div><div class="si"><i>◎</i>Qualité et transcodage</div><div class="si"><i>Aa</i>Audio et sous-titres</div><div class="si"><i>◐</i>Apparence</div><div class="si"><i>☰</i>Serveurs</div><div class="si"><i>ⓘ</i>À propos et licences</div></div><div class="set"><div class="t-title1" style="font-size:66px;margin-bottom:10px">Lecture</div><div class="grp">ENCHAÎNEMENT</div><div class="sr"><div><div class="l">Lire l'épisode suivant automatiquement</div><div class="d">Compte à rebours de 10 secondes à la fin du générique</div></div><div class="toggle on"></div></div><div class="sr focus"><div><div class="l">Passer les intros automatiquement</div><div class="d">Utilise les segments détectés par le serveur (Jellyfin 10.10+)</div></div><div class="toggle"></div></div><div class="sr"><div><div class="l">Passer les récapitulatifs</div></div><div class="toggle"></div></div><div class="grp">QUALITÉ</div><div class="sr"><div><div class="l">Débit maximal</div><div class="d">Au-delà, le serveur transcode</div></div><div class="v">Automatique (lecture directe) ›</div></div><div class="sr"><div><div class="l">Autoriser le transcodage</div><div class="d">Désactivé : les fichiers incompatibles ne se lancent pas</div></div><div class="toggle on"></div></div><div class="sr"><div><div class="l">HDR</div><div class="d">Tone-mapping vers SDR si l'écran ne supporte pas le HDR</div></div><div class="v">Automatique ›</div></div><div class="grp">LECTEUR</div><div class="sr"><div><div class="l">Saut avant / arrière</div></div><div class="v">10 s / 30 s ›</div></div></div></div>
+/* ---- revision HIG : marges 80/60, focus système (échelle + ombre, ni liseré ni lueur), styles de texte tvOS ---- */
+.t-large{font-size:76px;font-weight:700;letter-spacing:-.5px;line-height:1.05}
+.tabbar{position:absolute;left:50%;top:46px;transform:translateX(-50%);height:68px;padding:0 6px;border-radius:34px;display:flex;align-items:center;gap:4px;background:rgba(60,60,75,.55);backdrop-filter:blur(30px);z-index:30}
+.tabbar div{height:56px;padding:0 30px;border-radius:28px;display:flex;align-items:center;font-size:29px;font-weight:500;color:rgba(255,255,255,.7)}
+.tabbar div.on{background:rgba(255,255,255,.22);color:#fff;font-weight:700}
+.btn{height:80px;padding:0 40px;border-radius:40px;font-size:31px;font-weight:700}
+.btn.focus{transform:scale(1.06);box-shadow:0 20px 44px rgba(0,0,0,.5)}
+.btn.round{width:80px;padding:0}
+.chip.focus{transform:scale(1.06);box-shadow:0 14px 30px rgba(0,0,0,.5)}
+.poster{width:260px;height:390px}
+.land{width:410px;height:231px}
+.card.focus{transform:scale(1.1)}
+.card.focus .art,.card.focus .still{box-shadow:0 34px 60px rgba(0,0,0,.65);filter:brightness(1.12)}
+.card .cap{font-size:29px;font-weight:600}
+.card .cap2{font-size:25px}
+.shelf h3{margin:0 0 24px 80px;font-size:38px}
+.row{padding-left:80px}
+.meta{font-size:29px}
+
+.lst{position:absolute;left:360px;width:1200px;top:160px}
+.sr{display:flex;align-items:center;justify-content:space-between;height:92px;padding:0 36px;border-radius:22px;margin-bottom:8px;background:rgba(255,255,255,.06);font-size:31px;font-weight:600}
+.sr .v{font-size:29px;color:var(--text2);font-weight:500}
+.sr.focus{background:#fff;color:#0a0a10;transform:scale(1.02);box-shadow:0 20px 44px rgba(0,0,0,.5)}
+.sr.focus .v{color:#4a4a60}
+.grp{font-size:25px;color:var(--text2);font-weight:700;margin:30px 0 14px 8px}
+.grp.first{margin-top:0}
+.sr.focus .toggle{background:#cfcfda}.sr.focus .toggle:after{background:#0a0a10}
+.toggle:after{width:34px;height:34px;left:6px;top:6px}.toggle.on:after{left:40px}</style></head>
+<body><div class="tv"><div class="tabbar"><div class="">Accueil</div><div class="">Films</div><div class="">Séries</div><div class="">Recherche</div><div class="on">Réglages</div></div><div class="lst"><div class="grp first">COMPTE · ANTONIN SUR SALON</div><div class="sr">Changer d'utilisateur<span class="v">›</span></div><div class="grp">LECTURE</div><div class="sr">Lire l'épisode suivant automatiquement<span class="v"><div class="toggle on" style="width:80px;height:46px"></div></span></div><div class="sr focus">Passer les intros automatiquement<span class="v"><div class="toggle" style="width:80px;height:46px"></div></span></div><div class="sr">Débit maximal<span class="v">Automatique ›</span></div><div class="sr">Langue audio<span class="v">Français ›</span></div><div class="sr">Sous-titres<span class="v">Automatique ›</span></div><div class="grp">À PROPOS</div><div class="sr">Licences<span class="v">›</span></div></div></div>
 <script>/* optionnel : met l'écran 1920x1080 à l'échelle de la fenêtre */(function(){function f(){var s=Math.min(innerWidth/1920,innerHeight/1080);document.body.style.transform='scale('+s+')';document.documentElement.style.width='1920px'}if(innerWidth<1920||innerHeight<1080){f();addEventListener('resize',f)}})();</script>
 </body></html>

@@ -1,737 +1,531 @@
-# Plan UI/UX tvOS — Phase 3
+# Plan UI/UX tvOS — Phase 3 (révision KISS / HIG)
 
-Statut : proposition, à valider par Antonin avant le premier commit de code UI.
-Périmètre : tvOS 17+, SwiftUI pur. iOS / iPadOS viennent après (§12) sans contraindre ce design.
-Maquettes : `docs/design/mockups/index.html` (11 écrans, 1920×1080, statiques). Contexte produit et phases :
-`.claude/plans/reboot-appletv-swift-natif.md` du dépôt `jellyfuse`. Ce document ne touche ni au player (Phase 1, validé)
-ni au cœur Jellyfin (Phase 2) : il en consomme les API.
+Statut : proposition révisée, à valider par Antonin avant le premier commit de code UI.
+Périmètre : tvOS 17+, SwiftUI pur. iOS / iPadOS ensuite (§11). Maquettes : `docs/design/mockups/index.html`
+(11 écrans, 1920×1080, autonomes). Contexte produit et phases : `.claude/plans/reboot-appletv-swift-natif.md` du dépôt
+`jellyfuse`. Ce plan consomme le player (Phase 1) et le cœur Jellyfin (Phase 2), il ne les redessine pas.
 
-Sommaire : 1 principes · 2 identité visuelle · 3 système visuel (tokens) · 4 conventions d'architecture ·
-5 navigation · 6 écrans · 7 composants · 8 focus engine (règles transverses) · 9 données Jellyfin ·
-10 états transverses · 11 ordre de construction · 12 divergences iOS · 13 hors périmètre · 14 questions ouvertes.
+Sommaire : 0 recherche et ce qu'elle a changé · 1 principes · 2 identité · 3 tokens · 4 architecture · 5 navigation ·
+6 écrans · 7 composants · 8 règles de focus · 9 données Jellyfin · 10 états · 11 iOS · 12 hors périmètre ·
+13 ordre de construction · 14 questions ouvertes.
 
 ---
 
+## 0. Recherche et ce qu'elle a changé
+
+### 0.1 Sources
+
+Apple Human Interface Guidelines (pages lues via l'endpoint JSON de developer.apple.com, résumées par un modèle :
+la substance et les chiffres sont fidèles, les formulations sont paraphrasées, à recouper sur la page avant toute citation
+littérale) :
+
+1. [Focus and selection](https://developer.apple.com/design/human-interface-guidelines/focus-and-selection) : s'appuyer sur
+   les effets système (« custom effects only if absolutely necessary »), ne pas déplacer le focus sans action de
+   l'utilisateur, tout élément doit être atteignable au focus, parallaxe, agrandir sans « crowd » l'interface, cinq états
+   (non focalisé, focalisé, *highlighted*, sélectionné, indisponible), pas de pointeur.
+2. [Tab bars](https://developer.apple.com/design/human-interface-guidelines/tab-bars) : sur tvOS la barre est en haut, hauteur
+   68 pt et bord haut à 46 pt (non modifiables) ; **Menu ramène toujours le focus sur la barre** ; elle peut défiler hors
+   écran quand l'onglet n'a qu'une vue principale ; navigation, pas actions ; ne pas masquer ni désactiver un onglet
+   (expliquer s'il est vide) ; libellés d'un mot ; moins d'onglets = plus simple ; boutons-icônes (réglages, recherche)
+   possibles dans la barre.
+3. [Layout](https://developer.apple.com/design/human-interface-guidelines/layout) : zone sûre **60 pt haut/bas, 80 pt
+   côtés** ; grilles tvOS : 6 colonnes = items de 260 pt, écart 40 pt, **espacement vertical minimum 100 pt** ; 5 col. 320 pt,
+   4 col. 410 pt, 3 col. 560 pt ; laisser du jeu autour de l'élément focalisé ; contenu partiellement hors champ de même
+   largeur de chaque côté.
+4. [Typography](https://developer.apple.com/design/human-interface-guidelines/typography) : styles tvOS (Title 1 76 Medium,
+   Title 2 57, Title 3 48, Headline 38, Subtitle 1 38, Callout 31, Body 29, Caption 1 25, Caption 2 23), texte par défaut
+   29 pt, **minimum 23 pt**, emphase = Bold, éviter Ultralight/Thin/Light, SF Pro (ou New York).
+5. [Playing video](https://developer.apple.com/design/human-interface-guidelines/playing-video) : utiliser le lecteur
+   système ; si lecteur custom, **« référencer le comportement du lecteur système »** car une divergence légère frustre ;
+   contrôles de transport + onglets de contenu (Infos, Épisodes, Chapitres) « un pas ou deux » ; **reprendre
+   automatiquement sans demander confirmation** ; pas d'écran-barrière avant la lecture ; loader noir + spinner seulement
+   après 2 s ; à la sortie, **afficher la fiche du contenu avec option de reprise** ; overlays courts, discrets, SDR
+   (rétention d'image).
+6. [Siri Remote](https://developer.apple.com/design/human-interface-guidelines/remotes) : balayer = focus ; clic = activer ;
+   **Retour = parent dans la hiérarchie** (Home Apple TV au sommet) ; Lecture/Pause = lire/mettre en pause ; ne pas
+   redéfinir les boutons standard hors jeu ; ne pas réagir aux taps involontaires ; appui sur le pavé avant balayage =
+   mode scrub.
+7. [Collections](https://developer.apple.com/design/human-interface-guidelines/collections) : préférer la ligne/grille
+   standard, éviter les mises en page custom, marge autour des images pour voir l'effet de focus.
+8. [Top Shelf](https://developer.apple.com/design/human-interface-guidelines/top-shelf) (Phase 4) : mettre en avant du
+   contenu **nouveau ou à reprendre**, pas ce qui a déjà été vu ; carrousel avec bouton de lecture + « plus d'infos » ;
+   image statique de repli 2320×720 ; rangée : affiche 2:3 404×608, 16:9 908×512.
+
+Sources UX TV :
+9. [Smashing Magazine, « Designing For TV » (2025)](https://www.smashingmagazine.com/2025/09/designing-tv-principles-patterns-practical-guidance/) :
+   étagères horizontales, dernier élément qui dépasse du bord, haut/bas = changer de groupe et gauche/droite = changer
+   d'élément, focus lisible de loin (scale, inversion, bordure, seuls ou combinés), palette discrète avec contraste
+   réservé au focus, texte de base à partir de 24 px, 5-6 tailles de texte au plus, **appui long = menu contextuel**,
+   lecteur : l'interface s'efface pour laisser le contenu, la TV favorise la navigation latérale (point de vue
+   contraire à celui d'Apple sur tvOS, qui est ici prioritaire).
+10. Recherche web « 10-foot UI » (Amazon Fire TV UX guidelines, Edenspiekermann, Microsoft « Designing for Xbox and TV »,
+    UI/UX Atlas) : **non lues en entier**, seulement leurs résumés de résultats : écrans simples et peu denses, focus
+    visible « de 10 pieds », navigation prévisible, pas de bouton Retour dans l'UI (c'est la télécommande). Cités pour
+    mémoire, aucune décision ne repose sur eux seuls.
+
+Limite : aucune source lue ne détaille la conception du billboard de Netflix ; les choix de billboard viennent des HIG
+(Top Shelf, focus) et de Smashing, pas d'une analyse Netflix.
+
+### 0.2 Avant → après
+
+| Sujet | Avant (v1 du plan) | Après (HIG + KISS) | Raison |
+|---|---|---|---|
+| Navigation | barre custom (wordmark, 6 onglets, avatar) | **`TabView` natif** : Accueil, Films, Séries, Recherche, Réglages | HIG tab bars : barre système, Menu y ramène le focus, ne pas masquer d'onglet ; moins de code ; accessibilité gratuite |
+| Marges | 90 pt côtés | **80 pt** côtés, 60 haut/bas | HIG layout |
+| Grille / cartes | affiche 250×375, écart vertical 56 | **260×390, écart 40, vertical ≥ 100** ; paysage 410×231 | HIG layout (6 colonnes = 260) |
+| Focus | liseré blanc 5 pt + lueur violette + scale 1,12 | **effet système** (scale ≈ 1,1, ombre, parallaxe, légère hausse de luminosité) | HIG focus : effets système, custom seulement si indispensable |
+| Typo | 104 Heavy, 66, 57 custom | **styles tvOS uniquement** (Title 1 76 Bold pour les titres, Body 29, Callout 31, Caption 25/23) ; jamais Heavy/Light | HIG typography |
+| Billboard | 6 éléments, rotation 8 s, pagination, tag « À LA UNE », badges 4K/HDR, 3 boutons | **1 élément statique** : titre, 1 ligne de méta, 2 lignes de synopsis, **Lecture + Ma liste** | HIG : pas de changement sans action ; KISS |
+| Accueil | Reprendre + À suivre + Récents + Reco + Ma liste | **« À suivre »** (reprises puis prochains épisodes, fusionnés) + Récents par bibliothèque + Ma liste | Apple TV app : un seul « Up Next » ; reco abandonnée (Jellyfin n'a pas de vrai moteur) |
+| Fiche film | méta + 4 badges + crédits à droite + 4 boutons + 3 sélecteurs (version, audio, sous-titres) + Détails | **1 ligne de méta, 3 boutons** (Lecture/Reprendre, Ma liste, Vu), Distribution ; audio/sous-titres **dans le lecteur** ; version proposée seulement s'il y en a plusieurs | « a-t-on besoin de ça à 3 m ? » ; HIG playing video (reprise sans question) |
+| Fiche série | synopsis déplié sur carte, 5 chips, 4 boutons | Reprendre + Ma liste, **chips de saisons**, épisodes (titre + durée) ; synopsis complet en appui long | pas de changement de mise en page au focus |
+| Lecteur | OSD à 6 boutons, heure de fin, segments en surbrillance, panneau latéral à 2 colonnes | **calqué sur le lecteur système** : titre, 2 icônes (sous-titres, audio), barre, temps ; bas = onglets de contenu **Infos · Audio · Sous-titres · Chapitres** (liste unique) ; « Passer l'intro » ; épisode suivant en fin | HIG playing video : référencer le lecteur système |
+| Bibliothèque | 2 rangées de chips, bouton Non vus, rail A-Z, sous-titre, badges | **Titre + un bouton « Filtres et tri »** (panneau : tri, genres, Non vus, Favoris, années, **« Aller à la lettre »**) ; grille seule | moins de chrome ; HIG collections : grille standard |
+| Recherche | chips de types, aide Siri, récents | champ + clavier système, **résultats groupés** ; pas de chips | `.searchable` natif |
+| Connexion | 2 panneaux, 3 étapes, expiration, mosaïque | **un code, une phrase, un QR**, 2 boutons | KISS |
+| Profils | 3 chips, « Gérer » | avatars + « Changer de serveur » en lien | KISS |
+| Réglages | barre latérale 7 sections, ~25 lignes | **une liste groupée** : Compte, Lecture (5 lignes), À propos | `Form` natif ; on retire ce qui n'a pas de besoin prouvé |
+| Onglets | + Ma liste, + Collections, avatar | **Ma liste = shelf d'accueil + filtre « Favoris »** ; Collections = filtre de Films ; profil dans Réglages | HIG : moins d'onglets |
+| Transition carte → fiche | zoom envisagé | fondu avec backdrop conservé | `NavigationTransition.zoom` incertain sur tvOS |
+| Questions ouvertes | 10 | **6** (§14) | tranchées par les HIG : barre de nav, rotation, onglet Ma liste, note affichée |
+
+Identité violet/rose **inchangée** (aucune raison HIG de la modifier). Elle est en revanche **plus rare** : elle ne
+sert plus qu'au wordmark, à la barre de progression et à la coche de sélection.
+
 ## 1. Principes
 
-1. **L'ADN Netflix, pas la copie.** On garde : fond sombre immersif, billboard héro plein écran, shelves horizontales
-   d'affiches, focus qui grossit, chrome minimal, typographie forte. On ne garde pas : autoplay de bandes-annonces,
-   « % de correspondance » (Jellyfin n'a pas de moteur de reco), rouge, logo, vocabulaire. L'identité est la nôtre (§2).
-2. **Le focus est le design.** Sur tvOS il n'y a ni curseur ni tap : chaque écran est d'abord un graphe de focus. Pour
-   chaque écran on décide l'élément focus par défaut, les voies de sortie, ce que fait Menu et ce que fait Lecture/Pause
-   (§6, §8). Une maquette sans état de focus n'est pas une maquette.
-3. **Une action fréquente = au plus 2 clics depuis l'Accueil.** Reprendre un film : 1 clic. Lancer le prochain épisode : 1 clic.
-   Changer de piste audio : 2 gestes (bas, sélection) sans quitter la lecture.
-4. **Le contenu est l'interface.** Affiches et backdrops portent l'écran ; le texte est court, gros, lisible à 3 m.
-5. **Rien n'est bloquant.** Squelettes de la forme finale, pas de spinner plein écran, première image depuis le cache
-   puis revalidation (§10).
-6. **Complet côté Jellyfin, honnête côté limites.** Tout ce qu'un client vidéo Jellyfin sait faire est dans le périmètre
-   (§13 liste ce qui n'y est pas, avec la raison). Ce que le serveur ne fournit pas n'est pas inventé.
+1. **Natif d'abord.** Si tvOS fournit le composant (`TabView`, `.searchable`, `Form`/`List`, `contextMenu`, `.card`,
+   `confirmationDialog`), on l'utilise et on ne le redessine que pour la marque (couleurs, typo système). Moins de code,
+   comportements attendus, accessibilité incluse.
+2. **À 3 m, avec une télécommande, en a-t-on besoin LÀ ?** Chaque élément doit passer ce test ; sinon il va dans un
+   appui long, un panneau, ou disparaît.
+3. **Le contenu est l'interface.** Affiches et backdrops portent l'écran ; une ligne de méta, pas de badges (les infos
+   techniques vivent dans l'onglet Infos du lecteur).
+4. **Le focus est le design.** Chaque écran est un graphe de focus : défaut, sorties, Menu, Lecture/Pause (§6, §8).
+5. **Reprendre sans friction.** Lecture = reprise automatique, sans question (HIG). « Depuis le début » est dans
+   l'appui long.
+6. **Rien de bloquant.** Squelettes à la forme finale, cache d'abord, jamais de spinner plein écran avant 2 s.
+7. **Complet côté Jellyfin, honnête côté limites.** Tout le périmètre d'un client vidéo, mais derrière des écrans
+   sobres ; §12 liste ce qui n'y est pas et pourquoi.
 
-## 2. Identité visuelle (proposition)
+## 2. Identité (inchangée, plus discrète)
 
-- **Nom d'écran** : `jellyfuse`, en minuscules, sans espace. **Wordmark** : étincelle à quatre branches (symbole de la
-  « fuse ») en dégradé violet → rose, suivie de `jelly` en blanc et `fuse` en dégradé. Graisse ExtraBold, interlettrage
-  -1 pt. Rendu dans les maquettes (`.logo`). Le symbole seul sert d'icône d'app et de point de focus de marque
-  (spinner, état vide). Un SVG source sera produit au moment de l'icône (Phase 4).
-- **Accent** : « Fuse Violet » `#8A6CFF`, avec une étincelle rose `#FF5C8A` ; le dégradé 135° violet → magenta → rose
-  (`#8A6CFF → #C65BDB → #FF5C8A`) est réservé à : la progression de lecture, le mot `fuse` du wordmark, l'onglet actif, le
-  bouton primaire de l'onboarding. Un clin d'œil à la teinte violette de Jellyfin, volontairement loin du rouge Netflix.
-- **Ton** : sobre, cinéma, un peu techno (badges 4K / HDR / Atmos visibles, car c'est ce que le public Jellyfin
-  cherche). Pas d'humour dans l'UI.
-- **Focus signature** : l'élément ciblé grossit, prend un liseré blanc de 5 pt et une lueur violette diffuse. Le blanc
-  reste lisible sur n'importe quelle affiche ; la lueur donne l'identité (§3.5).
+- **Wordmark** `jellyfuse` : étincelle à quatre branches en dégradé violet → rose + `jelly` blanc + `fuse` en dégradé,
+  ExtraBold. Visible sur : lancement, connexion, profils, À propos. **Absent de la barre d'onglets** (système).
+- **Accent** « Fuse Violet » `#8A6CFF`, étincelle `#FF5C8A`. Dégradé `#8A6CFF → #C65BDB → #FF5C8A` réservé à la
+  progression de lecture et au wordmark ; l'accent plein sert à la coche de sélection.
+- **Ton** : sobre, cinéma. Fond `#07070B`.
 
 ## 3. Système visuel
 
-Toutes les valeurs vivent dans `DesignSystem` (namespace `Design`, §4). **Aucun nombre brut dans une vue** : une
-valeur nouvelle devient d'abord un token (règle d'Oisillon, `docs/design/design-system.md`).
+Tokens dans `DesignSystem` (namespace `Design`, §4). Aucun nombre brut dans une vue (règle d'Oisillon).
 
-### 3.1 Palette
+### 3.1 Palette (thème sombre unique)
 
-Thème sombre uniquement (pas de clair sur tvOS pour une app vidéo ; la maquette fait foi).
-
-| Token `Design.Palette` | Hex | Usage |
+| Token | Hex | Usage |
 |---|---|---|
-| `canvas` | `#07070B` | fond de tous les écrans |
-| `surface` | `#101018` | barres latérales, panneaux, rangées de réglages |
-| `raised` | `#181824` | cartes de dialogue, chips au repos (à 10 % blanc) |
-| `overlay` | `#212131` | panneaux flottants (pistes, info) sous flou |
-| `stroke` | blanc 10 % | filets, contours de panneaux |
-| `textPrimary` | `#F4F4F8` | titres, libellés |
+| `canvas` | `#07070B` | fond |
+| `surface` | `#101018` | rangées de réglages (à 6 % blanc sur `canvas`) |
+| `overlay` | `#181824` (82 %) sous flou | panneaux du lecteur |
+| `textPrimary` | `#F4F4F8` | titres |
 | `textSecondary` | `#A6A6B8` | synopsis, méta (8,3:1 sur `canvas`) |
-| `textTertiary` | `#6E6E82` | aides, légendes (4,0:1 : réservé aux textes ≥ 29 pt, jamais à une info essentielle) |
-| `accent` | `#8A6CFF` | sélection, liens, coche (4,9:1) |
-| `spark` | `#FF5C8A` | fin du dégradé, notification « nouveau » |
-| `accentGradient` | `#8A6CFF → #C65BDB → #FF5C8A` | progression, onglet actif |
-| `success` | `#3DDC97` | vu, serveur joignable, interrupteur actif |
-| `warning` | `#FFB84D` | note communautaire (★), transcodage |
-| `danger` | `#FF5A5F` | erreurs, déconnexion |
-| `focusRing` | `#FFFFFF` | liseré de focus |
-| `focusGlow` | `#8A6CFF` à 45-50 % | lueur de focus |
+| `textTertiary` | `#6E6E82` | légendes secondaires ≥ 25 pt, jamais une info essentielle (4,0:1) |
+| `accent` | `#8A6CFF` | sélection (4,9:1) |
+| `accentGradient` | violet → rose | progression, wordmark |
+| `success` | `#3DDC97` | vu, interrupteur actif |
+| `warning` | `#FFB84D` | note ★ |
+| `danger` | `#FF5A5F` | déconnexion, erreur |
 
-Les backdrops sont assombris par trois dégradés fixes (`Design.Scrim`) : **gauche** `canvas` 96 % → 0 % sur 70 % de la
-largeur (lisibilité du texte), **bas** `canvas` 100 % → 0 % sur 60 % de la hauteur (fondu vers les shelves), **haut**
-`canvas` 80 % → 0 % sur 24 % (barre de nav). Pas de texte posé sans scrim.
+Trois scrims fixes sur les backdrops (`Design.Scrim`) : gauche (lisibilité du texte), bas (fondu vers les shelves), haut.
+Aucun texte posé sans scrim.
 
-Couleur dominante : pour la fiche détail, on tire une teinte du backdrop (`UIImage` → moyenne HSB réduite) afin de
-teinter légèrement le scrim ; optionnel, derrière un test de contraste automatique (jamais sous 4,5:1).
+### 3.2 Typographie : styles tvOS uniquement
 
-### 3.2 Typographie
-
-SF Pro (police système, pas de police embarquée). tvOS n'a pas de Dynamic Type utilisateur : tailles fixes en points sur
-1920×1080, alignées sur les styles de la HIG tvOS, graisses relevées pour l'effet « affiche ».
-
-| Rôle `Design.Typography` | Taille | Graisse | Usage |
+| Rôle | Style tvOS | Taille | Usage |
 |---|---|---|---|
-| `billboardTitle` | 104 | Heavy, -3 | titre du billboard et de la fiche (si pas de logo) |
-| `largeTitle` | 76 | Heavy, -1,5 | titre d'écran (Films, Réglages) |
-| `title1` | 66 | Bold | titre de page secondaire |
-| `title2` | 57 | Bold | titre d'OSD, de dialogue |
-| `title3` | 48 | Bold | sous-titre de dialogue |
-| `shelfTitle` | 38 | Bold | en-tête de shelf |
-| `callout` | 31 | Medium | boutons, onglets, chips, lignes de réglages |
-| `body` | 29 | Regular/Medium | synopsis, méta |
-| `caption` | 25 | Medium | sous-légendes de carte, en-têtes de groupe (majuscules espacées +2 pt) |
-| `caption2` | 23 | Medium | tailles minimales (aide, badge) |
-| `timecode` | 27 | Medium, chiffres tabulaires | temps du player |
+| `title` | Title 1 (Bold pour l'emphase) | 76 | titre de fiche, de billboard, d'écran |
+| `sectionTitle` | Headline | 38 | en-tête de shelf |
+| `callout` | Callout | 31 | boutons, onglets internes, lignes de réglages |
+| `body` | Body | 29 | méta, synopsis, légendes de carte |
+| `caption` | Caption 1 | 25 | sous-légendes, aides |
+| `caption2` | Caption 2 | 23 | plancher |
 
-Plancher : 23 pt (HIG). Le titre d'un billboard utilise le **logo transparent Jellyfin** (`ImageType.logo`) quand il
-existe, le texte `billboardTitle` sinon.
+Pas de Heavy ni de Light ; pas de taille hors styles, sauf les chiffres du code Quick Connect (`Design.Typography.code`,
+92 pt Bold). Quand le serveur fournit un logo transparent (`ImageType.logo`), la fiche peut l'utiliser à la place du
+titre texte (v1.1).
 
-### 3.3 Grille et espacements
+### 3.3 Grille
 
-- Écran 1920×1080 pt. **Zone sûre : 90 pt à gauche et à droite, 60 pt en haut et en bas.** Les shelves partent de la
-  marge de 90 pt, mais **défilent jusqu'au bord** (peek de la carte suivante) : on voit toujours qu'il y a une suite.
-- Échelle `Design.Spacing` : 8 · 12 · 16 · 24 · 32 · 40 · 56 · 90. Alias : `shelfGap` 40 (entre cartes),
-  `shelfTitleToRow` 26, `screenMargin` 90, `sectionGap` 56, `navHeight` 170 (barre + fondu).
-- Tailles de cartes (`Design.Size`) : **affiche 250×375** (2:3, 6 visibles + peek), **paysage 400×225** (16:9, 4
-  visibles + peek), **personne** disque 150-190, **épisode** 400×225 + titre 2 lignes, **avatar de profil** 230.
-- Rayons (continus) : carte 14, bouton pilule = hauteur/2, panneau 28, rangée de réglage 22.
-- **Marge de focus** : une carte focalisée grossit de 12 % ; chaque shelf réserve donc 40 pt en haut et en bas
-  (`scrollClipDisabled()` + padding) pour que ni le scale ni l'ombre ne soient coupés.
+- 1920×1080 pt, **zone sûre 60 pt haut/bas, 80 pt côtés**.
+- **Affiche 260×390 (6 colonnes), écart horizontal 40, espacement vertical ≥ 100** ; **paysage 410×231 (4 colonnes)** ;
+  disque personne 150 ; avatar de profil 230.
+- Une shelf laisse passer la carte suivante au bord (peek). Chaque shelf réserve 40 pt de marge haute et basse pour
+  l'effet de focus (`scrollClipDisabled()` + padding).
+- Échelle `Design.Spacing` : 8 · 16 · 24 · 40 · 80 ; alias `screenMargin` 80, `shelfGap` 40, `gridRowGap` 100.
 
-### 3.4 Boutons et chips
+### 3.4 Focus
 
-- `FuseButton` : hauteur 84, pilule, 31 pt Bold. Styles : `primary` (blanc sur focus, translucide au repos),
-  `secondary`, `icon` (rond 84). Au focus : fond blanc, texte `canvas`, scale 1,08, ombre + lueur.
-- `FuseChip` : hauteur 60, 27 pt SemiBold. Au repos fond blanc 10 % ; sélectionné fond blanc ; focus = sélectionné +
-  scale 1,08.
-- Un seul bouton primaire par écran de contenu (Lecture / Reprendre).
+On s'appuie sur l'effet système : `.buttonStyle(.card)` pour les cartes (scale, ombre, parallaxe des images à calques),
+style de bouton système pour les boutons (inversion blanche). On ajoute seulement :
+- une légère hausse de luminosité de l'image focalisée (lisibilité sur fond très sombre) ;
+- la légende qui passe en `textPrimary` plein.
 
-### 3.5 Règles de focus (visuelles)
+Pas de liseré ni de lueur de marque. États (HIG) : non focalisé, focalisé, *highlighted* (inversion brève au clic),
+sélectionné (chip actif en blanc, coche accent), indisponible. Reduce Motion : on retire le scale animé, il ne reste que
+l'inversion/ombre.
 
-| Élément | Scale | Liseré | Ombre | Notes |
-|---|---|---|---|---|
-| Carte (affiche, paysage, épisode, personne) | 1,12 | blanc 5 pt | noir 65 % 36/70 + lueur violette 90 | légère parallaxe de l'image (`.card` natif quand possible), légende passe en blanc plein |
-| Bouton / chip | 1,08 | fond blanc (inversion) | noir 55 % + lueur 70 | texte inversé |
-| Rangée de réglage / de licence | 1,025 | fond blanc (inversion) | noir 55 % | pas de scale fort : la rangée est large |
-| Avatar de profil | 1,14 | blanc 8 pt | noir + lueur 100 | libellé blanc Bold |
-| Touche du clavier (recherche) | 1,14 | fond blanc | noir | |
-| Onglet de la barre de nav | — | fond blanc 16 % | — | l'onglet **actif** garde un soulignement dégradé |
+## 4. Architecture (alignée sur sillon et oisillon)
 
-Mouvement (`Design.Motion`) : ressort `duration 0,30 s, bounce 0,15` pour tout focus ; fondu 0,6 s pour le billboard ;
-fondu 0,25 s entre écrans (le backdrop identique d'une fiche à l'autre fait la continuité, pas un zoom). Si
-`accessibilityReduceMotion` : plus de scale animé, seulement le liseré et le fond ; plus de ken-burns ni de rotation du
-billboard.
+Études : `~/projects/sillon` (Swift 6, XcodeGen, `SillonKit`, `AppModel` main actor, vues minces, façade `actor
+JellyfinClient`) et Oisillon (dépôt `~/projects/poste`, `~/projects/oisillon` n'existe pas ; `Design` à sous-espaces,
+« aucun nombre brut dans une vue », `docs/design/`, maquettes HTML).
 
-## 4. Conventions d'architecture (alignées sur sillon et oisillon)
-
-Études : `~/projects/sillon` (Swift 6, XcodeGen, `Packages/SillonKit`, `App/Shared`, `AppModel` main actor, vues
-minces, façade `actor JellyfinClient` sur `jellyfin-sdk-swift`) et Oisillon (dépôt local `~/projects/poste`, le
-répertoire `~/projects/oisillon` n'existe pas : `App/Shared/Design/DesignSystem.swift`, enum `Design` à sous-espaces
-`Spacing`/`Radius`/`Emphasis`/`Motion`, règle « aucun nombre brut dans une vue », `docs/design/design-system.md`,
-maquettes HTML de référence dans `docs/design/`, `prototype/`). On reprend :
-
-| Règle | Origine | Application ici |
+| Règle | Origine | Ici |
 |---|---|---|
-| La logique vit dans le package, les vues restent minces | sillon, oisillon | `Packages/JellyKit` porte tout ce qui se teste sans UI ; `Apps/Jellyfuse` ne parle jamais au réseau |
-| `AppModel` `@MainActor @Observable` unique + `report(_:otherwise:)` pour les erreurs | sillon | session, serveur courant, erreurs, état réseau ; une erreur réseau = un bandeau, le reste = alerte de l'écran |
-| Namespace de tokens `Design`, valeurs nommées | oisillon | `DesignSystem/Design.swift` (§3) |
-| Docs de design versionnées + maquettes HTML | oisillon | ce dossier `docs/design/` ; une capture par écran réel comparée à la maquette avant de clore |
-| Tests swift-testing (`@Test`, `#expect`), réseau par `URLProtocol` | sillon, oisillon | logique du DesignSystem et des modèles d'écran testée sans simulateur |
-| Texte français dans le code = clé ; en (et es) dans `.xcstrings` | sillon, oisillon | `String(localized:)`, test « chaque clé a ses traductions » |
-| Concurrence stricte Swift 6, pas de `@unchecked Sendable` sans commentaire | sillon, oisillon | le seul bloc justifié existant est `MpvPlayer` |
-| `project.yml` XcodeGen fait foi | sillon, oisillon, déjà ici | nouvelles cibles ajoutées dans `project.yml` / `Package.swift` |
-| Arguments de lancement Debug pour rejouer un scénario | sillon (`-SillonServerOverride`…) | `-JellyfuseServer <url>`, `-JellyfuseOpen detail:<id>`, `-JellyfuseGallery` (galerie du DesignSystem, sans serveur) |
+| Logique dans le package, vues minces | sillon, oisillon | `Packages/JellyKit` pour tout ce qui se teste ; `Apps/Jellyfuse` ne parle jamais au réseau |
+| `AppModel` `@MainActor @Observable` + `report(_:otherwise:)` | sillon | session, erreurs, réseau : un bandeau pour le réseau, une alerte pour le reste |
+| Tokens `Design` nommés | oisillon | `DesignSystem/Design.swift` |
+| Tests swift-testing, réseau par `URLProtocol` | les deux | logique des modèles d'écran et du DesignSystem sans simulateur |
+| Français = clé, traductions en `.xcstrings` | les deux | `String(localized:)` |
+| Swift 6 strict | les deux | idem |
+| Arguments de lancement Debug | sillon | `-JellyfuseServer <url>`, `-JellyfuseOpen detail:<id>` |
 
-### 4.1 Découpage cible
+### 4.1 Découpage
 
 ```
 Packages/JellyKit/Sources/
-├── DesignSystem/     # NOUVEAU. SwiftUI seul : zéro dépendance Jellyfin, zéro réseau
-│   ├── Design.swift          # tokens : Palette, Typography, Spacing, Size, Radius, Motion, Focus, Scrim
-│   ├── Foundations/          # FocusableStyle, Artwork, Skeleton, Badge, ProgressBar, GradientText
-│   ├── Cards/                # PosterCard, LandscapeCard, EpisodeCard, PersonCard, ProfileAvatar
-│   ├── Layout/               # Shelf, Billboard, TopNav, PosterGrid, LetterRail, ChipRow
-│   ├── Player/               # PlayerOSD, Scrubber, TrickplayBubble, TrackPanel, SkipButton, UpNextCard
-│   ├── Forms/                # SettingsRow, SettingsSidebar, PinPad, QuickConnectCode
-│   └── Models/               # modèles d'affichage (valeurs) : PosterModel, EpisodeModel, OSDState…
-├── LibraryKit/       # existant : façade du SDK + modèles du domaine (MediaItem…)
-├── PlayerCore/       # existant : mpv
-├── PlaybackEngine/   # Phase 2 : device profile, resolver, reporter, mémorisation pistes
-└── AppModel/         # Phase 2 : Session/SessionStore, réglages (SwiftData)
+├── DesignSystem/     # NOUVEAU. SwiftUI seul, zéro dépendance Jellyfin
+│   ├── Design.swift                    # Palette, Typography, Spacing, Size, Scrim, Motion
+│   ├── Artwork.swift, Badge.swift …    # fondations
+│   ├── Cards/ (PosterCard, LandscapeCard, PersonCard, ProfileAvatar)
+│   ├── Layout/ (Shelf, Billboard, BackdropView, PosterGrid, DetailHeader)
+│   ├── Player/ (PlayerOSD, Scrubber, TrickplayBubble, ContentTabs, SkipButton, UpNextCard)
+│   ├── Forms/ (SettingsRow, PinPad, QuickConnectCode)
+│   └── Models/ (PosterModel, EpisodeModel, OSDModel…)    # valeurs d'affichage
+├── LibraryKit/ · PlayerCore/ · PlaybackEngine/ (Phase 2) · AppModel/ (Phase 2)
 Apps/Jellyfuse/
-├── JellyfuseApp.swift, RootView.swift, AppModel.swift
-├── Presentation/     # LibraryKit → DesignSystem.Models (mappers purs, testés)
-└── Features/         # un dossier par écran : Auth/ Home/ Detail/ Library/ Search/ Player/ Settings/
-                      #   chaque feature = View (mince) + XxxModel (@Observable, appelle le client)
+├── JellyfuseApp.swift, RootView.swift (TabView), AppModel.swift
+├── Presentation/   # LibraryKit → modèles d'affichage (mappers purs, testés)
+└── Features/       # Auth/ Home/ Detail/ Library/ Search/ Player/ Settings/ : View mince + XxxModel @Observable
 ```
 
-**Règle de dépendance** : `DesignSystem` ne connaît ni `LibraryKit` ni le SDK. Ses vues reçoivent des **modèles
-d'affichage** (valeurs `Sendable, Equatable, Identifiable`) et émettent des callbacks. `Presentation/` traduit
-`MediaItem`/`BaseItemDto` en modèles d'affichage. Cela garde le DesignSystem testable, prévisualisable (`#Preview`
-avec données fictives) et réutilisable par la future cible iOS.
-
-### 4.2 Composants purs : props-in, callbacks-out
-
-Exemple de signature de référence, valable pour tous les composants :
+`DesignSystem` ne connaît ni `LibraryKit` ni le SDK : ses vues reçoivent des valeurs `Sendable, Equatable, Identifiable`
+et émettent des callbacks (props-in, callbacks-out) :
 
 ```swift
 public struct PosterModel: Sendable, Equatable, Identifiable {
-    public let id: String
-    public let title: String
-    public let image: ArtworkSource            // url + blurhash + aspect
-    public let progress: Double?               // 0...1, nil = pas de barre
-    public let isWatched: Bool
-    public let badge: Badge?                   // .new, .count(n)
+    public let id: String; public let title: String
+    public let image: ArtworkSource; public let progress: Double?; public let isWatched: Bool
 }
-
 public struct PosterCard: View {
-    public init(_ model: PosterModel, onSelect: @escaping () -> Void, onLongPress: @escaping () -> Void = {})
-    // le focus est lu via @Environment(\.isFocused) ; aucun état métier dans la vue
+    public init(_ model: PosterModel, onSelect: @escaping () -> Void)
 }
 ```
 
-Le composant n'importe rien de `Features/` ; la navigation et les mutations sont des callbacks fournis par l'écran.
-Pas de `memoize` manuel, pas de singleton, pas de `ObservableObject` : `@Observable` uniquement dans les `XxxModel` des
-features.
-
-### 4.3 État et données
-
-- Un `XxxModel` `@MainActor @Observable` par écran (`HomeModel`, `DetailModel`, `LibraryModel`, `SearchModel`,
-  `SettingsModel`), construit avec le `JellyfinClient` de la session. Il expose des **modèles d'affichage** et un état
-  `Loadable<T>` (`idle | loading | loaded(T) | failed(Error)`), jamais un `[BaseItemDto]` brut.
-- **Pas de store maison généralisé** (décision du plan de reboot). Exception raisonnable : un cache disque de la Home
-  (dernier résultat de chaque shelf, par propriétaire = serveur + utilisateur, comme `libraryOwner` de sillon) pour
-  afficher quelque chose au lancement avant le réseau. Images : Nuke (`ImagePipeline` + `ImageCache` disque 500 Mo).
-- Websocket Jellyfin (`socketSession()` de sillon) : `UserDataChanged` rafraîchit « Reprendre » et « À suivre »,
-  `LibraryChanged` marque les shelves « Ajoutés récemment » obsolètes.
-- **Mutations optimistes** (vu, ma liste) : on patche le modèle local d'abord, l'appel part ensuite, rollback + `report`
-  en cas d'erreur.
+### 4.2 État et données
+- Un `XxxModel` `@Observable` par écran, état `Loadable<T>` (`idle | loading | loaded | failed`), jamais de DTO brut.
+- Cache disque de l'Accueil seulement (dernier résultat par shelf, clé serveur + utilisateur, comme `libraryOwner` de
+  sillon). Images : Nuke avec cache disque. Pas de store généralisé.
+- Websocket (`socketSession`) : `UserDataChanged` rafraîchit « À suivre » ; `LibraryChanged` invalide « Récents ».
+- Mutations (vu, ma liste) optimistes avec rollback + `report`.
 
 ## 5. Navigation
 
 ```mermaid
 flowchart TD
     L([Lancement]) --> S{Session valide ?}
-    S -- non --> A1[Choix du serveur]
-    S -- oui --> H
-    A1 -->|serveur sélectionné ou saisi| A2[Choix du profil]
-    A2 -->|profil public| A4{Quick Connect actif ?}
-    A2 -->|Autre utilisateur| A5[Mot de passe]
-    A4 -- oui --> QC[Connexion rapide : code + QR]
-    A4 -- non --> A5
-    QC -->|autorisé| H
-    QC -->|Utiliser un mot de passe| A5
-    A5 -->|OK| H
-    A2 -->|profil verrouillé| PIN[PIN local] --> A4
+    S -- non --> A1[Serveur]
+    S -- oui --> T
+    A1 --> A2[Profil]
+    A2 -->|profil verrouillé| PIN[PIN local] --> QC
+    A2 --> QC[Connexion rapide : code + QR]
+    QC -->|autorisé| T
+    QC -->|mot de passe| A5[Mot de passe] --> T
+    A2 -->|Autre| A5
 
-    subgraph Racine [Racine : barre de navigation haute]
-      H[Accueil] 
-      F[Films / Bibliothèques]
-      SE[Séries]
-      CO[Collections]
-      ML[Ma liste]
-      RE[Recherche]
-      R[Réglages]
+    subgraph T [TabView natif]
+      H[Accueil] --- F[Films] --- SE[Séries] --- RE[Recherche] --- R[Réglages]
     end
 
-    H & F & SE & CO & ML & RE -->|Sélection carte| D{Type ?}
+    H & F & SE & RE -->|carte| D{Type}
     D -->|Film| DM[Fiche film]
-    D -->|Série| DS[Fiche série · saison · épisodes]
-    D -->|Collection| BX[Fiche collection]
-    D -->|Personne| PE[Fiche personne]
-    BX --> DM
-    PE --> DM & DS
-    DM & DS -->|Lecture / Reprendre| P[[Lecteur]]
-    H -->|Carte Reprendre · Play/Pause| P
-    DS -->|Épisode| P
-    P --> PP[Panneau pistes] & PI[Panneau infos] & PC[Chapitres] & UN[Épisode suivant]
-    UN --> P
-    P -->|Menu| BACK[(retour à l'écran d'origine)]
-
-    R --> RP[Lecture] & RQ[Qualité] & RA[Audio et sous-titres] & RAp[Apparence] & RS[Serveurs] & RL[À propos · Licences]
-    R -->|Changer d'utilisateur| A2
-    RS -->|Ajouter un serveur| A1
-    NAVAV[Avatar de la barre] --> A2
+    D -->|Série| DS[Fiche série]
+    DM & DS -->|Lecture| P[[Lecteur]]
+    H -->|carte « À suivre »| P
+    P -->|Menu| DM & DS
+    R --> A2
+    R --> LI[Licences]
 ```
 
-- **Racine** : barre de navigation haute personnalisée (`TopNav`), dans une zone de focus dédiée. Onglets dynamiques :
-  `Accueil`, une entrée par bibliothèque vidéo du serveur (type `movies` → *Films*, `tvshows` → *Séries*, `boxsets` →
-  *Collections*, `homevideos`/`mixed` → nom de la bibliothèque), `Ma liste`, `Recherche`, `Réglages`. Si deux
-  bibliothèques ont le même type, l'onglet gère un sélecteur de bibliothèque (chip « Toutes / Films 4K / Enfants »).
-  Musique, livres, photos : masqués en v1 (Sillon couvre la musique).
-- **Profondeur** : Racine → fiche → (sous-fiche) → Lecteur. Chaque niveau est une `NavigationStack` pushée ; le lecteur
-  est présenté en `fullScreenCover`.
-- Deep links : `jellyfuse://item/<id>`, `jellyfuse://play/<id>` (Top Shelf en Phase 4, Siri plus tard).
+- **Onglets** (`TabView` natif, 5 maximum) : `Accueil`, `Films`, `Séries`, `Recherche`, `Réglages`. Une bibliothèque
+  vidéo supplémentaire (vidéos personnelles, mixte) ajoute un onglet seulement si elle existe. Musique, livres, photos :
+  masqués (Sillon couvre la musique). Collections : filtre de Films. Ma liste : shelf d'accueil + filtre « Favoris ».
+- **Menu** : sur n'importe quel écran racine, premier appui = focus sur la barre d'onglets (comportement système) ;
+  sur la barre = Home Apple TV. Dans une fiche : pop vers l'écran parent. Dans le lecteur : voir §6.7.
+- Deep links : `jellyfuse://item/<id>`, `jellyfuse://play/<id>` (Top Shelf en Phase 4).
 
 ## 6. Écrans
 
-Légende : **F0** = focus par défaut · **Menu** = bouton Menu/Retour de la télécommande · **▶︎⏸** = bouton Lecture/Pause
-· **LP** = appui long sur Sélection (menu contextuel).
+**F0** = focus par défaut · **Menu** = bouton Retour · **▶︎⏸** = Lecture/Pause · **LP** = appui long (menu contextuel).
 
-### 6.1 Auth
-
-#### A1. Choix du serveur
-- **But** : trouver ou saisir un serveur Jellyfin.
-- **Contenu** : liste « Serveurs détectés » (découverte UDP du SDK, `JellyfinClient.discover`, port 7359), « Serveurs récents »,
-  bouton « Saisir une adresse ». Chaque ligne : nom + version + URL + pastille d'état.
-- **F0** : le dernier serveur utilisé, sinon le premier détecté, sinon « Saisir une adresse ».
-- **Saisie d'adresse** : champ texte tvOS (clavier ; la saisie depuis l'iPhone voisin est offerte nativement par le
-  système). Validation par `getPublicSystemInfo` : on affiche nom + version avant de continuer. `http://` accepté
-  (serveurs LAN), `https://` suggéré si le serveur répond dessus.
-- **Menu** : si une session existe, retour à l'app ; sinon sortie vers le Home Apple TV. **▶︎⏸** : sans effet.
-- **États** : recherche en cours (sablier discret à côté du titre « Serveurs détectés »), aucun serveur détecté (état
-  vide avec instructions), serveur injoignable (ligne rouge + « Réessayer »).
-
-#### A2. Choix du profil (`profiles.html`)
-- **But** : multi-utilisateurs. Avatars des utilisateurs publics du serveur + « Ajouter » (autre utilisateur, nom +
-  mot de passe) ; chips : serveur courant, « Changer de serveur », « Gérer les profils ».
-- **F0** : le dernier profil utilisé. Gauche/droite = parcourir ; bas = chips.
-- **Verrou** : un cadenas indique un profil protégé par **PIN local**. Jellyfin ne propose pas d'authentification par
-  PIN côté serveur exploitable par un client (le code simple est stocké mais non utilisé pour s'authentifier) : le PIN
-  est une protection **de l'app sur cet Apple TV** (4 chiffres, haché dans le Keychain) qui garde le jeton de session
-  derrière. Il protège contre un autre habitant du salon, pas contre un attaquant (cf. §14, Q3).
-- **Sélection** d'un profil dont la session est déjà mémorisée → Accueil direct ; sinon A4/A5. **LP** : « Oublier ce
-  profil », « Définir/Changer le PIN ».
-- **Menu** : retour au choix du serveur (ou à l'app si lancé depuis Réglages).
-- **Données** : `getPublicUsers`, `getUserImage` (avatar ; à défaut initiale sur dégradé stable dérivé de l'ID).
-
-#### A3. PIN local
-Dialogue plein écran, `PinPad` 4 chiffres : clavier numérique focusable 3×4 ; la télécommande saisit aussi les
-chiffres. Erreur = secousse + « Code incorrect », verrou temporisé après 5 essais (30 s, doublé à chaque série).
-**Menu** annule.
-
-#### A4. Connexion rapide (`login.html`)
-- **But** : se connecter sans clavier. Code à 6 chiffres en très gros (`Design.Typography.quickConnectDigit`), 3 étapes
-  numérotées, **QR code** vers `http(s)://<serveur>/web/#/quickconnect` (la page web du serveur où l'utilisateur
-  saisit le code), compte à rebours de validité, spinner « En attente d'autorisation… ».
-- **F0** : « Utiliser un mot de passe ». Gauche/haut : sans objet (un seul focusable utile). Le code n'est **pas** un
-  champ focusable.
-- **Flux** : `getQuickConnectEnabled` → `initiateQuickConnect` → polling 5 s `getQuickConnectState` (le SDK fournit
-  `QuickConnect.connect(...)` qui enchaîne) → `authenticateWithQuickConnect` → session → Accueil. Expiration (≈ 5 min) :
-  nouveau code automatique, le focus ne bouge pas.
-- **Menu** : annule le polling, retour à A2. **▶︎⏸** : sans effet.
-- **Si Quick Connect est désactivé** sur le serveur : l'écran est sauté, on ouvre A5 avec un bandeau explicatif.
-
-#### A5. Mot de passe
-Deux champs (nom d'utilisateur pré-rempli si profil choisi, mot de passe), bouton « Se connecter », lien « Utiliser la
-connexion rapide ». Mot de passe vide accepté (comptes Jellyfin sans mot de passe). Erreurs : « Identifiants
-incorrects », « Serveur injoignable ». `authenticateUserByName`.
+### 6.1 Auth (`login.html`, `profiles.html`)
+- **Serveur** : liste « Détectés » (`JellyfinClient.discover`, UDP 7359) + « Récents » + « Saisir une adresse »
+  (champ système, saisie depuis l'iPhone offerte par tvOS). Validation par `getPublicSystemInfo` (nom + version).
+  F0 : dernier serveur. Menu : retour à l'app si une session existe, sinon Home Apple TV.
+- **Profil** : avatars (`getPublicUsers`) + « Autre ». Cadenas = **PIN local** (4 chiffres, Keychain : protège l'app sur
+  cet Apple TV, pas le compte, cf. Q2). F0 : dernier profil. LP : oublier le profil. Pas de « Gérer les profils » :
+  l'oubli est dans l'appui long et dans Réglages.
+- **Connexion rapide** : code à 6 chiffres, une phrase, QR vers `<serveur>/web/#/quickconnect`, « En attente… ». F0 :
+  « Utiliser un mot de passe ». Flux : `getQuickConnectEnabled` → `initiateQuickConnect` → poll 5 s → session
+  (`QuickConnect.connect` du SDK). Expiration : nouveau code, focus inchangé. Quick Connect désactivé : l'écran est
+  sauté. Menu : retour au profil.
+- **Mot de passe** : nom (pré-rempli) + mot de passe + « Se connecter » (`authenticateUserByName`). Mot de passe vide
+  accepté.
 
 ### 6.2 Accueil (`home.html`)
-- **Structure** (de haut en bas) : barre de nav · **Billboard** (≈ 640 pt) · shelves :
-  1. **Reprendre la lecture** (paysage, barre de progression, « 28 min restantes ») — `getResumeItems`
-  2. **À suivre** (paysage, prochain épisode de chaque série suivie) — `getNextUp` (`enableRewatching` désactivé)
-  3. **Ajoutés récemment** par bibliothèque (une shelf par bibliothèque : « Films récents », « Séries récentes ») —
-     `getLatestMedia(parentID:)`
-  4. **Recommandations** : « Parce que vous avez regardé X » — `getMovieRecommendations` (si le serveur renvoie quelque
-     chose)
-  5. **Ma liste** (si non vide) — favoris
-  6. Une shelf **par genre favori** (v1.1, dérivée de l'historique)
-  L'ordre est paramétrable en v1.1 ; en v1 c'est celui-ci, les shelves vides sont masquées.
-- **Billboard** : jusqu'à 6 éléments. Source : le premier « Reprendre » (état « Reprendre » sur le bouton), puis des
-  films/séries non vus avec backdrop (`getItems`, `isUnplayed`, `sortBy: random`, `limit: 12`, filtrés côté client sur
-  `BackdropImageTags` non vide). Backdrop plein écran (ken-burns 12 s), logo ou titre, méta (★ note communautaire,
-  année, durée, classification, badges 4K / HDR / Atmos), synopsis 2 lignes, boutons **Lecture/Reprendre**, **Ma liste**,
-  **Infos**. Rotation toutes les 8 s uniquement quand le billboard n'a pas le focus ; un clic gauche/droit sur le
-  billboard passe à l'élément suivant/précédent.
-- **F0** : bouton **Lecture** du billboard. Bas : première shelf, carte mémorisée sinon la première. La carte focalisée
-  d'une shelf **ne change pas** le billboard (pas de mise à jour de fond au focus, pour éviter l'agitation) ; la maquette
-  montre l'état « focus descendu dans la première shelf », le billboard reste affiché au-dessus puis défile hors champ
-  quand le focus descend à la deuxième shelf.
-- **Menu** : sur le contenu, premier appui = remonter en haut + focus sur la barre de nav ; sur la barre, comportement
-  système (retour au Home Apple TV). **▶︎⏸** sur une carte : lance la lecture (reprise). **LP** sur une carte : menu
-  contextuel (Marquer comme vu/non vu, Ajouter à Ma liste, Aller à la série, Informations).
-- **États** : lancement = squelettes (billboard flou + 2 shelves fantômes) ; dernier résultat du cache affiché tout de
-  suite ; serveur injoignable = bandeau « Hors connexion » sous la nav + cache.
+- **Barre d'onglets** native. **Billboard** : **un** élément (la première reprise, sinon un titre non vu tiré au hasard
+  parmi ceux qui ont un backdrop, fixé pour la session), plein écran sous scrims ; titre, une ligne (★ note · année ·
+  durée), synopsis 2 lignes, boutons **Lecture / Reprendre** et **Ma liste**. Pas de rotation, pas de pagination, pas de
+  badges.
+- **Shelves** : (1) **À suivre** (paysage, progression, « 28 min restantes ») = reprises puis prochains épisodes,
+  dédoublonnés par série ; (2) **Récents** par bibliothèque (affiches) ; (3) **Ma liste** si non vide. Les shelves
+  vides sont absentes.
+- **F0** : « Lecture » du billboard ; bas : première carte (ou la carte mémorisée). Le billboard ne change jamais au
+  focus d'une carte. **Menu** : focus vers la barre d'onglets (système). **▶︎⏸** sur une carte : lecture (reprise).
+  **LP** : Marquer vu/non vu, Ma liste, Aller à la série, Depuis le début.
+- **États** : squelettes (billboard flou + une shelf) ; cache instantané ; hors ligne = bandeau.
 
 ### 6.3 Fiche film (`detail-movie.html`)
-- **Structure** : backdrop plein écran + scrims ; colonne gauche (genres, titre/logo, méta, synopsis 3 lignes,
-  actions, sélecteurs) ; colonne droite haute (réalisation, écriture, studio) ; sous le pli : **Distribution**
-  (disques), **Extras** (si présents), **Similaires**, **Collection** (si le film en fait partie), **Détails**
-  (langues audio, sous-titres, durée, taille, chemin masqué).
-- **Actions** (rangée) : **Lecture / Reprendre · 1 h 12** (primaire), **Depuis le début** (si une position existe),
-  **Vu** (icône, bascule), **Ma liste** (icône cœur ; favori Jellyfin). **Bande-annonce** : absente en v1 (les
-  `RemoteTrailers` pointent vers YouTube, non lisible) ; les `LocalTrailers`/`SpecialFeatures` éventuels passent par
-  *Extras*.
-- **Sélecteurs** (chips) : **Version** (si plusieurs `MediaSources` : « 4K HEVC · 18 Mb/s », « 1080p H.264 »),
-  **Audio**, **Sous-titres** ; chacun ouvre un panneau de choix (même composant que dans le player). Le choix s'applique
-  à la prochaine lecture ; l'initial respecte les préférences de l'utilisateur serveur (§9.4).
-- **F0** : bouton primaire. Haut : barre de nav ; bas : chips puis distribution. **Menu** : retour (pop). **▶︎⏸** :
-  lance la lecture. **LP** sur une personne : « Voir sa fiche ».
-- **Transition** : depuis une carte, fondu avec conservation du backdrop (même image mise en cache) ; pas de zoom
-  hérité (non garanti sur tvOS, cf. §14).
+- Backdrop + scrims ; colonne gauche : titre, **une ligne** (★ · année · durée · genres · classification), synopsis (3
+  lignes), **trois boutons** : **Lecture / Reprendre · 1 h 12** (primaire), **Ma liste** (icône), **Vu** (icône).
+  Dessous : **Distribution** (disques), puis **Similaires**, **Extras** (si présents).
+- **Pas** de sélecteurs d'audio/sous-titres ici : ils sont dans le lecteur (§6.7) et suivent la mémorisation + les
+  préférences (§9.3). Si le fichier existe en plusieurs versions (`MediaSources` > 1), un bouton « Version » apparaît ;
+  sinon il n'existe pas. « Depuis le début », « Informations » : appui long sur le bouton primaire.
+- **F0** : bouton primaire. **Menu** : retour. **▶︎⏸** : lecture. **LP** sur un acteur : sa fiche.
+- Transition : fondu, même backdrop (pas de zoom, cf. Q5).
 
-### 6.4 Fiche série / saison / épisode (`detail-series.html`)
-- **Structure** : même tête que le film (genres, titre, méta « 2022 – 2025 · 32 épisodes », synopsis 2 lignes), bouton
-  primaire **Reprendre S2 · E5** (ou **Lecture S1 · E1** si rien vu), **Ma liste**, **Favori**, **Tout marquer vu**.
-  Rangée de **chips de saisons** (+ **Extras** si `getSpecialFeatures` non vide), puis **rangée d'épisodes** (cartes
-  paysage 400×225, numéro, titre, durée, barre de progression, coche « vu »).
-- **Épisode focalisé** : la carte grossit et développe sous elle son synopsis (2 lignes) ; **LP** ou bouton « i »
-  ouvre la **fiche épisode** (feuille modale : synopsis complet, date de diffusion, média : résolution, codecs, pistes
-  — `EpisodeInfoSheet`). Il n'y a **pas d'écran épisode séparé** : un épisode est toujours atteint via sa série
-  (ouvrir un épisode depuis la recherche = ouvrir la série avec cet épisode focalisé).
-- **Saison** : un chip de saison charge la rangée d'épisodes de cette saison (`getEpisodes(seasonID:)`) ; la saison
-  initiale est celle de l'épisode « À suivre ». Les saisons à un épisode ou « Spéciaux » se comportent pareil.
-  Au-delà de 12 épisodes, la rangée reste horizontale (pagination incrémentale par `startItemID`).
-- **F0** : bouton primaire. Bas : chips de saisons (le chip actif d'abord), puis épisodes (l'épisode « à suivre »
-  d'abord, rangée pré-défilée dessus). **Menu** : retour. **▶︎⏸** sur un épisode : lecture directe.
-- **Sous le pli** : Distribution, Similaires, Détails.
-- **États** : saison sans épisode (« Aucun épisode »), épisodes manquants masqués (`isMissing: false`).
+### 6.4 Fiche série (`detail-series.html`)
+- Tête identique ; boutons **Reprendre S2 · E5** (ou Lecture S1 · E1) et **Ma liste**. **Chips de saisons** ; **rangée
+  d'épisodes** (carte paysage, « 5. Titre », durée, progression, coche si vu). Pré-défilée sur l'épisode à suivre.
+- **Pas** de synopsis déplié ni de mise en page qui bouge au focus : **LP** (ou Sélection prolongée) sur un épisode =
+  fiche modale (synopsis, date, infos fichier) + « Depuis le début ». Ouvrir un épisode trouvé en recherche = ouvrir la
+  série focalisée sur lui (pas d'écran épisode séparé).
+- **F0** : bouton primaire. Bas : chip de saison active, puis l'épisode à suivre. **Extras** : chip supplémentaire
+  seulement si `getSpecialFeatures` n'est pas vide.
 
-### 6.5 Fiche collection et fiche personne
-- **Collection (BoxSet)** : tête compacte (titre, nombre de films, bouton « Tout lire » en ordre de sortie) puis grille
-  d'affiches (§6.6). **Personne** : disque, biographie courte, grille « Filmographie » (films et séries) triée par
-  année. Même composant `PosterGrid`, mêmes règles de focus.
+### 6.5 Bibliothèque (`library.html`)
+- Titre (« Films ») + **un seul bouton « Filtres et tri »** (affiche le tri courant). Grille 6 colonnes (260 pt, 40 pt,
+  ≥ 100 pt), affiches avec coche « vu » et progression ; rien d'autre.
+- **Panneau « Filtres et tri »** : Tri (Titre, Date d'ajout, Date de sortie, Note, Durée, Aléatoire), Genres, Non vus,
+  Favoris, Années, Classifications, **« Aller à la lettre »** (rangée A-Z : saut par `nameStartsWithOrGreater`) et, pour
+  Films, « Collections ». Un seul panneau remplace les deux rangées de chips et le rail.
+- **F0** : première affiche (mémorisée au retour). Haut depuis la première ligne : le bouton, puis la barre d'onglets.
+  Pagination par pages de 60, préchargement à 2 lignes de la fin. **LP** : vu, Ma liste, Informations.
+- **États** : filtre sans résultat (« Effacer les filtres »), bibliothèque vide, erreur de page (« Réessayer »).
+- Collection ouverte / filmographie d'une personne : même grille avec titre de la collection ou de la personne.
 
-### 6.6 Bibliothèque (`library.html`)
-- **But** : parcourir Films / Séries / Collections / bibliothèque personnalisée.
-- **Structure** : titre + total (« 1 284 titres · triés par titre ») ; en haut à droite **Tri** (Titre A-Z, Date
-  d'ajout, Date de sortie, Note, Durée, Aléatoire ; ordre inversable) et **Filtres** (Non vus, Favoris, Genres,
-  Années, Classifications, Studios, Résolution) et un raccourci **Non vus** ; rangée de **chips de genres** ; **grille
-  d'affiches 6 colonnes** ; **rail A-Z** vertical sur le bord droit (visible quand le tri est alphabétique).
-- **F0** : première affiche (ou l'affiche mémorisée au retour). Haut depuis la première ligne : chips de genres, puis
-  tri/filtres, puis barre de nav. Droite depuis la dernière colonne : rail A-Z ; haut/bas dans le rail = lettre, gauche
-  = retour à la grille, **sélection d'une lettre** = saut à cette lettre (`nameStartsWithOrGreater`).
-- **Chargement** : pagination par pages de 60 (`startIndex`/`limit`), préchargement à 2 lignes de la fin ; squelette de
-  lignes pour les pages en vol. **Menu** : de la grille → remonte en haut + focus nav ; **▶︎⏸** sur une affiche : lecture.
-  **LP** : menu contextuel (vu, favori, infos).
-- **États** : filtre sans résultat (« Aucun résultat. Effacer les filtres » en bouton), bibliothèque vide, erreur de
-  page (ligne « Réessayer » au bout de la grille).
+### 6.6 Recherche (`search.html`)
+`.searchable` natif (clavier système, dictée Siri, saisie depuis l'iPhone, suggestions). Résultats **groupés en
+shelves** (Films, Séries, puis Épisodes et Personnes s'ils ont des résultats), pas de chips. Dès 2 caractères, 300 ms de
+pause, réponse tardive abandonnée (règle de `CatalogSearch` de sillon). Avant la frappe : Récents ajoutés. F0 : le
+clavier. Menu : efface la requête puis focus sur la barre.
 
-### 6.7 Recherche (`search.html`)
-- **Structure** : champ + **clavier tvOS** natif (`.searchable`, donc dictée Siri, saisie depuis l'iPhone, suggestions),
-  chips de filtre **Tout / Films / Séries / Épisodes / Personnes**, résultats **groupés en shelves** (Films, Séries,
-  Épisodes, Personnes). Pas de requête avant 2 caractères ; 300 ms de pause de frappe ; une réponse tardive est
-  abandonnée (règle reprise de `CatalogSearch` de sillon).
-- **Avant la frappe** : « Recherches récentes » (locales) et « Tendances dans votre bibliothèque » (récemment ajoutés).
-- **F0** : le clavier. Bas : chips, puis premier résultat. **Menu** : efface la requête, puis quitte vers Accueil.
-- **Données** : `getSearchHints` (rapide, par type) pour remplir les shelves, hydratées par `getItems(ids:)` ;
-  `getPersons` pour les personnes.
-
-### 6.8 Lecteur (`player-osd.html`, `player-tracks.html`)
-
-Plein écran, mpv dessous (surface `PlayerCore`), tout le reste est SwiftUI au-dessus.
-
-**États de l'OSD** (`OSDState`) : `hidden` → `transport` → `scrubbing` → `panel(tracks | info | chapters)` ; `upNext`
-et `skip` se superposent à `hidden`/`transport`.
+### 6.7 Lecteur (`player-osd.html`, `player-tracks.html`)
+**Principe HIG** : mpv remplace `AVPlayerViewController`, donc on **reproduit le comportement du lecteur système** pour
+que les gestes habituels continuent de marcher. Mêmes conventions : barre en bas, titre + icônes au-dessus, onglets de
+contenu vers le bas, Menu = sortie.
 
 | État | Contenu | Commandes |
 |---|---|---|
-| `hidden` | vidéo seule (+ sous-titres rendus par mpv) | **Sélection** : pause/lecture + `transport` ; **Gauche/droite** : saut arrière 10 s / avant 30 s (réglable) ; **Haut** : `transport` ; **Bas** : panneau pistes ; **▶︎⏸** : pause/lecture ; **Menu** : quitter |
-| `transport` | titre (série · saison / épisode), horloge + « se termine à », **scrubber** (position, tampon, repères de chapitres, segments), temps écoulé / restant, rangée de boutons : Précédent, Épisode suivant, ▶︎/⏸, Audio, Sous-titres, Infos | masqué après 5 s sans commande ; **Gauche/droite** sur le scrubber : saut ; **Glisser sur le pavé tactile** : `scrubbing` ; **Bas** : focus sur la rangée de boutons ; **Menu** : `hidden` |
-| `scrubbing` | `transport` + **bulle trickplay** (vignette 16:9, horodatage, nom du chapitre) qui suit la tête de lecture | glisser / clic gauche-droit = déplacer ; **Sélection** : valider la position ; **Menu** : annuler et revenir à la position d'origine |
-| `panel(tracks)` | volet droit : colonnes **Audio** (langue, codec, canaux) et **Sous-titres** (Désactivés, forcés, langues, SDH) ; coche sur le choix actif | haut/bas = choix, sélection = applique **immédiatement** et mémorise ; **Menu**/gauche : ferme |
-| `panel(info)` | débit, résolution, codecs, **méthode de lecture** (Lecture directe / Flux direct / Transcodage + raison), HDR, pistes | **Menu** : ferme |
-| `panel(chapters)` | rangée de vignettes de chapitres (`ImageType.chapter`) | sélection = saut ; Menu : ferme |
-| `skip` | bouton **Passer l'intro / le récapitulatif / le générique** en bas à droite, apparaît pendant le segment correspondant, dure 8 s ; **prend le focus à l'apparition** | **Sélection** : saute à la fin du segment ; sans action : disparaît ; si « Passer automatiquement » est actif : saut sans bouton (toast « Intro passée ») |
-| `upNext` | carte « Épisode suivant » (vignette, S2 · E6, titre) à l'entrée du générique de fin ou 30 s avant la fin ; compte à rebours 10 s si lecture auto | **Sélection** : lancer maintenant ; **Menu** : annuler, rester sur la fin ; **Bas/haut** : « Regarder le générique » |
+| `hidden` | vidéo seule | **Sélection** : afficher la barre (et basculer pause) ; **Gauche/droite** : −10 s / +30 s ; **Bas** : onglets de contenu ; **▶︎⏸** : pause/lecture ; **Menu** : quitter |
+| `transport` | titre (série · saison/épisode), **2 icônes** (sous-titres, audio), barre (tampon, chapitres), temps écoulé / restant | masquée après 5 s ; glisser sur le pavé = `scrubbing` ; **Menu** : `hidden` |
+| `scrubbing` | barre + **bulle trickplay** (vignette, horodatage, chapitre) | clic gauche/droit ou glisser ; **Sélection** valide ; **Menu** annule |
+| `tabs` | panneau avec onglets **Infos · Audio · Sous-titres · Chapitres** (une seule liste à la fois) | haut/bas = choix, **Sélection applique immédiatement et mémorise** ; **Menu** ferme |
+| `skip` | bouton « Passer l'intro / le récapitulatif / le générique » 8 s, **prend le focus à l'apparition** | **Sélection** saute ; sans action, disparaît ; en mode « passer automatiquement » : saut + court message |
+| `upNext` | carte « Épisode suivant » à l'entrée du générique de fin ; compte à rebours 10 s si lecture auto | **Sélection** : lancer ; **Menu** : annuler |
 
-- **F0** (quand l'OSD est visible) : le scrubber. **Play/Pause** fonctionne dans tous les états, y compris quand un
-  panneau est ouvert (il met en pause sans fermer le panneau).
-- **Fin de film** : retour automatique à la fiche (position effacée, marqué vu par le reporter). **Fin de série** :
-  retour à la fiche série, focus sur le dernier épisode.
-- **Erreurs** : mpv échoue ou le réseau tombe = dialogue « Lecture impossible » avec « Réessayer », « Choisir une autre
-  version », « Retour » ; mise en mémoire tampon prolongée (> 3 s) = spinner au centre avec le symbole étincelle.
-- **Technique à valider** : le *scrub continu au pavé tactile* n'existe pas en SwiftUI pur sur tvOS ; il faut un pont
-  UIKit (`UIPanGestureRecognizer` avec `allowedTouchTypes = [.indirect]`) hébergé dans une `UIViewRepresentable`
-  derrière la surface vidéo. Le clic gauche/droit (`onMoveCommand`) fonctionne sans pont. Premier spike du lot 3.4a.
-- **Reporting** : start / progress (toutes les 10 s et à chaque pause/seek) / stopped avec `MediaSourceId`,
-  `PlayMethod`, `CanSeek` — Phase 2 (`PlaybackEngine`), pas redessiné ici.
+- **Retiré** de la v1 du plan : boutons Précédent / Suivant dans la barre (l'épisode suivant est proposé en fin et dans
+  l'onglet Chapitres/Épisodes plus tard), heure de fin, ticks de segments, deux colonnes de pistes.
+- **Reprise** : jamais de question (HIG). **Sortie** : Menu ferme le lecteur et **ramène à la fiche du contenu**
+  (HIG), focus sur le bouton Lecture (« Reprendre » à jour). Fin de film : fiche ; fin de série : fiche série.
+- **Erreurs** : « Lecture impossible » avec Réessayer / Autre version / Retour. Mise en mémoire tampon > 2 s : écran
+  noir + spinner centré, rien autour (HIG).
+- **Overlays courts et discrets** (rétention d'image) : « Passer l'intro » et « Épisode suivant » sont translucides,
+  petits, temporaires.
+- **Risque** : le scrub continu au pavé tactile demande un pont UIKit (`UIPanGestureRecognizer`,
+  `allowedTouchTypes = [.indirect]`) car SwiftUI pur ne l'expose pas ; le clic gauche/droit (`onMoveCommand`) n'en a pas
+  besoin. Premier spike du lot 3.4a. Reporting (start/progress/stopped) : Phase 2.
 
-### 6.9 Réglages (`settings.html`, `licenses.html`)
-Disposition : barre latérale (`surface`) + panneau de lignes. **F0** : la section courante de la barre ; droite = entrer
-dans le panneau ; **Menu** depuis le panneau = retour à la barre ; depuis la barre = retour à l'onglet précédent.
+### 6.8 Réglages (`settings.html`, `licenses.html`)
+Une **liste groupée** native (`Form`/`List`), sans barre latérale. F0 : première ligne. Menu : focus sur la barre.
+- **Compte** : « Changer d'utilisateur » (ouvre Profil ; contient « Se déconnecter » et « Oublier ce profil »).
+- **Lecture** : Lire l'épisode suivant automatiquement · Passer les intros automatiquement · Débit maximal (Automatique,
+  puis paliers) · Langue audio · Sous-titres (Automatique / Forcés / Toujours / Aucun).
+- **À propos** : **Licences** (liste mpv, FFmpeg, libplacebo, libass, MoltenVK, dav1d, FreeType/HarfBuzz/FriBidi, SDK ;
+  texte intégral en feuille ; introduction MIT + lien du code source pour la recompilation, obligation LGPL §6), version.
+- Retiré de la v1 du plan (aucun besoin prouvé) : Apparence, qualité détaillée, taille/couleur des sous-titres,
+  serveurs (la liste des serveurs vit dans l'écran Serveur), journaux.
+Valeurs **par utilisateur** lues du serveur au départ (`UserConfiguration`, §9.3) ; débit et automatismes en local.
+La CI échoue si un artefact `-GPL` entre dans le graphe (plan de reboot).
 
-| Section | Contenu |
-|---|---|
-| **Compte** | utilisateur et serveur courants, **Changer d'utilisateur**, **Se déconnecter** (danger, confirmation), **PIN du profil**, « Autoriser une connexion rapide » (v1.1) |
-| **Lecture** | Lire l'épisode suivant automatiquement · Passer les intros automatiquement · Passer les récapitulatifs · Passer les génériques de fin · Saut arrière / avant (5-10-15 / 10-30-60 s) · Reprendre au dernier point |
-| **Qualité et transcodage** | Débit maximal (Automatique, 120, 60, 40, 20, 10, 5 Mb/s) · Autoriser le transcodage · Forcer la lecture directe · HDR (Automatique / Tone-mapping SDR) · Cache de lecture (mémoire tampon) |
-| **Audio et sous-titres** | Langue audio préférée · Mode de sous-titres (Aucun, Forcés, Auto selon l'audio, Toujours) · Langue des sous-titres · Taille / couleur / fond (rendu libass) · Mémoriser les choix par série |
-| **Apparence** | Billboard (activé, rotation), Titres sur les affiches, Réduire les animations (suit le réglage système), Langue de l'interface |
-| **Serveurs** | liste des serveurs, Ajouter, Oublier |
-| **À propos et licences** | Version / build, version de mpv, version du serveur, **Licences** (liste des bibliothèques → texte de la licence), lien du code source, mention « non affilié au projet Jellyfin », export des journaux (v1.1) |
+### 6.9 États transverses
+Serveur injoignable (plein écran sans cache, bandeau sinon ; F0 Réessayer) · 401 (retour au profil avec message) ·
+vide (bibliothèque, Ma liste, recherche) avec la prochaine action · lancement : fond `canvas` + étincelle, pas
+d'écran marketing.
 
-Chaque ligne : titre 31 pt, sous-titre explicatif 23 pt, valeur à droite ; les choix multiples s'ouvrent dans un panneau
-liste (même composant que les pistes). Réglages **par utilisateur** synchronisés avec le serveur quand possible
-(`DisplayPreferences`, `UserConfiguration`, §9.4) ; réglages **par appareil** (débit, saut, billboard) en local.
+## 7. Composants DesignSystem
 
-**Licences** : liste des composants avec nom + licence, texte intégral en feuille défilable, introduction MIT +
-lien du code source, de quoi **re-linker** (obligation LGPL §6). Données générées au build (`THIRD_PARTY_LICENSES`) ;
-la CI échoue si un artefact `-GPL` entre dans le graphe (décision du plan de reboot).
+Purs (props-in, callbacks-out), un composant natif quand il existe.
 
-### 6.10 Écrans transverses
-- **Serveur injoignable** (plein écran si aucun cache, bandeau sinon) : « Impossible de joindre Salon », Réessayer /
-  Changer de serveur. F0 = Réessayer.
-- **Session expirée (401)** : retour à A2 avec message, le profil reste choisi (reprise du pattern `onUnauthorized`).
-- **Vide** : bibliothèque vide, Ma liste vide (« Ajoutez des titres avec ♡ »), recherche sans résultat.
-- **Lancement** : écran de lancement fond `canvas` + étincelle ; pas d'écran d'accueil marketing.
+| Besoin | Composant | Esquisse | Natif ? |
+|---|---|---|---|
+| Onglets | — | `TabView` | **natif** |
+| Recherche | — | `.searchable` | **natif** |
+| Réglages | `SettingsRow` | `SettingsRow(title:, accessory: .toggle(Binding)/.value(String)/.chevron)` dans un `Form` | liste native, ligne custom minimale |
+| Confirmations, choix | — | `confirmationDialog`, `Menu`/`Picker` | **natif** |
+| Menu contextuel (LP) | — | `.contextMenu` | **natif** |
+| Cartes | `PosterCard`, `LandscapeCard` | `(_ model:, onSelect:)` ; `.buttonStyle(.card)` | effet de focus natif |
+| Personne, profil | `PersonCard`, `ProfileAvatar` | `(_ model:, isLocked:, onSelect:)` | — |
+| Rangée | `Shelf` | `Shelf(title:, items:, card:)` : `ScrollView` + `LazyHStack`, `focusSection`, `scrollClipDisabled` | — |
+| Billboard | `Billboard` | `Billboard(_ model:, primaryLabel:, onPlay:, onToggleList:)` : backdrop + scrims + texte + 2 boutons | — |
+| Fond | `BackdropView` | `BackdropView(_ source:, scrim:)` | — |
+| Tête de fiche | `DetailHeader` | `DetailHeader(title:, meta:, overview:, actions: @ViewBuilder)` | — |
+| Grille | `PosterGrid` | `PosterGrid(items:, onSelect:, onReachEnd:)` : 6 colonnes fixes | `LazyVGrid` |
+| Chips de saison | `FuseChip` | `FuseChip(_ title:, isSelected:, action:)` | — |
+| Panneau de choix | `OptionPanel` | `OptionPanel(title:, options:, selection:, onSelect:)` (tri, débit, langues, pistes) | — |
+| Images | `Artwork` | `Artwork(_ source:, aspect:)` : Nuke + blurhash + dégradé de repli | — |
+| Chargement | `Skeleton`, `EmptyState`, `Banner` | formes statiques ; état vide ; bandeau réseau unique | — |
+| Lecteur | `PlayerOSD`, `Scrubber`, `TrickplayBubble`, `ContentTabs`, `SkipButton`, `UpNextCard` | `PlayerOSD(state:, model:, handlers:)` ne connaît pas mpv ; tuile trickplay calculée par `TrickplaySheet.tile(at:)` (testé) | — |
+| Auth | `QuickConnectCode`, `QRCodeView`, `PinPad` | code en cases ; QR par `CIQRCodeGenerator` ; clavier + chiffres de la télécommande | — |
 
-## 7. Inventaire des composants DesignSystem
+Supprimés du plan précédent : `TopNav`, `ChipRow`, `LetterRail`, `EpisodeCard` (une `LandscapeCard` suffit), `EpisodeInfoSheet`
+(un `OptionPanel`/feuille suffit), `InfoPanel` et `ChapterStrip` (deux onglets de `ContentTabs`), `ServerRow` (une
+`SettingsRow`), `MetaLine`, `GradientText` (le wordmark est un asset).
 
-Tous **purs** (§4.2). Les signatures sont des esquisses : `Model` = valeur d'affichage du dossier `Models/`.
+## 8. Règles de focus transverses
 
-### Fondations
-| Composant | API esquissée | Rôle |
-|---|---|---|
-| `Design` | `enum Design { Palette, Typography, Spacing, Size, Radius, Motion, Focus, Scrim }` | tokens (§3) |
-| `FocusableStyle` | `ButtonStyle` : `.fuseFocus(scale:, ring:, glow:)` ; lit `\.isFocused` | scale + liseré + lueur, ressort `Motion.focus` ; respecte Reduce Motion |
-| `Artwork` | `Artwork(_ source: ArtworkSource, aspect: ArtworkAspect, contentMode)` | image (Nuke `LazyImage`), flou blurhash puis fondu, repli dégradé + initiale |
-| `ArtworkSource` | `struct { url: URL?; blurHash: String?; fallbackSeed: String }` | seed stable → dégradé de repli |
-| `ProgressBar` | `ProgressBar(value: Double)` | barre 8 pt dégradée |
-| `Badge` | `Badge("4K")`, `.filled`, `.outlined` | méta techniques, « NOUVEAU » |
-| `MetaLine` | `MetaLine(rating:, year:, runtime:, certification:, badges:)` | ligne ★ · année · durée · classification · badges |
-| `GradientText` | `GradientText(_ s: String)` | wordmark, onglet actif |
-| `Skeleton` | `Skeleton(shape:)`, `.skeletonShelf(count:)` | formes de chargement, statiques |
-| `EmptyState` | `EmptyState(symbol:, title:, message:, action: (label:, run:)?)` | états vides et erreurs |
-| `Banner` | `Banner(kind: .offline/.error, message:, onRetry:)` | bandeau réseau (un seul, comme sillon) |
-
-### Boutons et sélecteurs
-| Composant | API esquissée | Rôle |
-|---|---|---|
-| `FuseButton` | `FuseButton(_ title:, symbol:, style: .primary/.secondary/.icon, action:)` | boutons de fiche et de dialogue |
-| `FuseChip` | `FuseChip(_ title:, isSelected:, accessory:, action:)` | genres, saisons, filtres, version/audio/sous-titres |
-| `ChipRow` | `ChipRow(_ items: [ChipModel], selection: Binding<ChipID?>)` | rangée focusable défilante, `focusSection` |
-| `OptionPanel` | `OptionPanel(title:, options: [OptionModel], selection:, onSelect:)` | panneau de choix (tri, débit, langue, pistes) |
-| `Toggle` focusable | `FuseToggle(isOn:)` (via `SettingsRow`) | interrupteurs |
-
-### Cartes
-| Composant | API esquissée | Notes |
-|---|---|---|
-| `PosterCard` | `PosterCard(_ model: PosterModel, onSelect:, onLongPress:)` | affiche 2:3, coche « vu », badge, barre de progression |
-| `LandscapeCard` | `LandscapeCard(_ model: LandscapeModel, onSelect:, onLongPress:)` | 16:9 ; légende titre + sous-titre ; barre de progression ; fallback sur le backdrop ou la vignette |
-| `EpisodeCard` | `EpisodeCard(_ model: EpisodeModel, isExpanded:, onSelect:, onInfo:)` | carte d'épisode avec synopsis déplié au focus |
-| `PersonCard` | `PersonCard(_ model: PersonModel, onSelect:)` | disque + nom + rôle |
-| `ProfileAvatar` | `ProfileAvatar(_ model: ProfileModel, isLocked:, onSelect:)` | cercle, initiale, cadenas |
-| `ServerRow` | `ServerRow(_ model: ServerModel, onSelect:)` | ligne serveur (nom, version, URL, statut) |
-
-### Mise en page
-| Composant | API esquissée | Notes |
-|---|---|---|
-| `Shelf` | `Shelf(title:, items: [Item], card: (Item) -> Card, onSeeAll: (() -> Void)?)` | ScrollView horizontal, `LazyHStack`, `scrollClipDisabled`, `focusSection`, mémorise l'élément focalisé via `focusedID: Binding` |
-| `ShelfHeader` | `ShelfHeader(_ title:, trailing:)` | |
-| `Billboard` | `Billboard(items: [BillboardModel], index: Binding<Int>, primaryLabel:, onPlay:, onToggleList:, onInfo:)` | backdrop + scrims + méta + boutons, ken-burns, rotation ; focus sur « Lecture » par défaut |
-| `BackdropView` | `BackdropView(_ source:, scrim: .left/.bottom/.full, tint: Color?)` | fond de fiche, partagé entre écrans |
-| `TopNav` | `TopNav(tabs: [NavTab], selection: Binding<NavTab>, profile: ProfileModel, onProfile:)` | wordmark + onglets + avatar ; zone de focus dédiée |
-| `PosterGrid` | `PosterGrid(items:, columns: 6, onSelect:, onLongPress:, onReachEnd:)` | `LazyVGrid`, pagination, mémorisation du focus |
-| `LetterRail` | `LetterRail(letters: [Character], selection:, onSelect:)` | rail A-Z |
-| `DetailHeader` | `DetailHeader(title:, logo:, meta:, overview:, actions: @ViewBuilder)` | tête commune film / série / collection |
-| `SettingsSidebar` / `SettingsRow` | `SettingsRow(title:, subtitle:, accessory: .toggle(Binding)/.value(String)/.chevron)` | réglages et licences |
-
-### Player
-| Composant | API esquissée | Notes |
-|---|---|---|
-| `PlayerOSD` | `PlayerOSD(state: OSDState, model: OSDModel, handlers: OSDHandlers)` | ne connaît pas mpv : `OSDModel` (titres, position, durée, chapitres, segments, pistes) fourni par `PlayerModel` |
-| `Scrubber` | `Scrubber(position:, buffered:, duration:, chapters:, segments:, isScrubbing:)` | piste 12 pt, repères, tête de 34 pt ; accessibilité `adjustable` |
-| `TrickplayBubble` | `TrickplayBubble(sheet: TrickplaySheet, time:, chapterTitle:)` | découpe la tuile de la planche ; calcul d'index testé (`TrickplaySheet.tile(at:)`) |
-| `TransportBar` | `TransportBar(buttons: [TransportButton], onPress:)` | rangée Précédent / Suivant / ▶︎⏸ / pistes / infos |
-| `TrackPanel` | `TrackPanel(audio: [TrackOption], subtitles: [TrackOption], onSelect:)` | volet droit (maquette `player-tracks`) |
-| `SkipSegmentButton` | `SkipSegmentButton(kind: .intro/.recap/.outro, onSkip:, onTimeout:)` | prend le focus à l'apparition, 8 s |
-| `UpNextCard` | `UpNextCard(_ model:, countdown: Duration?, onPlay:, onCancel:)` | |
-| `ChapterStrip` | `ChapterStrip(chapters:, onSelect:)` | vignettes de chapitres |
-| `InfoPanel` | `InfoPanel(model: PlaybackInfoModel)` | méthode de lecture, flux, débit |
-
-### Authentification
-| Composant | API esquissée | Notes |
-|---|---|---|
-| `QuickConnectCode` | `QuickConnectCode(code: String, remaining: Duration)` | 6 chiffres en cases, décompte |
-| `QRCodeView` | `QRCodeView(payload: String)` | génération Core Image (`CIQRCodeGenerator`), fond blanc, marge de silence |
-| `PinPad` | `PinPad(length: 4, onComplete: (String) -> Void)` | clavier focusable + saisie des chiffres de la télécommande |
-
-## 8. Focus engine : règles transverses
-
-1. **Zones** : chaque bloc logique est un `focusSection()` (barre de nav, billboard, chaque shelf, chips, rail A-Z,
-   rangée d'actions). Le moteur saute ainsi d'une zone à l'autre même si les cartes ne sont pas alignées.
-2. **Focus par défaut** : `@Namespace` + `.prefersDefaultFocus(true, in:)` + `.focusScope`, jamais de `DispatchQueue`
-   pour forcer le focus. Sur les écrans « liste », le `defaultFocus` suit un **ID mémorisé** (`focusedID`).
-3. **Restauration** : au retour d'une fiche, le focus retrouve la carte d'où l'on est parti (ID mémorisé dans le
-   `XxxModel` de l'écran source, clé = identifiant de route), et le défilement vertical est restauré avec lui.
-4. **Menu (retour)** : toujours `.onExitCommand` explicite sur les racines d'onglet (haut + nav, puis système) ; les
-   fiches et sous-écrans laissent la `NavigationStack` faire le pop ; les panneaux et dialogues ferment leur panneau.
-   Jamais de « piège » : un utilisateur peut toujours sortir en trois Menu au plus.
-5. **Lecture/Pause** : `.onPlayPauseCommand` sur les cartes lisibles (lance), sur le player (bascule), nulle part
-   ailleurs.
-6. **Appui long (Sélection maintenue)** : `.contextMenu` sur toutes les cartes lisibles.
-7. **Scrolling** : pas de `ScrollViewReader.scrollTo` animé pendant que le focus bouge (provoque des sauts) ; utiliser
-   `scrollPosition(id:)` et laisser le moteur suivre le focus.
-8. **Billboard** : le focus ne doit **jamais** déclencher de changement de contenu ailleurs (anti-agitation) ; seul un
-   clic gauche/droit sur le billboard change d'élément.
-9. **Accessibilité** : chaque carte porte un `accessibilityLabel` complet (« Nocturne, film, 2025, reprise à 62 % ») ;
-   VoiceOver tvOS parcourt les shelves ; `accessibilityAdjustableAction` sur le scrubber.
-10. **Tests du graphe de focus** : tests UI sur simulateur (XCUITest `XCUIRemote.shared.press(.right)`) pour les
-    parcours critiques (Accueil → fiche → lecture → Menu → Accueil avec focus restauré). Les règles pures (mémorisation
-    de focus, calcul de lettre, indexation trickplay) sont en swift-testing sans simulateur.
+1. Chaque bloc est un `focusSection()` (billboard, shelf, boutons, grille).
+2. Focus par défaut par `@Namespace` + `prefersDefaultFocus`, jamais par temporisation.
+3. **Restauration** : retour d'une fiche = même carte focalisée, même défilement (ID mémorisé dans le modèle d'écran).
+4. **Menu** : jamais redéfini sur les écrans racine (le système ramène à la barre puis à l'Apple TV) ; panneaux et
+   dialogues ferment leur panneau ; lecteur : `hidden` → sortie vers la fiche.
+5. **Pas de changement de contenu au focus** (billboard fixe, pas de synopsis déplié) : HIG « ne pas déplacer le focus
+   sans action » et mises en page stables.
+6. **▶︎⏸** lance sur une carte lisible, bascule dans le lecteur, rien ailleurs. **LP** = `contextMenu` sur toutes les
+   cartes lisibles.
+7. Ignorer les taps involontaires sur le pavé pendant la lecture (HIG remote) : seuls clic, balayage et boutons agissent.
+8. Pas de `scrollTo` animé pendant le déplacement du focus ; `scrollPosition(id:)`.
+9. Accessibilité : `accessibilityLabel` complet par carte (« Nocturne, film, 2025, repris à 62 % ») ; scrubber
+   `adjustable`.
+10. Tests : règles pures (mémoire de focus, lettre → index, tuile trickplay) en swift-testing ; parcours critiques en
+    XCUITest (`XCUIRemote`) : Accueil → fiche → lecture → Menu → fiche, focus restauré.
 
 ## 9. Données : écran → Jellyfin
 
-Toutes les ressources passent par le SDK officiel `jellyfin-sdk-swift` (règle dure du plan de reboot), derrière la
-façade `actor JellyfinClient` de `LibraryKit` ; les noms ci-dessous sont ceux des `Paths.*` du SDK (vérifiés dans
-`Sources/Paths`). Les champs `BaseItemDto` nécessaires se demandent par `fields:` (jamais le DTO complet par défaut).
+Tout passe par `jellyfin-sdk-swift` via la façade `JellyfinClient` (règle dure du plan de reboot). Noms vérifiés dans
+`Sources/Paths` du SDK.
 
-### 9.1 Tableau par écran
+| Écran | Ressource SDK | Paramètres clés |
+|---|---|---|
+| Serveur | `JellyfinClient.discover`, `getPublicSystemInfo` | UDP 7359 ; URL saisie |
+| Profil | `getPublicUsers`, `getUserImage` | — |
+| Connexion rapide | `getQuickConnectEnabled`, `initiateQuickConnect`, `getQuickConnectState`, `authenticateWithQuickConnect` | poll 5 s |
+| Mot de passe | `authenticateUserByName` | — |
+| Onglets | `getUserViews` | `collectionType` → onglets |
+| Accueil · À suivre | `getResumeItems` + `getNextUp` | `mediaTypes [.video]`, `enableRewatching false`, fusion et dédoublonnage par série |
+| Accueil · Récents | `getLatestMedia` | `parentID`, `limit 20` |
+| Accueil · billboard | première reprise, sinon `getItems` | `isUnplayed`, `sortBy random`, `imageTypes [.backdrop]`, `limit 12` |
+| Accueil · Ma liste | `getItems` | `filters [.isFavorite]` |
+| Images | `getItemImage` | Primary, Backdrop, Thumb, Chapter ; `tag`, `maxWidth` ; `ImageBlurHashes` |
+| Fiche | `getItem` | `fields [.overview, .genres, .people, .mediaSources, .mediaStreams, .chapters, .trickplay]` |
+| Fiche · Similaires / Extras | `getSimilarItems`, `getSpecialFeatures` | `limit 12` |
+| Série | `getSeasons`, `getEpisodes` | `isMissing false`, `seasonID`, `startItemID` |
+| Bibliothèque | `getItems` | `parentID`, `sortBy`, `filters`, `genres`, `years`, `startIndex/limit 60`, `nameStartsWithOrGreater`, total |
+| Filtres | `getGenres`, `getQueryFilters` | `parentID` |
+| Collection / personne | `getItems` | `parentID` du BoxSet ; `personIDs` |
+| Recherche | `getSearchHints`, `getItems(ids:)` | `searchTerm`, `limit 12` par type |
+| Mutations | `markFavoriteItem`/`unmarkFavoriteItem`, `markPlayedItem`/`markUnplayedItem` | — |
+| Lecture | `getPostedPlaybackInfo`, `reportPlaybackStart`/`Progress`/`Stopped` | profil d'appareil tvOS ; `MediaSourceId`, `PlayMethod`, `CanSeek` (Phase 2) |
+| Lecteur · chapitres | champ `chapters` + `getItemImage(.chapter)` | repères + onglet Chapitres |
+| Lecteur · trickplay | champ `trickplay` + `getTrickplayTileImage` | largeur ≥ 320 la plus proche |
+| Lecteur · segments | `getItemSegments` (Jellyfin ≥ 10.10) | `Intro`, `Recap`, `Outro` |
+| Lecteur · pistes / infos | `MediaStreams` du `MediaSource` | mapping sid group-aware (lessons-learned) |
+| Réglages | `getCurrentUser` (`UserDto.configuration`) | `audioLanguagePreference`, `subtitleLanguagePreference`, `subtitleMode`, `rememberAudioSelections`… |
+| Temps réel | websocket | `UserDataChanged`, `LibraryChanged` |
 
-| Écran | Ressource SDK | Paramètres clés | Alimente |
-|---|---|---|---|
-| Serveurs (A1) | `JellyfinClient.discover` (SDK, UDP 7359), `getPublicSystemInfo` | durée 5 s ; URL saisie | liste des serveurs détectés, validation d'une adresse |
-| Profils (A2) | `getPublicUsers`, `getUserImage` | — | avatars |
-| Quick Connect (A4) | `getQuickConnectEnabled`, `initiateQuickConnect`, `getQuickConnectState`, `authenticateWithQuickConnect` (via `QuickConnect.connect`) | secret conservé en mémoire ; polling 5 s | code, session |
-| Mot de passe (A5) | `authenticateUserByName` | — | session (jeton, userID) |
-| Accueil · nav | `getUserViews` | — | onglets dynamiques (type de collection) |
-| Accueil · Reprendre | `getResumeItems` | `mediaTypes: [.video]`, `fields: [.overview, .mediaSources…]`, `enableUserData`, `limit 20` | shelf paysage |
-| Accueil · À suivre | `getNextUp` | `enableRewatching: false`, `disableFirstEpisode: false` | shelf paysage |
-| Accueil · Récents | `getLatestMedia` | `parentID` par bibliothèque, `limit 20`, `groupItems: true` | shelves d'affiches |
-| Accueil · Billboard | `getItems` + `getResumeItems` | `includeItemTypes: [.movie,.series]`, `filters: [.isUnplayed]`, `sortBy: [.random]`, `imageTypes: [.backdrop]`, `limit 12` | héros |
-| Accueil · Reco | `getMovieRecommendations`, `getSuggestions` | `categoryLimit 3`, `itemLimit 12` | « Parce que vous avez regardé X » |
-| Images (partout) | `getItemImage` (URL construites, pas de téléchargement par le client) | `imageType` Primary / Backdrop / Logo / Thumb / Chapter, `maxWidth`, `tag` | cartes, fonds ; flou via `ImageBlurHashes` du DTO |
-| Fiche film/série | `getItem` | `fields: [.overview, .genres, .people, .studios, .taglines, .mediaSources, .mediaStreams, .chapters, .trickplay…]` | tête, sélecteurs, détails |
-| Fiche · Distribution | `getItem` (`people`) | `type: actor/director/writer` | `PersonCard` |
-| Fiche · Similaires | `getSimilarItems` | `limit 12` | shelf |
-| Fiche · Extras | `getSpecialFeatures` | — | shelf paysage |
-| Fiche série · Saisons | `getSeasons` | `userID`, `isMissing: false` | chips |
-| Fiche série · Épisodes | `getEpisodes` | `seasonID`, `fields: [.overview, .mediaStreams]`, `startItemID` | rangée |
-| Collection | `getItems` | `parentID: <boxsetID>`, `sortBy: [.premiereDate]` | grille |
-| Personne | `getItems` | `personIDs: [id]`, `includeItemTypes: [.movie,.series]` | filmographie |
-| Bibliothèque | `getItems` | `parentID`, `includeItemTypes`, `sortBy`, `sortOrder`, `filters`, `genres`, `years`, `officialRatings`, `startIndex/limit`, `nameStartsWithOrGreater` (A-Z), `enableTotalRecordCount` | grille paginée |
-| Bibliothèque · Filtres | `getGenres`, `getQueryFilters` | `parentID` | chips de genres, panneau de filtres |
-| Recherche | `getSearchHints`, `getItems(ids:)`, `getPersons` | `searchTerm`, `includeItemTypes`, `limit 12` par type | résultats groupés |
-| Ma liste | `getItems` | `filters: [.isFavorite]`, `includeItemTypes` vidéo | onglet + shelf d'accueil |
-| Mutations | `markFavoriteItem` / `unmarkFavoriteItem`, `markPlayedItem` / `markUnplayedItem` | `userID`, `itemID` | ♡ et ✓ |
-| Lecture · prépa | `getPostedPlaybackInfo` | `DeviceProfile` tvOS, `mediaSourceID`, `audioStreamIndex`, `subtitleStreamIndex`, `startTimeTicks`, `maxStreamingBitrate` | URL de flux, `PlaySessionId`, `MediaSource` retenue (Phase 2 : `PlaybackEngine`) |
-| Lecture · reporting | `reportPlaybackStart`, `reportPlaybackProgress`, `reportPlaybackStopped` | `MediaSourceId`, `PlayMethod`, `CanSeek`, `PositionTicks` | état serveur (Reprendre) |
-| OSD · chapitres | champ `chapters` du DTO + `getItemImage(.chapter, index)` | | repères du scrubber, panneau chapitres |
-| OSD · trickplay | champ `trickplay` du DTO (`TrickplayInfoDto` : width, tile grid, interval) + `getTrickplayTileImage(width:, index:)` | on choisit la largeur ≥ 320 la plus proche | bulle de scrub |
-| OSD · segments | `getItemSegments` (Jellyfin ≥ 10.10 : `Intro`, `Recap`, `Outro`, `Preview`, `Commercial`) | `includeSegmentTypes` | bouton Passer, `UpNextCard` |
-| OSD · pistes | `MediaStreams` du `MediaSource` (type, langue, codec, `IsDefault`, `IsForced`, `IsExternal`) | | `TrackPanel` ; mapping sid group-aware (lessons-learned) |
-| Réglages · compte | `getCurrentUser` (via `UserDto.configuration`) | `audioLanguagePreference`, `subtitleLanguagePreference`, `subtitleMode`, `playDefaultAudioTrack`, `rememberAudioSelections`, `rememberSubtitleSelections` | valeurs initiales de lecture |
-| Réglages · prefs | `getDisplayPreferences` / `updateDisplayPreferences` (clé `jellyfuse`, `client: "Jellyfuse"`) | | prefs synchronisées entre appareils (ordre des shelves en v1.1) |
-| Temps réel | websocket (`socketSession`) | `UserDataChanged`, `LibraryChanged`, `ServerRestarting` | rafraîchissement automatique |
-| Licences | aucune (générées au build) | | écran Licences |
+Abandonnés par rapport à la v1 du plan : `getMovieRecommendations`/`getSuggestions` (plus de shelf de recommandation),
+`getDisplayPreferences` (plus de réglage synchronisé), `getPersons` (la recherche de personnes passe par
+`getSearchHints`).
 
-### 9.2 Modèles d'affichage → champs du DTO
-`PosterModel` ← `id`, `name`, `imageTags.Primary`, `imageBlurHashes`, `userData.played`, `userData.playedPercentage`,
-`userData.unplayedItemCount` ; `LandscapeModel` ← idem + `parentBackdropImageTags`, `seriesName`, `indexNumber`,
-`parentIndexNumber`, `runTimeTicks`, `userData.playbackPositionTicks` ; `BillboardModel` ← `overview`, `communityRating`,
-`productionYear`, `officialRating`, `mediaStreams` (badges 4K/HDR/Atmos déduits de `Width`, `VideoRangeType`, `Codec`/
-`AudioSpatialFormat`). Les mappers vivent dans `Presentation/` et sont testés avec des fixtures JSON du SDK.
+**Préférences (ordre de priorité)** : choix explicite dans le lecteur → mémorisation par série → préférences de
+l'utilisateur serveur → réglages Jellyfuse → piste par défaut du fichier.
+**Images** : affiche `maxWidth 520` (2×), paysage 820, backdrop 2560, disque 300 ; URL avec `tag` ; flou blurhash.
 
-### 9.3 Images : tailles demandées
-Affiche : `maxWidth 500` (2× 250), qualité 90. Paysage : `maxWidth 800`. Backdrop billboard/fiche : `maxWidth 2560`.
-Logo : `maxWidth 900`. Disque personne : `maxWidth 400`. Les URL portent le `tag` (cache durable) ; le flou blurhash
-s'affiche sous 30 ms.
+## 10. États
 
-### 9.4 Préférences : qui décide
-Ordre de priorité à l'ouverture d'une lecture : choix explicite dans la fiche → **mémorisation par série**
-(`rememberAudioSelections`/`rememberSubtitleSelections`, règles du plan de reboot) → préférences de l'utilisateur
-serveur (`UserConfiguration`) → réglages Jellyfuse (Audio et sous-titres) → piste par défaut du fichier.
+Squelettes statiques à la forme finale ; cache d'abord, revalidation silencieuse ; hors ligne = un `Banner` ; 401 =
+retour au profil ; vide = `EmptyState` + action ; erreur de page = « Réessayer » en bout de shelf ; titres à 2 lignes
+maximum ; aucun `try?` qui avale une erreur visible (tout passe par `AppModel.report`).
 
-## 10. États transverses
+## 11. iOS / iPadOS (plus tard)
 
-| Situation | Rendu |
-|---|---|
-| Chargement premier écran | squelettes (`Skeleton`) à la forme finale, aucun spinner plein écran |
-| Données en cache | affichées immédiatement ; revalidation silencieuse ; pas de clignotement si identiques |
-| Hors ligne / serveur injoignable | `Banner` sous la nav, cache lisible ; lecture impossible = dialogue clair |
-| 401 | retour au choix du profil avec message |
-| Vide | `EmptyState` avec la prochaine action |
-| Erreur de page / d'image | ligne « Réessayer » en bout de shelf ; image = dégradé de repli + initiale |
-| Longs titres | 2 lignes maximum sous les cartes, 1 ligne dans les rangées |
-| Contenu sensible | classification affichée (badge) ; pas de filtrage parental propre à l'app (celui du compte Jellyfin s'applique) |
-
-Erreurs : jamais de `try?` qui avale un échec visible ; tout passe par `AppModel.report` (règle sillon / oisillon).
-
-## 11. Ordre de construction recommandé
-
-Chaque lot se termine par : défauts de focus vérifiés à la télécommande (simulateur, puis Apple TV réelle à la fin des
-lots 3.2, 3.4 et 3.8), **capture comparée à la maquette**, états vide/erreur/chargement présents, VoiceOver correct,
-tests swift-testing de la logique, build sans avertissement. On dit ce qui a été vérifié et ce qui ne l'a pas été.
-
-| Lot | Contenu | Pourquoi dans cet ordre | Sortie |
-|---|---|---|---|
-| **3.0** Fondations | `Design`, `FocusableStyle`, `Artwork`, `Badge`, `FuseButton`, `FuseChip`, `PosterCard`, `LandscapeCard`, `Shelf`, `Skeleton` ; cible `DesignSystem` + `DesignSystemTests` ; `-JellyfuseGallery` (galerie sans serveur) | tout le reste en dépend ; le **focus engine se valide ici**, sur des données fictives | galerie jouable à la télécommande, cartes et boutons conformes aux maquettes |
-| **3.1** Auth | `AppModel`, `RootView` (routage session), `ServerRow`, `ProfileAvatar`, `QuickConnectCode`, `QRCodeView`, `PinPad`, écrans A1-A5 | rien ne s'affiche sans session ; Quick Connect est le parcours le plus particulier de tvOS | connexion complète sur un vrai serveur, session mémorisée (Keychain), multi-profils |
-| **3.2** Accueil | `TopNav`, `BackdropView`, `Billboard`, shelves (Reprendre, À suivre, Récents), cache Home, lecture directe depuis une carte (avec le `PlayerScreen` V0 branché sur le resolver de la Phase 2) | première valeur visible ; valide perfs d'image et défilement | Accueil fluide à 60 i/s sur Apple TV 4K, focus restauré |
-| **3.3** Fiches | `DetailHeader`, `DetailModel`, fiche film, fiche série (saisons, épisodes), distribution, similaires, extras, mutations optimistes (vu, ma liste) | avant le player complet : on peut tout lancer | fiches complètes, ♡ et ✓ synchronisés |
-| **3.4a** Lecteur : transport | `PlayerOSD`, `Scrubber`, `TransportBar`, états OSD, saut gauche/droite, ▶︎⏸, pont UIKit du pavé tactile (spike), reporting | cœur de l'expérience ; le spike du scrub est le risque n°1 | lecture/scrub fiables, `OSDState` testé |
-| **3.4b** Lecteur : pistes et infos | `TrackPanel`, `InfoPanel`, `ChapterStrip`, trickplay (`TrickplayBubble`) | dépend de 3.4a | choix de piste immédiat et mémorisé, vignettes de scrub |
-| **3.4c** Lecteur : segments et suite | `SkipSegmentButton`, `UpNextCard`, auto-lecture, retour à la fiche | dépend de 3.4b et du serveur ≥ 10.10 | enchaînement d'une série sans toucher la télécommande |
-| **3.5** Bibliothèques | `PosterGrid`, `LetterRail`, `ChipRow`, `OptionPanel`, tri/filtres/genres, collections, personne | réutilise cartes et chips | parcours d'une bibliothèque de 5 000 titres sans accroc |
-| **3.6** Recherche | `.searchable`, groupes, récents | dépend des cartes et fiches | recherche en < 1 s sur le serveur de référence |
-| **3.7** Réglages et licences | `SettingsSidebar`, `SettingsRow`, panneaux, profils (PIN, oubli), serveurs, licences générées | fin de parcours ; débloque la soumission | écran Licences conforme, réglages persistés (serveur + local) |
-| **3.8** Durcissement | audit du focus (tous les écrans), accessibilité, Reduce Motion, localisation fr/en/es, perf, XCUITest des parcours critiques, états d'erreur réels | le dernier 20 % qui fait la qualité | parcours quotidien complet sur l'Apple TV du salon (sortie de phase) |
-
-Dépendances de phase : 3.1 suppose la façade d'auth de la Phase 2 (`JellyfinClient.authenticate`, `quickConnect` : déjà
-en place) ; 3.4 suppose `PlaybackEngine` (resolver, reporter). Si la Phase 2 n'est pas finie, 3.2-3.3 utilisent une
-lecture directe sans resolver.
-
-## 12. Divergences iOS / iPadOS (plus tard)
-
-Principe : **on ne compromet pas le design TV**. Le `DesignSystem` n'est pas partagé ; la future cible iOS aura sa
-bibliothèque de composants tactiles. Ce qui est partagé : `LibraryKit`, `PlaybackEngine`, `AppModel`, les modèles
-d'affichage, les mappers `Presentation/`, les tokens de palette et d'accent (extraits dans un module `DesignTokens`
-quand la cible iOS démarre, sans changer l'API de `Design`).
+Le `DesignSystem` tvOS n'est pas partagé ; la cible iOS aura ses composants tactiles. Partagés : `LibraryKit`,
+`PlaybackEngine`, `AppModel`, modèles d'affichage, mappers, tokens de palette.
 
 | Écran | tvOS | iOS / iPadOS |
 |---|---|---|
-| Navigation | barre haute personnalisée | iPhone : `TabView` en bas ; iPad : barre latérale adaptative |
-| Accueil | billboard 640 pt, focus | billboard paginé au balayage, plus court (≈ 45 % de l'écran), shelves en défilement tactile |
-| Cartes | scale + liseré au focus | pression / surbrillance, haptique ; tailles adaptatives (`GridItem(.adaptive)`) |
-| Fiche | actions en rangée, sélecteurs en chips | défilement vertical, en-tête collant, sélecteurs dans des `Menu` |
-| Bibliothèque | grille 6 colonnes + rail A-Z | grille adaptative + index système (`List` sections) ou rail tactile |
-| Recherche | clavier tvOS | `.searchable` natif, tokens de filtre |
-| Lecteur | OSD au focus, scrub au pavé tactile | gestes : double-tap ±10 s, glisser vertical (luminosité/volume), pincement (remplissage), **PiP** et AirPlay |
-| Connexion | Quick Connect affiche un code | Quick Connect **autorise** (`authorizeQuickConnect`) : l'iPhone connecté valide le code affiché par l'Apple TV ; connexion par mot de passe classique |
-| Réglages | barre latérale + panneau | `Form` groupé natif |
-| Téléchargements | non (pas de stockage persistant garanti sur tvOS) | oui, plus tard |
+| Navigation | `TabView` en haut | iPhone : `TabView` en bas ; iPad : barre latérale adaptative |
+| Accueil | billboard + shelves au focus | billboard plus court, défilement tactile |
+| Cartes | effet de focus système | pression, haptique, grille adaptative |
+| Fiche | boutons en rangée | en-tête collant, `Menu` pour les versions |
+| Bibliothèque | grille 6 col. + panneau | grille adaptative, index système |
+| Lecteur | OSD au focus, scrub au pavé | gestes (double-tap ±10 s), **PiP**, AirPlay |
+| Connexion | affiche le code | **autorise** le code (`authorizeQuickConnect`) |
+| Réglages | `Form` | `Form` |
 
-## 13. Hors périmètre v1 (et pourquoi)
+## 12. Hors périmètre v1
 
-- **Live TV / enregistrements** : hors périmètre v1 (décision produit). L'API existe (`getLiveTvChannels`, programmes,
-  minuteries) mais l'EPG est un problème de focus à part entière (grille 2D à défilement bidirectionnel) ; un onglet
-  « TV en direct » est réservé dans la barre de nav, absent tant que non construit.
-- **Musique, livres, photos** : Sillon couvre la musique ; les bibliothèques de ces types sont masquées.
-- **Téléchargements hors ligne** : pas de stockage persistant garanti sur tvOS.
-- **SyncPlay, commande à distance (recevoir « lire sur cet appareil »)** : v1.1 ; le websocket est déjà branché.
-- **Recherche/téléchargement de sous-titres distants** (plugin OpenSubtitles côté serveur) : v1.1.
-- **Jellyseerr / demandes** : hors produit (décision du plan de reboot).
-- **Top Shelf, Now Playing, écran de veille** : Phase 4.
-- **Bandes-annonces YouTube** : non lisibles (`RemoteTrailers`) ; seules les vidéos locales (extras) le sont.
-- **Contrôle parental propre à l'app** : on s'appuie sur la classification et les restrictions du compte Jellyfin.
+Live TV (décision produit ; l'EPG est un problème de focus à part ; pas d'onglet tant que non construit) · musique,
+livres, photos · téléchargements hors ligne · SyncPlay et commande à distance · sous-titres distants · Jellyseerr ·
+Top Shelf, Now Playing, écran de veille (Phase 4 ; Top Shelf : carrousel « à reprendre / nouveau » conforme aux HIG) ·
+bandes-annonces YouTube · contrôle parental propre à l'app · pistes du lecteur au-delà d'une liste simple.
 
-## 14. Questions ouvertes pour Antonin
+## 13. Ordre de construction
 
-1. **Barre de nav personnalisée ou `TabView` natif ?** Le plan prévoit une barre custom (wordmark à gauche, avatar à
-   droite, Netflix). Le `TabView` natif donne Menu, focus et accessibilité gratuits mais pas de wordmark et un rendu
-   différent entre tvOS 17 et 18. Recommandation : custom, avec repli natif si le focus s'avère fragile au lot 3.2.
-2. **Nom et identité.** Wordmark `jellyfuse` + étincelle violet/rose OK ? Un autre accent (ambre, cyan) ? Le logo de l'app
-   (icône) reste à dessiner.
-3. **PIN de profil local.** Le PIN protège l'app sur cet Apple TV, pas le compte (le serveur n'authentifie pas par PIN).
-   Acceptable pour v1, ou on le retire ?
-4. **« Ma liste » = favoris Jellyfin ?** Jellyfin n'a pas de watchlist ; les favoris sont l'équivalent le plus proche et
-   se synchronisent avec les autres clients. Alternative : une playlist dédiée « Ma liste » (plus propre mais invisible
-   dans les autres clients). Recommandation : favoris.
-5. **Bibliothèques « mixtes » / vidéos personnelles** : onglet propre ou regroupées sous « Autres » ?
-6. **Langues de l'interface** : fr + en comme Oisillon, ou fr + en + es comme Sillon ?
-7. **Zoom de transition carte → fiche** : `NavigationTransition.zoom` n'est pas garanti sur tvOS ; à vérifier au lot
-   3.3 avant de promettre autre chose que le fondu.
-8. **Rotation automatique du billboard** : désactivée par défaut (calme) ou activée (vivant) ? La maquette suppose activée
-   quand le billboard n'a pas le focus.
-9. **Minimum tvOS 17** confirmé ? `defaultFocus` et `scrollClipDisabled` sont disponibles ; certaines API de focus
-   plus riches arrivent avec tvOS 18.
-10. **Note affichée** : étoile + note communautaire (TMDB) seule, ou aussi la note critique (Rotten Tomatoes) quand
-    elle existe ?
+Chaque lot se termine par : focus vérifié à la télécommande (simulateur, puis Apple TV réelle aux lots 3.2, 3.4, 3.7),
+capture comparée à la maquette, états vide/erreur/chargement, VoiceOver, tests swift-testing, zéro avertissement ; on
+dit ce qui a été vérifié et ce qui ne l'a pas été.
 
-*Les maquettes utilisent des titres, des personnes et un serveur fictifs (`salon.local`). Le QR de `login.html` est
-illustratif et ne se scanne pas.*
+| Lot | Contenu | Sortie |
+|---|---|---|
+| **3.0** Fondations | `Design`, `Artwork`, `PosterCard`, `LandscapeCard`, `Shelf`, `Skeleton`, `FuseChip`, `TabView` vide ; `DesignSystemTests` | cartes et shelves jouables sur données fictives (`#Preview`), focus validé |
+| **3.1** Auth | `AppModel`, `RootView`, écrans Serveur / Profil / Connexion rapide / Mot de passe, `PinPad`, `QRCodeView` | connexion complète, session en Keychain, multi-profils |
+| **3.2** Accueil | `Billboard`, `BackdropView`, shelves, cache, lecture directe depuis une carte | Accueil fluide à 60 i/s sur Apple TV 4K |
+| **3.3** Fiches | `DetailHeader`, film, série (saisons, épisodes), distribution, mutations optimistes | fiches complètes, Ma liste et Vu synchronisés |
+| **3.4a** Lecteur : transport | `PlayerOSD`, `Scrubber`, états, sauts, ▶︎⏸, pont UIKit du pavé (spike), reporting | lecture et scrub fiables |
+| **3.4b** Lecteur : onglets | `ContentTabs` (Infos, Audio, Sous-titres, Chapitres), `TrickplayBubble` | pistes immédiates et mémorisées |
+| **3.4c** Lecteur : suite | `SkipButton`, `UpNextCard`, auto-lecture, retour à la fiche | série enchaînée sans toucher la télécommande |
+| **3.5** Bibliothèque | `PosterGrid`, panneau « Filtres et tri », « Aller à la lettre », collection, personne | 5 000 titres sans accroc |
+| **3.6** Recherche | `.searchable`, groupes | < 1 s sur le serveur de référence |
+| **3.7** Réglages et licences | liste groupée, licences générées | écran Licences conforme |
+| **3.8** Durcissement | audit du focus, accessibilité, Reduce Motion, localisation, perf, XCUITest | parcours quotidien sur l'Apple TV du salon |
+
+## 14. Questions ouvertes (6, contre 10)
+
+Tranchées par la recherche : barre de navigation (native), rotation du billboard (aucune), onglet Ma liste (pas
+d'onglet), note affichée (note communautaire seule), mise en page du lecteur (calquée sur le système).
+
+1. **Identité** : wordmark `jellyfuse` + étincelle violet/rose conservés tels quels ; confirmé ? L'icône d'app reste à
+   dessiner.
+2. **PIN de profil local** : protège l'app sur cet Apple TV, pas le compte (le serveur n'authentifie pas par PIN). On le
+   garde en v1 ou on le retire (suppression = un écran et un composant en moins) ?
+3. **« Ma liste » = favoris Jellyfin** (recommandé, synchronisé avec les autres clients) ou playlist dédiée ?
+4. **Langues de l'interface** : fr + en (Oisillon) ou fr + en + es (Sillon) ?
+5. **tvOS minimum** : 17 (recommandé) garde un `TabView` simple ; la barre tvOS 18 permet des boutons-icônes
+   (recherche, réglages) dans la barre. À vérifier au lot 3.0 : sur tvOS 17 on garde les cinq onglets textuels.
+   Transition carte → fiche : fondu (le zoom n'est pas garanti sur tvOS).
+6. **Bibliothèques mixtes / vidéos personnelles** : onglet propre quand elles existent (plan actuel) ou masquées en v1 ?
+
+*Maquettes : titres, personnes et serveur fictifs (`salon.local`) ; le QR de `login.html` est illustratif. Placeholders
+colorés, aucune image externe.*
