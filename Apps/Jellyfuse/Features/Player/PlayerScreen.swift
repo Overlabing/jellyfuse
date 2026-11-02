@@ -35,7 +35,7 @@ struct PlayerScreen: View {
             if showsStats { stats }
         }
         .animation(.easeOut(duration: 0.2), value: model.isBuffering)
-        .background(RemoteInputView(handlers: remoteHandlers))
+        .overlay { RemoteInputView(handlers: remoteHandlers).ignoresSafeArea() }
         .task(id: transport.visibility.deadline) { await hideWhenIdle() }
         .task(id: transport.skipFeedback?.token) { await clearSkipFeedback() }
         .onChange(of: model.isPaused) { _, paused in transport.pausedChanged(paused) }
