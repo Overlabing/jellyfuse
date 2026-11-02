@@ -13,6 +13,8 @@ public struct MpvOptions: Sendable, Equatable {
     public var messageLevel: String
     /// Persistent shader/pipeline cache directory; nil disables it.
     public var shaderCacheDirectory: URL?
+    /// Debug/launch-arg escape hatch: raw mpv options appended last (they win).
+    public var extraOptions: [String]  // "name=value" entries
 
     public init(
         backend: VideoBackendKind = .sampleBuffer,
@@ -20,7 +22,8 @@ public struct MpvOptions: Sendable, Equatable {
         demuxerMaxBytes: String = "50MiB",
         demuxerMaxBackBytes: String = "25MiB",
         messageLevel: String = "all=warn",
-        shaderCacheDirectory: URL? = MpvOptions.defaultShaderCacheDirectory
+        shaderCacheDirectory: URL? = MpvOptions.defaultShaderCacheDirectory,
+        extraOptions: [String] = []
     ) {
         self.backend = backend
         self.hwdec = hwdec
@@ -28,6 +31,7 @@ public struct MpvOptions: Sendable, Equatable {
         self.demuxerMaxBackBytes = demuxerMaxBackBytes
         self.messageLevel = messageLevel
         self.shaderCacheDirectory = shaderCacheDirectory
+        self.extraOptions = extraOptions
     }
 
     public static var defaultShaderCacheDirectory: URL? {
@@ -69,6 +73,10 @@ public struct MpvOptions: Sendable, Equatable {
             if let dir = shaderCacheDirectory {
                 out.append(("gpu-shader-cache-dir", dir.path))
             }
+        }
+        for raw in extraOptions {
+            let kv = raw.split(separator: "=", maxSplits: 1).map(String.init)
+            if kv.count == 2 { out.append((kv[0], kv[1])) }
         }
         return out
     }

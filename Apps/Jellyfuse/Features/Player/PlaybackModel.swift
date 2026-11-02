@@ -1,3 +1,4 @@
+import Foundation
 import Observation
 import PlayerCore
 
@@ -21,7 +22,15 @@ final class PlaybackModel {
     init(startSeconds: Double = 0) {
         self.startSeconds = startSeconds
         do {
-            player = try MpvPlayer()
+            var options = MpvOptions()
+            // Debug launch args (same as the spike): -mpvopt k=v,k=v and -start <secs>.
+            if let raw = UserDefaults.standard.string(forKey: "mpvopt") {
+                options.extraOptions = raw.split(separator: ",").map(String.init)
+            }
+            if let start = UserDefaults.standard.string(forKey: "start") {
+                options.extraOptions.append("start=\(start)")
+            }
+            player = try MpvPlayer(options: options)
         } catch {
             player = nil
             failure = String(describing: error)
