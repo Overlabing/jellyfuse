@@ -1,6 +1,18 @@
+import DesignSystem
 import Foundation
+import HomePresentation
 import LibraryKit
 import PlaybackEngine
+import PlayerPresentation
+
+/// The episode that follows the one playing: what to play and how the card presents it.
+struct NextEpisode: Equatable {
+    /// Always from the beginning: the viewer is not asked « Reprendre / Recommencer ».
+    let target: PlayTarget
+    /// `S1E5 · Titre`.
+    let title: String
+    let thumbnail: ArtworkSource
+}
 
 /// What a playback needs from the session: the resolver (PlaybackInfo -> source) and the reporter (journal,
 /// Start/Progress/Stopped). One instance per session, so the journal is drained once at sign-in and again each
@@ -14,11 +26,15 @@ final class PlaybackServices {
     private let thresholds: ResumeThresholdsCache
     private let userId: String
     private let store: LibraryStore
+    private let client: JellyfinClient
+    private let extras: any PlayerExtrasAPI
 
     init(session: Session, client: JellyfinClient, store: LibraryStore, reachability: ServerReachability) {
         userId = session.userId
         trackPreferences = TrackPreferenceStore(owner: session.libraryOwner)
         self.store = store
+        self.client = client
+        extras = client
         resolver = PlaybackResolver(api: client, profile: .jellyfuse())
         let thresholds = ResumeThresholdsCache(fetch: Self.makeThresholdsFetch(client))
         self.thresholds = thresholds
@@ -59,6 +75,33 @@ final class PlaybackServices {
     func detail(_ id: String) async -> ItemDetail? {
         try? await store.ensureDetailFresh(id)
         return store.detail(id)
+    }
+
+    /// The intro and credits of the item. None when the server has none or predates them (10.10).
+    func segments(_ id: String) async -> ItemSegments {
+        (try? await extras.segments(itemId: id)) ?? .none
+    }
+
+    /// The tile image `index` of the item's trickplay at `width`.
+    func trickplayTileURL(itemId: String, width: Int, index: Int) -> URL? {
+        extras.trickplayTileURL(itemId: itemId, width: width, index: index)
+    }
+
+    /// The episode after `id` in its series, once the series' episodes are loaded. Nil for a film, the last
+    /// episode, or when the series cannot be loaded (offline, never listed).
+    func nextEpisode(after id: String) async -> NextEpisode? {
+        guard let current = store.items[id], current.kind == .episode, let seriesId = current.seriesId else { return nil }
+        try? await store.ensureSeriesFresh(seriesId)
+        guard let next = UpNext.next(after: id, in: store.episodes(of: seriesId)) else { return nil }
+        let title = UpNext.title(of: next)
+        return NextEpisode(
+            target: PlayTarget(id: next.id, title: next.seriesName ?? next.name, resumeSeconds: 0),
+            title: title,
+            thumbnail: ArtworkSource(
+                url: client.imageURL(itemId: next.id, kind: .primary, tag: next.primaryImageTag, maxWidth: 512),
+                placeholderTitle: next.name
+            )
+        )
     }
 
     private nonisolated static func makeThresholdsFetch(_ client: JellyfinClient) -> @Sendable () async throws -> ResumeThresholds? {

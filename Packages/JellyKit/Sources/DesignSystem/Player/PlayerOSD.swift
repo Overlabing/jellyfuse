@@ -6,10 +6,13 @@ public struct PlayerOSD: View {
     @Environment(\.designMetrics) private var metrics
     private let state: OSDState
     private let model: OSDModel
+    private let scrubThumbnail: Image?
 
-    public init(state: OSDState, model: OSDModel) {
+    /// `scrubThumbnail`: the frame under the playhead (trickplay), shown in the scrub bubble; nil = text only.
+    public init(state: OSDState, model: OSDModel, scrubThumbnail: Image? = nil) {
         self.state = state
         self.model = model
+        self.scrubThumbnail = scrubThumbnail
     }
 
     public var body: some View {
@@ -28,7 +31,7 @@ public struct PlayerOSD: View {
             Text(model.title)
                 .font(Design.Typography.callout.weight(.bold))
                 .lineLimit(1)
-            OSDProgressBar(progress: model.progress, chapterMarks: model.chapterMarks, preview: model.preview, chapterTitle: model.chapterTitle, skip: state.skip, isScrubbing: state.isScrubbing)
+            OSDProgressBar(progress: model.progress, chapterMarks: model.chapterMarks, preview: model.preview, chapterTitle: model.chapterTitle, thumbnail: scrubThumbnail, skip: state.skip, isScrubbing: state.isScrubbing)
             times
         }
         .foregroundStyle(.white)
@@ -79,6 +82,7 @@ struct OSDProgressBar: View {
     let chapterMarks: [Double]
     let preview: String?
     let chapterTitle: String?
+    let thumbnail: Image?
     let skip: SkipFeedback?
     let isScrubbing: Bool
 
@@ -109,10 +113,17 @@ struct OSDProgressBar: View {
                     .frame(width: knobSize, height: knobSize)
                     .shadow(color: .black.opacity(0.6), radius: 10, y: 6)
                     .position(x: x, y: proxy.size.height / 2)
-                if let preview {
-                    bubble(preview, chapter: chapterTitle).position(x: min(max(x, 160), proxy.size.width - 160), y: chapterTitle == nil ? -44 : -64)
-                } else if let skip {
+                if let skip, preview == nil {
                     skipChevrons(skip).position(x: x, y: -44)
+                }
+            }
+            .overlay(alignment: .topLeading) {
+                if let preview {
+                    // Centred on the playhead (kept on screen), its bottom edge just above the bar.
+                    let centre = min(max(x, Self.bubbleWidth / 2), proxy.size.width - Self.bubbleWidth / 2)
+                    bubble(preview, chapter: chapterTitle)
+                        .alignmentGuide(.leading) { $0.width / 2 - centre }
+                        .alignmentGuide(.top) { $0[.bottom] + 28 }
                 }
             }
             .animation(.easeOut(duration: 0.15), value: progress)
@@ -122,14 +133,25 @@ struct OSDProgressBar: View {
         .accessibilityHidden(true)
     }
 
+    /// Also the thumbnail's width, so the bubble does not resize as the frames change.
+    private static let bubbleWidth: CGFloat = 320
+
     private func bubble(_ text: String, chapter: String?) -> some View {
         VStack(spacing: 2) {
+            if let thumbnail {
+                thumbnail
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: Self.bubbleWidth)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .padding(.bottom, Design.Spacing.xs)
+            }
             Text(text).font(Design.Typography.callout.weight(.bold).monospacedDigit())
             if let chapter {
                 Text(chapter).font(Design.Typography.caption).foregroundStyle(.white.opacity(0.8)).lineLimit(1)
             }
         }
-        .padding(.horizontal, Design.Spacing.s)
+        .padding(.horizontal, thumbnail == nil ? Design.Spacing.s : Design.Spacing.xs)
         .padding(.vertical, Design.Spacing.xs)
         .background(.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 20))
     }
