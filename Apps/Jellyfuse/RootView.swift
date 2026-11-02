@@ -8,8 +8,8 @@ struct RootView: View {
     var body: some View {
         ZStack {
             Design.Palette.canvas.ignoresSafeArea()
-            if let home = model.home {
-                MainTabs(model: model, home: home)
+            if let home = model.home, let playback = model.playback {
+                MainTabs(model: model, home: home, playback: playback)
             } else {
                 LoginScreen(onSignedIn: { model.signedIn($0) })
             }
@@ -21,6 +21,7 @@ struct RootView: View {
 private struct MainTabs: View {
     @Bindable var model: AppModel
     let home: HomeModel
+    let playback: PlaybackServices
 
     var body: some View {
         TabView {
@@ -36,7 +37,7 @@ private struct MainTabs: View {
                 .tabItem { Text("Réglages") }
         }
         .fullScreenCover(item: $model.playing) { request in
-            PlayerScreen(url: request.url, startSeconds: request.startSeconds, onClose: { model.playing = nil })
+            PlayerScreen(target: request.target, services: playback, onClose: { model.playing = nil })
         }
     }
 }

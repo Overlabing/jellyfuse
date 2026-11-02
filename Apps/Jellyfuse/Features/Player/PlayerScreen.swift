@@ -1,21 +1,20 @@
+import HomePresentation
 import PlayerCore
 import SwiftUI
 
-/// Plays one stream (direct play for now). Menu closes it.
+/// Plays one item, reporting it to the server. Menu closes it.
 struct PlayerScreen: View {
-    let url: URL
     let onClose: () -> Void
     @State private var model: PlaybackModel
 
-    init(url: URL, startSeconds: Double, onClose: @escaping () -> Void) {
-        self.url = url
+    init(target: PlayTarget, services: PlaybackServices, onClose: @escaping () -> Void) {
         self.onClose = onClose
-        _model = State(initialValue: PlaybackModel(startSeconds: startSeconds))
+        _model = State(initialValue: PlaybackModel(target: target, services: services))
     }
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            if let player = model.player {
+            if let player = model.player, let url = model.streamURL {
                 MpvPlayerView(player: player, startURL: url)
                     .ignoresSafeArea()
                 stats
@@ -28,11 +27,12 @@ struct PlayerScreen: View {
         .focusable()
         .onPlayPauseCommand { model.togglePause() }
         .onExitCommand(perform: onClose)
+        .onDisappear { model.stop() }
     }
 
     private var message: String {
         if let failure = model.failure { return "Player failed: \(failure)" }
-        return "Player unavailable."
+        return model.player == nil ? "Player unavailable." : "Loading…"
     }
 
     private var stats: some View {

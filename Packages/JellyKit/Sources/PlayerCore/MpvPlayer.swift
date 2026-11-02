@@ -84,6 +84,11 @@ public final class MpvPlayer: @unchecked Sendable {
         setProperty(kind.propertyName, id.map(String.init) ?? "no")
     }
 
+    /// Adds a sidecar subtitle without selecting it: the caller sets `sid` once all are added.
+    public func addSubtitle(_ url: URL, title: String? = nil, language: String? = nil) {
+        command(["sub-add", url.absoluteString, "auto", title ?? "", language ?? ""])
+    }
+
     /// Stops playback and destroys the mpv core. Idempotent; `events` finishes.
     public func shutdown() {
         queue.sync { tearDown() }
