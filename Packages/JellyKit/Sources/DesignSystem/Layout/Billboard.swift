@@ -25,52 +25,57 @@ public struct BackdropView: View {
     }
 }
 
-/// Home billboard: one static item with title, meta line, two-line synopsis, and two buttons.
+/// Home billboard (fixed-height section, `metrics.billboardHeight`): one static item with title, meta line, two-line synopsis, and two buttons.
 public struct Billboard: View {
     @Environment(\.designMetrics) private var metrics
     private let model: BillboardModel
     private let primaryLabel: String
     private let onPlay: () -> Void
     private let onToggleList: () -> Void
+    private let focusNamespace: Namespace.ID
 
     public init(
         _ model: BillboardModel,
         primaryLabel: String,
         onPlay: @escaping () -> Void,
-        onToggleList: @escaping () -> Void
+        onToggleList: @escaping () -> Void,
+        focusNamespace: Namespace.ID
     ) {
         self.model = model
         self.primaryLabel = primaryLabel
         self.onPlay = onPlay
         self.onToggleList = onToggleList
+        self.focusNamespace = focusNamespace
     }
 
     public var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            BackdropView(model.backdrop)
-            VStack(alignment: .leading, spacing: Design.Spacing.m) {
-                Text(model.title)
-                    .font(Design.Typography.title)
-                    .foregroundStyle(Design.Palette.textPrimary)
-                    .lineLimit(2)
-                BillboardMeta(parts: model.metaParts())
-                Text(model.overview)
-                    .font(Design.Typography.body)
-                    .foregroundStyle(Design.Palette.textSecondary)
-                    .lineLimit(2)
-                HStack(spacing: Design.Spacing.m) {
-                    PillButton(primaryLabel, systemImage: "play.fill", action: onPlay)
-                    PillButton(String(localized: "Ma liste"), systemImage: "plus", action: onToggleList)
-                }
-                .padding(.top, Design.Spacing.s)
-                .focusBlock()
+        // Fixed-height section at the head of the scroll: the text block is laid out inside the
+        // frame and the backdrop is only its background, so it can never move the content.
+        VStack(alignment: .leading, spacing: Design.Spacing.m) {
+            Text(model.title)
+                .font(Design.Typography.title)
+                .foregroundStyle(Design.Palette.textPrimary)
+                .lineLimit(2)
+            BillboardMeta(parts: model.metaParts())
+            Text(model.overview)
+                .font(Design.Typography.body)
+                .foregroundStyle(Design.Palette.textSecondary)
+                .lineLimit(2)
+            HStack(spacing: Design.Spacing.m) {
+                PillButton(primaryLabel, systemImage: "play.fill", action: onPlay)
+                    .prefersDefaultFocus(true, in: focusNamespace)
+                PillButton(String(localized: "Ma liste"), systemImage: "plus", action: onToggleList)
             }
-            .frame(width: metrics.billboardTextWidth, alignment: .leading)
-            .padding(.leading, metrics.screenMargin)
-            .padding(.bottom, Design.Spacing.xl)
+            .padding(.top, Design.Spacing.s)
+            .focusBlock()
         }
-        .frame(maxWidth: .infinity)
+        .frame(width: metrics.billboardTextWidth, alignment: .leading)
+        .padding(.leading, metrics.screenMargin)
+        .padding(.bottom, Design.Spacing.xl)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
         .frame(height: metrics.billboardHeight)
+        .background { BackdropView(model.backdrop) }
+        .clipped()
     }
 }
 
@@ -98,8 +103,7 @@ private struct BillboardMeta: View {
 #Preview("Billboard – Lecture focused") {
     PreviewFocusScope { namespace in
         VStack(spacing: 0) {
-            Billboard(PreviewData.billboard, primaryLabel: "Lecture", onPlay: {}, onToggleList: {})
-                .previewDefaultFocus(in: namespace)
+            Billboard(PreviewData.billboard, primaryLabel: "Lecture", onPlay: {}, onToggleList: {}, focusNamespace: namespace)
             Spacer()
         }
     }
