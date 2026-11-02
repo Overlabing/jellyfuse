@@ -24,6 +24,7 @@ private actor StubLibraryAPI: LibraryAPI {
     func seasons(of seriesId: String) async throws -> [LibraryEntry] { [] }
     func episodes(of seriesId: String) async throws -> [LibraryEntry] { [] }
     func setFavorite(_ isFavorite: Bool, for itemId: String) async throws {}
+    func setPlayed(_ isPlayed: Bool, for itemId: String) async throws {}
 }
 
 private final class Counter: @unchecked Sendable {

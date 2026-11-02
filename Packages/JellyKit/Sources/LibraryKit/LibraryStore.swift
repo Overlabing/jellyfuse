@@ -393,6 +393,20 @@ public final class LibraryStore {
         }
     }
 
+    /// « Vu » / « Non vu »: optimistic watched toggle (data-plan §5.6). The flag flips at once and the
+    /// resume position resets, as the server does. Success marks « À suivre » stale (a watched item
+    /// leaves it, a next episode may appear); a refusal restores the previous state and rethrows.
+    public func setPlayed(_ isPlayed: Bool, for id: String) async throws {
+        try await mutateUserData([id], invalidating: [.continueWatching, .nextUp]) { data in
+            var data = data
+            data.played = isPlayed
+            data.playbackPositionTicks = 0
+            return data
+        } call: {
+            try await self.api.setPlayed(isPlayed, for: id)
+        }
+    }
+
     // MARK: Persistence
 
     private func hydrate() {

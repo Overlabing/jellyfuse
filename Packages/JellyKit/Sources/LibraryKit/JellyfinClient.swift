@@ -177,6 +177,14 @@ public actor JellyfinClient {
         _ = try await call { try await self.sdk.send(request).value }
     }
 
+    public func setPlayed(_ isPlayed: Bool, for itemId: String) async throws {
+        let userId = try requireUserId()
+        let request = isPlayed
+            ? Paths.markPlayedItem(itemID: itemId, userID: userId)
+            : Paths.markUnplayedItem(itemID: itemId, userID: userId)
+        _ = try await call { try await self.sdk.send(request).value }
+    }
+
     /// Unauthenticated reachability probe (`/System/Info/Public`), 5 s budget, no retry.
     public func ping() async -> Bool {
         let request = Paths.getPublicSystemInfo

@@ -39,6 +39,29 @@ import Testing
         #expect(running.endYear == nil)
     }
 
+    @Test func peopleKeepActorsAndDirectorsInServerOrder() throws {
+        let dto = BaseItemDto(
+            id: "m1", name: "Nocturne",
+            people: [
+                BaseItemPerson(id: "p1", name: "Inès Marchand", primaryImageTag: "img", role: "Léa", type: .actor),
+                BaseItemPerson(id: "p2", name: "Salomé Ricard", role: "", type: .director),
+                BaseItemPerson(id: "p3", name: "Compositeur", type: .composer),
+                BaseItemPerson(id: "p4", name: "", type: .actor),
+                BaseItemPerson(name: "Sans id", type: .actor),
+            ],
+            type: .movie
+        )
+        let detail = try #require(ItemDetail(dto: dto))
+        #expect(detail.people == [
+            Person(id: "p1", name: "Inès Marchand", kind: .actor, role: "Léa", primaryImageTag: "img"),
+            Person(id: "p2", name: "Salomé Ricard", kind: .director),
+        ])
+    }
+
+    @Test func itemWithoutPeopleHasNone() throws {
+        #expect(try #require(ItemDetail(dto: BaseItemDto(id: "m1", name: "x", type: .movie))).people.isEmpty)
+    }
+
     @Test func itemWithoutIdIsRejected() {
         #expect(ItemDetail(dto: BaseItemDto(name: "x")) == nil)
     }
@@ -199,5 +222,76 @@ import Testing
         try await load.value
         try await favorite.value
         #expect(store.userData["m1"]?.isFavorite == true)
+    }
+
+    // MARK: Watched
+
+    private func played(_ value: Bool) -> UserData {
+        UserData(played: value, playbackPositionTicks: value ? 0 : 40, playCount: value ? 1 : 0, isFavorite: false, lastPlayedDate: nil)
+    }
+
+    @Test func playedIsPatchedAtOnceResetsTheResumePositionAndIsSentToTheServer() async throws {
+        let api = FakeAPI()
+        await api.setDetail(movie(), userData: played(false))
+        let store = makeStore(api)
+        try await store.ensureDetailFresh("m1")
+        try await store.setPlayed(true, for: "m1")
+        #expect(store.userData["m1"]?.played == true)
+        #expect(store.userData["m1"]?.playbackPositionTicks == 0)
+        #expect(await api.playedCalls == ["m1:true"])
+        try await store.setPlayed(false, for: "m1")
+        #expect(store.userData["m1"]?.played == false)
+    }
+
+    @Test func playedRollsBackWhenTheServerRefuses() async throws {
+        let api = FakeAPI()
+        await api.setDetail(movie(), userData: played(false))
+        let store = makeStore(api)
+        try await store.ensureDetailFresh("m1")
+        await api.queueErrors([Boom()])
+        await #expect(throws: Boom.self) { try await store.setPlayed(true, for: "m1") }
+        #expect(store.userData["m1"]?.played == false)
+        #expect(store.userData["m1"]?.playbackPositionTicks == 40)
+    }
+
+    @Test func playedIsVisibleBeforeTheServerAnswers() async throws {
+        let api = FakeAPI()
+        await api.setDetail(movie(), userData: played(false))
+        let store = makeStore(api)
+        try await store.ensureDetailFresh("m1")
+        await api.holdAnswers()
+        let task = Task { try await store.setPlayed(true, for: "m1") }
+        await api.waitUntilParked()
+        #expect(store.userData["m1"]?.played == true)
+        await api.releaseAnswers()
+        try await task.value
+    }
+
+    @Test func playedInvalidatesContinueWatchingAndNextUpOnSuccessOnly() async throws {
+        let api = FakeAPI()
+        await api.setDetail(movie(), userData: played(false))
+        await api.setResume([entry("m1")])
+        let store = makeStore(api)
+        try await store.ensureDetailFresh("m1")
+        try await store.ensureFresh(.continueWatching)
+        try await store.ensureFresh(.nextUp)
+        #expect(!store.isStale(.continueWatching) && !store.isStale(.nextUp))
+
+        await api.queueErrors([Boom()])
+        await #expect(throws: Boom.self) { try await store.setPlayed(true, for: "m1") }
+        #expect(!store.isStale(.continueWatching) && !store.isStale(.nextUp))
+
+        try await store.setPlayed(true, for: "m1")
+        #expect(store.isStale(.continueWatching) && store.isStale(.nextUp))
+    }
+
+    @Test func playedOnAnEpisodeUpdatesTheSeriesEpisodeList() async throws {
+        let api = FakeAPI()
+        await api.setSeasons([LibraryEntry(item: MediaItem(id: "se1", name: "S1", kind: .season, seriesId: "s1", indexNumber: 1))], of: "s1")
+        await api.setEpisodes([episode("e1", season: "se1", number: 1, position: 500)], of: "s1")
+        let store = makeStore(api)
+        try await store.ensureSeriesFresh("s1")
+        try await store.setPlayed(true, for: "e1")
+        #expect(store.episodes(of: "s1").first?.userData.played == true)
     }
 }

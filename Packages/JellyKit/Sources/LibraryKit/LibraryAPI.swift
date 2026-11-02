@@ -16,6 +16,8 @@ public protocol LibraryAPI: Sendable {
     func episodes(of seriesId: String) async throws -> [LibraryEntry]
     /// Adds the item to / removes it from the user's favorites (« Ma liste »).
     func setFavorite(_ isFavorite: Bool, for itemId: String) async throws
+    /// Marks the item watched / unwatched for the user.
+    func setPlayed(_ isPlayed: Bool, for itemId: String) async throws
 }
 
 extension JellyfinClient: LibraryAPI {}

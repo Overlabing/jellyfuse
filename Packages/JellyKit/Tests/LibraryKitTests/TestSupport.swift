@@ -30,6 +30,7 @@ actor FakeAPI: LibraryAPI {
     var seasonResults: [String: [LibraryEntry]] = [:]
     var episodeResults: [String: [LibraryEntry]] = [:]
     private(set) var favoriteCalls: [String] = []
+    private(set) var playedCalls: [String] = []
     var errors: [any Error] = []
     private var gate: CheckedContinuation<Void, Never>?
     private var gated = false
@@ -90,6 +91,10 @@ actor FakeAPI: LibraryAPI {
     func setFavorite(_ isFavorite: Bool, for itemId: String) async throws {
         try await gate("favorite:\(itemId):\(isFavorite)")
         favoriteCalls.append("\(itemId):\(isFavorite)")
+    }
+    func setPlayed(_ isPlayed: Bool, for itemId: String) async throws {
+        try await gate("played:\(itemId):\(isPlayed)")
+        playedCalls.append("\(itemId):\(isPlayed)")
     }
     func latest(in libraryId: String, limit: Int) async throws -> [LibraryEntry] {
         try await answer("latest:\(libraryId)", latestResults[libraryId] ?? [])

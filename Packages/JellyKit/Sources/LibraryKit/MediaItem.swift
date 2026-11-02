@@ -45,6 +45,44 @@ public struct MediaItem: Sendable, Equatable, Identifiable, Codable {
     }
 }
 
+/// A cast or crew member credited on an item (`BaseItemDto.people`). Only actors and directors are kept.
+public struct Person: Sendable, Equatable {
+    public enum Kind: String, Sendable, Equatable {
+        case actor
+        case director
+    }
+
+    public let id: String
+    public let name: String
+    public let kind: Kind
+    /// The character an actor plays; nil for a director or when the server has none.
+    public let role: String?
+    public let primaryImageTag: String?
+
+    public init(id: String, name: String, kind: Kind, role: String? = nil, primaryImageTag: String? = nil) {
+        self.id = id
+        self.name = name
+        self.kind = kind
+        self.role = role
+        self.primaryImageTag = primaryImageTag
+    }
+}
+
+extension Person {
+    /// Nil for anything but an actor or a director, or without an id or a name.
+    init?(dto: BaseItemPerson) {
+        guard let id = dto.id, let name = dto.name, !name.isEmpty else { return nil }
+        let kind: Kind
+        switch dto.type {
+        case .actor: kind = .actor
+        case .director: kind = .director
+        default: return nil
+        }
+        let role = dto.role.flatMap { $0.isEmpty ? nil : $0 }
+        self.init(id: id, name: name, kind: kind, role: role, primaryImageTag: dto.primaryImageTag)
+    }
+}
+
 /// The on-demand extras of the detail screen: loaded with `/Items/{id}`, never part of a shelf, so they
 /// are not stored in the shared `items` dictionary (a shelf reload must not erase them).
 public struct ItemDetail: Sendable, Equatable {
@@ -59,11 +97,13 @@ public struct ItemDetail: Sendable, Equatable {
     public let backdropImageTag: String?
     /// The title as an image (Jellyfin `Logo`); the screen falls back to text without it.
     public let logoImageTag: String?
+    /// Actors and directors, in the server's order.
+    public let people: [Person]
 
     public init(
         item: MediaItem, overview: String? = nil, productionYear: Int? = nil, endYear: Int? = nil,
         communityRating: Double? = nil, officialRating: String? = nil, genres: [String] = [],
-        backdropImageTag: String? = nil, logoImageTag: String? = nil
+        backdropImageTag: String? = nil, logoImageTag: String? = nil, people: [Person] = []
     ) {
         self.item = item
         self.overview = overview
@@ -74,6 +114,7 @@ public struct ItemDetail: Sendable, Equatable {
         self.genres = genres
         self.backdropImageTag = backdropImageTag
         self.logoImageTag = logoImageTag
+        self.people = people
     }
 }
 
@@ -135,7 +176,8 @@ extension ItemDetail {
             officialRating: dto.officialRating,
             genres: dto.genres ?? [],
             backdropImageTag: dto.backdropImageTags?.first,
-            logoImageTag: dto.imageTags?["Logo"]
+            logoImageTag: dto.imageTags?["Logo"],
+            people: (dto.people ?? []).compactMap(Person.init(dto:))
         )
     }
 }
