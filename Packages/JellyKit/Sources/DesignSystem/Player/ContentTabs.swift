@@ -258,8 +258,11 @@ public struct ContentTabs: View {
                         .id(row.id)
                     }
                 }
-                .padding(.vertical, Design.Spacing.xs)
+                // Room for the focused row to grow (scale + lift) without being cut by the scroll view.
+                .padding(.horizontal, Design.Spacing.m)
+                .padding(.vertical, Design.Spacing.s)
             }
+            .scrollClipDisabled()
             .frame(maxHeight: 460)
             .onAppear {
                 if let marked = rows.first(where: \.isMarked) { proxy.scrollTo(marked.id, anchor: .center) }
