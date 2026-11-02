@@ -11,12 +11,6 @@ struct PlayerScreen: View {
     @State private var model: PlaybackModel
     @State private var transport: TransportController
     @State private var tab = PlayerTab.info
-    /// The panel stays mounted while it slides out: the UIKit-hosted panel has no SwiftUI removal transition,
-    /// so both directions are an explicit offset animation.
-    @State private var panelMounted = false
-    @State private var panelSlid = false
-    /// Bumped once the panel is on screen, which is when it can take the focus.
-    @State private var panelFocusToken = 0
     /// Debug overlay: launch with `-stats YES`.
     private let showsStats = UserDefaults.standard.bool(forKey: "stats")
     @State private var focusProbe = FocusProbe()
@@ -40,13 +34,15 @@ struct PlayerScreen: View {
             }
             PlayerOSD(state: transport.state, model: osdModel)
                 .ignoresSafeArea()
-            if panelMounted { panel }
             status
             if showsStats { stats }
         }
         .animation(.easeOut(duration: 0.2), value: model.isBuffering)
-        .onChange(of: transport.isPanelOpen) { _, open in setPanel(open) }
-        // While the panel is open it owns the focus (it is a SwiftUI surface); the bridge takes it back on close.
+        // The panel is a presentation: the platform gives its content the focus and Menu dismisses it (not the
+        // player under it). The bridge steps aside while it is up and takes the focus back when it goes.
+        .fullScreenCover(isPresented: Binding(get: { transport.isPanelOpen }, set: { if !$0 { transport.closePanel() } })) {
+            PanelCover { panel }
+        }
         .overlay { RemoteInputView(handlers: remoteHandlers, isActive: !transport.isPanelOpen).ignoresSafeArea() }
         .task(id: transport.visibility.deadline) { await hideWhenIdle() }
         .task(id: transport.skipFeedback?.token) { await clearSkipFeedback() }
@@ -64,29 +60,6 @@ struct PlayerScreen: View {
         )
     }
 
-    private static let panelTravel: CGFloat = 700
-
-    /// Down from the top on open, back up on close, the same 0.3 s each way.
-    private func setPanel(_ open: Bool) {
-        if open {
-            panelMounted = true
-            // Next turn, so the first frame is drawn off screen and the move animates.
-            DispatchQueue.main.async {
-                withAnimation(.easeOut(duration: 0.3)) {
-                    panelSlid = true
-                } completion: {
-                    if transport.isPanelOpen { panelFocusToken += 1 }
-                }
-            }
-        } else {
-            withAnimation(.easeIn(duration: 0.3)) {
-                panelSlid = false
-            } completion: {
-                if !transport.isPanelOpen { panelMounted = false }
-            }
-        }
-    }
-
     /// The chapter under the playhead (or the scrub preview), for the scrub bubble.
     private var chapterTitle: String? {
         let chapters = model.chapters
@@ -102,14 +75,8 @@ struct PlayerScreen: View {
             onSelectChapter: { seconds in
                 model.seek(to: seconds)
                 transport.closePanel()
-            },
-            onClose: { transport.closePanel() },
-            focusToken: panelFocusToken
+            }
         )
-        .offset(y: panelSlid ? 0 : -Self.panelTravel)
-        .opacity(panelSlid ? 1 : 0)
-        // Sliding out: no longer a focus target, the bridge already has the focus back.
-        .disabled(!transport.isPanelOpen)
     }
 
     @ViewBuilder private var status: some View {
@@ -164,7 +131,7 @@ struct PlayerScreen: View {
             Text("video-codec: \(model.videoCodec)")
             Text("hwdec-current: \(model.hwdecCurrent)")
             Text("focus: \(focusProbe.description)")
-            Text("panel open: \(transport.isPanelOpen)")
+            Text("panel presented: \(transport.isPanelOpen)")
             if let error = model.lastError { Text("error: \(error)") }
         }
         .font(.system(size: 28, weight: .medium, design: .monospaced))
@@ -173,5 +140,20 @@ struct PlayerScreen: View {
         .background(.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 12))
         .padding(60)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+}
+
+/// The panel's presentation: clear, so the video stays visible behind, and the panel drops in from the top.
+private struct PanelCover<Content: View>: View {
+    @ViewBuilder let content: Content
+    @State private var slid = false
+
+    var body: some View {
+        content
+            .offset(y: slid ? 0 : -700)
+            .opacity(slid ? 1 : 0)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .presentationBackground(.clear)
+            .onAppear { withAnimation(.easeOut(duration: 0.3)) { slid = true } }
     }
 }

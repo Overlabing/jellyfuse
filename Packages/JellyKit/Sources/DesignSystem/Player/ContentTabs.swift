@@ -125,14 +125,11 @@ public struct ContentTabs: View {
     /// `TrackRow.offID` turns the subtitles off.
     private let onSelectSubtitle: (Int) -> Void
     private let onSelectChapter: (Double) -> Void
-    private let onClose: @MainActor () -> Void
-    private let focusToken: Int
 
     public init(
         model: ContentTabsModel, selection: PlayerTab, onSelectTab: @escaping (PlayerTab) -> Void,
         onSelectAudio: @escaping (Int) -> Void, onSelectSubtitle: @escaping (Int) -> Void,
-        onSelectChapter: @escaping (Double) -> Void, onClose: @escaping @MainActor () -> Void,
-        focusToken: Int = 0
+        onSelectChapter: @escaping (Double) -> Void
     ) {
         self.model = model
         self.selection = selection
@@ -140,19 +137,12 @@ public struct ContentTabs: View {
         self.onSelectAudio = onSelectAudio
         self.onSelectSubtitle = onSelectSubtitle
         self.onSelectChapter = onSelectChapter
-        self.onClose = onClose
-        self.focusToken = focusToken
     }
 
     @FocusState private var focusedTab: PlayerTab?
 
     public var body: some View {
-        #if os(tvOS)
-        MenuInterceptor(onMenu: onClose, focusToken: focusToken, content: pinned)
-            .ignoresSafeArea()
-        #else
         pinned
-        #endif
     }
 
     /// Glued to the top edge, centered horizontally; the rest of the screen stays empty (video behind).
@@ -160,10 +150,6 @@ public struct ContentTabs: View {
         panel
             .padding(.top, 60)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            #if os(tvOS)
-            // Third way Menu reaches the panel, from any focused row or tab: SwiftUI's own exit command.
-            .onExitCommand { onClose() }
-            #endif
     }
 
     private var panel: some View {
