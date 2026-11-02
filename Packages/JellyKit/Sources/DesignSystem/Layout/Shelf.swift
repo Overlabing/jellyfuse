@@ -1,16 +1,23 @@
 import SwiftUI
 
 /// Horizontal titled row of cards. Its own focus section; the next card peeks at the edge.
-public struct Shelf<Item: Identifiable, Card: View>: View {
+public struct Shelf<Item: Identifiable, Card: View, Trailing: View>: View {
     @Environment(\.designMetrics) private var metrics
     private let title: String
     private let items: [Item]
     private let card: (Item) -> Card
+    private let trailing: Trailing
 
-    public init(title: String, items: [Item], @ViewBuilder card: @escaping (Item) -> Card) {
+    /// `trailing` ends the row after the last card (e.g. a « Voir tout » card).
+    public init(
+        title: String, items: [Item],
+        @ViewBuilder card: @escaping (Item) -> Card,
+        @ViewBuilder trailing: () -> Trailing
+    ) {
         self.title = title
         self.items = items
         self.card = card
+        self.trailing = trailing()
     }
 
     public var body: some View {
@@ -23,6 +30,7 @@ public struct Shelf<Item: Identifiable, Card: View>: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(alignment: .top, spacing: metrics.shelfGap) {
                     ForEach(items) { card($0) }
+                    trailing
                 }
                 .padding(.horizontal, metrics.screenMargin)
                 .padding(.vertical, metrics.focusInset)
@@ -30,6 +38,12 @@ public struct Shelf<Item: Identifiable, Card: View>: View {
             .scrollClipDisabled()
         }
         .focusBlock()
+    }
+}
+
+extension Shelf where Trailing == EmptyView {
+    public init(title: String, items: [Item], @ViewBuilder card: @escaping (Item) -> Card) {
+        self.init(title: title, items: items, card: card, trailing: { EmptyView() })
     }
 }
 
@@ -43,6 +57,8 @@ public struct Shelf<Item: Identifiable, Card: View>: View {
             }
             Shelf(title: "Récents", items: PreviewData.posters) { model in
                 PosterCard(model) {}
+            } trailing: {
+                SeeAllCard {}
             }
         }
     }
