@@ -14,6 +14,16 @@ public struct PlaybackSnapshot: Sendable, Equatable {
         self.audioStreamIndex = audioStreamIndex
         self.subtitleStreamIndex = subtitleStreamIndex
     }
+
+    /// Jellyfin ticks (100 ns) in one second.
+    public static let ticksPerSecond: Int64 = 10_000_000
+
+    /// A player position in seconds as ticks. Negative, NaN and infinite positions (mpv before the first
+    /// frame) count as 0, so a report never carries a nonsense position.
+    public static func ticks(seconds: Double) -> Int64 {
+        guard seconds.isFinite, seconds > 0 else { return 0 }
+        return Int64(min(seconds, Double(Int64.max / ticksPerSecond)) * Double(ticksPerSecond))
+    }
 }
 
 /// Why a snapshot is being reported.
