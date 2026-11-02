@@ -1,5 +1,5 @@
 # Generated project: `xcodegen generate` (the .xcodeproj is not committed).
-name: JellyTV
+name: Jellyfuse
 options:
   bundleIdPrefix: dev.antonin
   deploymentTarget:
@@ -11,16 +11,17 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
 targets:
-  JellyTV:
+  Jellyfuse:
     type: application
     platform: tvOS
-    sources: [Apps/JellyTV]
+    sources: [Apps/Jellyfuse]
     dependencies:
       - package: JellyKit
         products: [PlayerCore, LibraryKit]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: dev.antonin.jellytv
+        PRODUCT_BUNDLE_IDENTIFIER: dev.antonin.jellyfuse
+        INFOPLIST_KEY_CFBundleDisplayName: Jellyfuse
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         # Open ATS while developing against plain-HTTP LAN servers.
