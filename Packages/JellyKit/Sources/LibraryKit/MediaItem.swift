@@ -106,11 +106,14 @@ public struct ItemDetail: Sendable, Equatable {
     public let logoImageTag: String?
     /// Actors and directors, in the server's order.
     public let people: [Person]
+    /// Chapter marks, by start time.
+    public let chapters: [Chapter]
 
     public init(
         item: MediaItem, overview: String? = nil, productionYear: Int? = nil, endYear: Int? = nil,
         communityRating: Double? = nil, officialRating: String? = nil, genres: [String] = [],
-        backdropImageTag: String? = nil, logoImageTag: String? = nil, people: [Person] = []
+        backdropImageTag: String? = nil, logoImageTag: String? = nil, people: [Person] = [],
+        chapters: [Chapter] = []
     ) {
         self.item = item
         self.overview = overview
@@ -122,6 +125,25 @@ public struct ItemDetail: Sendable, Equatable {
         self.backdropImageTag = backdropImageTag
         self.logoImageTag = logoImageTag
         self.people = people
+        self.chapters = chapters
+    }
+}
+
+/// A chapter mark of a video.
+public struct Chapter: Sendable, Equatable {
+    /// Jellyfin names unnamed chapters « Chapter 3 » on its own; nil when the server sent none.
+    public let name: String?
+    public let startSeconds: Double
+
+    public init(name: String?, startSeconds: Double) {
+        self.name = name
+        self.startSeconds = startSeconds
+    }
+
+    /// 100-nanosecond ticks to seconds.
+    init?(dto: ChapterInfo) {
+        guard let ticks = dto.startPositionTicks else { return nil }
+        self.init(name: dto.name, startSeconds: Double(ticks) / 10_000_000)
     }
 }
 
@@ -196,7 +218,8 @@ extension ItemDetail {
             genres: dto.genres ?? [],
             backdropImageTag: dto.backdropImageTags?.first,
             logoImageTag: dto.imageTags?["Logo"],
-            people: (dto.people ?? []).compactMap(Person.init(dto:))
+            people: (dto.people ?? []).compactMap(Person.init(dto:)),
+            chapters: (dto.chapters ?? []).compactMap(Chapter.init(dto:)).sorted { $0.startSeconds < $1.startSeconds }
         )
     }
 }

@@ -319,3 +319,23 @@ import Testing
         #expect(store.episodes(of: "s1").first?.userData.played == true)
     }
 }
+
+@Suite struct ChapterMappingTests {
+    @Test func chaptersConvertTicksToSecondsAndSort() throws {
+        let dto = BaseItemDto(
+            chapters: [
+                ChapterInfo(name: "Fin", startPositionTicks: 36_000_000_000),
+                ChapterInfo(name: "Début", startPositionTicks: 0),
+                ChapterInfo(name: "Sans temps"),
+            ],
+            id: "m1", name: "M", type: .movie
+        )
+        let detail = try #require(ItemDetail(dto: dto))
+        #expect(detail.chapters == [Chapter(name: "Début", startSeconds: 0), Chapter(name: "Fin", startSeconds: 3600)])
+    }
+
+    @Test func noChaptersIsEmpty() throws {
+        let detail = try #require(ItemDetail(dto: BaseItemDto(id: "m1", name: "M", type: .movie)))
+        #expect(detail.chapters.isEmpty)
+    }
+}

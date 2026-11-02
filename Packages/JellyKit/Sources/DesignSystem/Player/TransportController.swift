@@ -61,6 +61,8 @@ public final class TransportController {
     public private(set) var visibility = OSDVisibility()
     public private(set) var scrub: ScrubSession?
     public private(set) var skipFeedback: SkipFeedback?
+    /// The content panel (tabs) is open. The remote bridge then gives the focus to it.
+    public private(set) var isPanelOpen = false
 
     private let driver: Driver
     private let now: @MainActor () -> Date
@@ -84,11 +86,13 @@ public final class TransportController {
 
     /// Any touch of the pad, swipe or button press.
     public func reveal() {
+        guard !isPanelOpen else { return }
         visibility.reveal(isPlaying: !driver.isPaused() && !isScrubbing, now: now())
     }
 
     /// The player's pause state changed (also when it was not us who changed it).
     public func pausedChanged(_ paused: Bool) {
+        guard !isPanelOpen else { return }
         if paused {
             visibility.hold()
         } else if visibility.isVisible, !isScrubbing {
@@ -137,6 +141,10 @@ public final class TransportController {
     }
 
     public func menu() -> MenuOutcome {
+        if isPanelOpen {
+            closePanel()
+            return .handled
+        }
         if isScrubbing {
             cancelScrub()
             return .handled
@@ -144,6 +152,22 @@ public final class TransportController {
         guard visibility.isVisible else { return .exit }
         visibility.hide()
         return .handled
+    }
+
+    // MARK: Content panel
+
+    /// Down (click or swipe): shows the display with the panel. Ignored while scrubbing.
+    public func openPanel() {
+        guard !isScrubbing, !isPanelOpen else { return }
+        isPanelOpen = true
+        visibility.hold()
+    }
+
+    /// Menu, or the panel closing itself: back to the display with its inactivity timer.
+    public func closePanel() {
+        guard isPanelOpen else { return }
+        isPanelOpen = false
+        visibility.reveal(isPlaying: !driver.isPaused(), now: now())
     }
 
     // MARK: Scrubbing

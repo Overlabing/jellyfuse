@@ -1,6 +1,7 @@
 # Generated project: `xcodegen generate` (the .xcodeproj is not committed).
 name: Jellyfuse
 options:
+  developmentLanguage: fr
   bundleIdPrefix: dev.antonin
   deploymentTarget:
     tvOS: "17.0"
@@ -17,7 +18,7 @@ targets:
     sources: [Apps/Jellyfuse]
     dependencies:
       - package: JellyKit
-        products: [PlayerCore, LibraryKit, DesignSystem, HomePresentation, PlaybackEngine]
+        products: [PlayerCore, LibraryKit, DesignSystem, HomePresentation, PlaybackEngine, PlayerPresentation]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.jellyfusion.app

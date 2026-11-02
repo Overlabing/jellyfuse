@@ -13,16 +13,22 @@ public struct OSDModel: Sendable, Equatable {
     public let endsAt: String?
     /// The time under the playhead while scrubbing; nil otherwise.
     public let preview: String?
+    /// Chapter markers on the bar, 0...1 of the file (see `ChapterMarks.fractions`).
+    public let chapterMarks: [Double]
+    /// The chapter under the playhead; shown with the scrub preview.
+    public let chapterTitle: String?
 
     /// `position` is where the playhead is: the scrub target while scrubbing, the playback position otherwise.
     public init(
-        title: String, position: Double, duration: Double, isScrubbing: Bool = false,
+        title: String, position: Double, duration: Double, isScrubbing: Bool = false, chapterMarks: [Double] = [], chapterTitle: String? = nil,
         now: Date = .now, calendar: Calendar = .current
     ) {
         let position = Self.sanitized(position)
         let hasDuration = duration.isFinite && duration > 0
         let remainingSeconds = hasDuration ? max(duration - position, 0) : nil
         self.title = title
+        self.chapterMarks = chapterMarks
+        self.chapterTitle = chapterTitle
         progress = hasDuration ? min(position / duration, 1) : 0
         elapsed = Self.clock(position)
         remaining = remainingSeconds.map { "-" + Self.clock($0, rounding: .up) }

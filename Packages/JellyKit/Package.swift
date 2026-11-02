@@ -10,6 +10,7 @@ let package = Package(
         .library(name: "PlaybackEngine", targets: ["PlaybackEngine"]),
         .library(name: "DesignSystem", targets: ["DesignSystem"]),
         .library(name: "HomePresentation", targets: ["HomePresentation"]),
+        .library(name: "PlayerPresentation", targets: ["PlayerPresentation"]),
     ],
     dependencies: [
         // Only the LGPL product. Never a "-GPL" product.
@@ -31,10 +32,13 @@ let package = Package(
         .target(name: "DesignSystem"),
         // LibraryKit entries -> DesignSystem display models (pure mappers, no UI).
         .target(name: "HomePresentation", dependencies: ["LibraryKit", "DesignSystem"]),
+        // Playback state (tracks, chapters, item) -> the player's content panel model (pure mapper, no UI).
+        .target(name: "PlayerPresentation", dependencies: ["LibraryKit", "PlaybackEngine", "DesignSystem"]),
         .testTarget(name: "PlayerCoreTests", dependencies: ["PlayerCore"]),
         .testTarget(name: "LibraryKitTests", dependencies: ["LibraryKit"]),
         .testTarget(name: "PlaybackEngineTests", dependencies: ["PlaybackEngine"]),
         .testTarget(name: "DesignSystemTests", dependencies: ["DesignSystem"]),
+        .testTarget(name: "PlayerPresentationTests", dependencies: ["PlayerPresentation", "PlaybackEngine", "LibraryKit", "DesignSystem"]),
         .testTarget(name: "HomePresentationTests", dependencies: ["HomePresentation", "LibraryKit", "DesignSystem"]),
     ]
 )
