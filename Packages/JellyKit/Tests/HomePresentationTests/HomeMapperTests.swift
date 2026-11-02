@@ -20,7 +20,34 @@ private let urls: HomeMapper.ImageURL = { id, tag, width in
     tag.flatMap { URL(string: "https://jf.test/\(id)/\($0)/\(width)") }
 }
 
+private func films(_ entries: [LibraryEntry]) -> LibraryShelfSource {
+    LibraryShelfSource(library: Library(id: "films", name: "Films", kind: .movies), entries: entries)
+}
+
 @Suite struct HomeMapperTests {
+    @Test func oneShelfPerLibraryInServerOrderWithTheLibraryNameInTheTitle() {
+        let series = LibraryShelfSource(library: Library(id: "series", name: "Séries", kind: .tvshows), entries: [entry("s1", "Ep", series: "Nocturne")])
+        let content = HomeMapper.content(continueWatching: [], nextUp: [], libraries: [films([entry("r1", "Neuf")]), series], imageURL: urls)
+        #expect(content.libraryShelves.map(\.id) == ["films", "series"])
+        #expect(content.libraryShelves.map(\.title) == ["Films — Ajouts récents", "Séries — Ajouts récents"])
+        #expect(content.libraryShelves[1].items.map(\.id) == ["s1"])
+    }
+
+    @Test func libraryWithoutEntriesKeepsItsShelfButContentIsEmpty() {
+        let content = HomeMapper.content(continueWatching: [], nextUp: [], libraries: [films([])], imageURL: urls)
+        #expect(content.libraryShelves.count == 1)
+        #expect(content.isEmpty)
+    }
+
+    @Test func gridKeepsOrderAndExposesPlayTargets() {
+        let library = Library(id: "films", name: "Films", kind: .movies)
+        let grid = HomeMapper.grid(library: library, entries: [entry("b", "B"), entry("a", "A")], imageURL: urls)
+        #expect(grid.title == "Films")
+        #expect(grid.items.map(\.id) == ["b", "a"])
+        #expect(grid.target(for: "a")?.title == "A")
+        #expect(grid.target(for: "zz") == nil)
+    }
+
     @Test func upNextPutsResumesFirstAndDedupesByIdAndSeries() {
         let resume = [entry("e2", "Pilot 2", series: "Nocturne", positionMinutes: 10), entry("m1", "Cendres", positionMinutes: 5)]
         let next = [entry("e2", "Pilot 2", series: "Nocturne"), entry("e3", "Pilot 3", series: "Nocturne"), entry("f1", "Un", series: "Fréquences")]
@@ -30,20 +57,20 @@ private let urls: HomeMapper.ImageURL = { id, tag, width in
 
     @Test func billboardIsFirstUpNextElseFirstRecent() {
         let withResume = HomeMapper.content(
-            continueWatching: [entry("m1", "Cendres", positionMinutes: 30)], nextUp: [], recentlyAdded: [entry("r1", "Neuf")], imageURL: urls
+            continueWatching: [entry("m1", "Cendres", positionMinutes: 30)], nextUp: [], libraries: [films([entry("r1", "Neuf")])], imageURL: urls
         )
         #expect(withResume.billboard?.model.id == "m1")
         #expect(withResume.billboard?.target.resumeSeconds == 1800)
         #expect(withResume.billboard?.primaryLabel == String(localized: "Reprendre"))
 
-        let recentOnly = HomeMapper.content(continueWatching: [], nextUp: [], recentlyAdded: [entry("r1", "Neuf")], imageURL: urls)
+        let recentOnly = HomeMapper.content(continueWatching: [], nextUp: [], libraries: [films([entry("r1", "Neuf")])], imageURL: urls)
         #expect(recentOnly.billboard?.model.id == "r1")
         #expect(recentOnly.billboard?.target.resumeSeconds == 0)
         #expect(recentOnly.billboard?.primaryLabel == String(localized: "Lecture"))
     }
 
     @Test func emptyInputIsEmptyContent() {
-        let content = HomeMapper.content(continueWatching: [], nextUp: [], recentlyAdded: [], imageURL: urls)
+        let content = HomeMapper.content(continueWatching: [], nextUp: [], libraries: [], imageURL: urls)
         #expect(content.isEmpty)
         #expect(content.billboard == nil)
     }
@@ -74,7 +101,7 @@ private let urls: HomeMapper.ImageURL = { id, tag, width in
     }
 
     @Test func targetsCoverEveryShelf() {
-        let content = HomeMapper.content(continueWatching: [entry("a", "A")], nextUp: [], recentlyAdded: [entry("b", "B")], imageURL: urls)
+        let content = HomeMapper.content(continueWatching: [entry("a", "A")], nextUp: [], libraries: [films([entry("b", "B")])], imageURL: urls)
         #expect(content.target(for: "a")?.id == "a")
         #expect(content.target(for: "b")?.title == "B")
         #expect(content.target(for: "zz") == nil)

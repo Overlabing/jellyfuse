@@ -24,19 +24,57 @@ public struct BillboardContent: Sendable, Equatable {
     public let primaryLabel: String
 }
 
+/// A library as the home screen needs it: the library, and its « Ajouts récents » posters.
+public struct LibraryShelfSource: Sendable, Equatable {
+    public let library: Library
+    public let entries: [LibraryEntry]
+
+    public init(library: Library, entries: [LibraryEntry]) {
+        self.library = library
+        self.entries = entries
+    }
+}
+
+/// One « Ajouts récents » shelf of a library. It is empty until that library's first load answers.
+public struct LibraryShelfContent: Sendable, Equatable, Identifiable {
+    public var id: String { library.id }
+    public let library: Library
+    /// `Films — Ajouts récents`.
+    public let title: String
+    public let items: [PosterModel]
+}
+
 /// Everything the home screen shows, as display values.
 public struct HomeContent: Sendable, Equatable {
     public let billboard: BillboardContent?
     public let upNext: [LandscapeModel]
-    public let recent: [PosterModel]
+    /// One per video library, in the server's order.
+    public let libraryShelves: [LibraryShelfContent]
     private let targets: [String: PlayTarget]
 
-    public var isEmpty: Bool { billboard == nil && upNext.isEmpty && recent.isEmpty }
+    public var isEmpty: Bool { billboard == nil && upNext.isEmpty && libraryShelves.allSatisfy { $0.items.isEmpty } }
 
-    init(billboard: BillboardContent?, upNext: [LandscapeModel], recent: [PosterModel], targets: [String: PlayTarget]) {
+    init(billboard: BillboardContent?, upNext: [LandscapeModel], libraryShelves: [LibraryShelfContent], targets: [String: PlayTarget]) {
         self.billboard = billboard
         self.upNext = upNext
-        self.recent = recent
+        self.libraryShelves = libraryShelves
+        self.targets = targets
+    }
+
+    public func target(for id: String) -> PlayTarget? { targets[id] }
+}
+
+/// The « Voir tout » grid of one library.
+public struct LibraryGridContent: Sendable, Equatable {
+    public let title: String
+    public let items: [PosterModel]
+    private let targets: [String: PlayTarget]
+
+    public var isEmpty: Bool { items.isEmpty }
+
+    init(title: String, items: [PosterModel], targets: [String: PlayTarget]) {
+        self.title = title
+        self.items = items
         self.targets = targets
     }
 
@@ -70,14 +108,14 @@ public enum HomeMapper {
     public static func content(
         continueWatching: [LibraryEntry],
         nextUp: [LibraryEntry],
-        recentlyAdded: [LibraryEntry],
+        libraries: [LibraryShelfSource],
         imageURL: ImageURL
     ) -> HomeContent {
         let upNext = upNextEntries(continueWatching: continueWatching, nextUp: nextUp)
         var targets: [String: PlayTarget] = [:]
-        for entry in upNext + recentlyAdded { targets[entry.item.id] = target(for: entry) }
+        for entry in upNext + libraries.flatMap(\.entries) { targets[entry.item.id] = target(for: entry) }
 
-        let billboard = (upNext.first ?? recentlyAdded.first).map { entry in
+        let billboard = (upNext.first ?? libraries.lazy.compactMap(\.entries.first).first).map { entry in
             let target = target(for: entry)
             return BillboardContent(
                 model: billboard(entry, imageURL: imageURL),
@@ -88,8 +126,23 @@ public enum HomeMapper {
         return HomeContent(
             billboard: billboard,
             upNext: upNext.map { landscape($0, imageURL: imageURL) },
-            recent: recentlyAdded.map { poster($0, imageURL: imageURL) },
+            libraryShelves: libraries.map { source in
+                LibraryShelfContent(
+                    library: source.library,
+                    title: String(localized: "\(source.library.name) — Ajouts récents"),
+                    items: source.entries.map { poster($0, imageURL: imageURL) }
+                )
+            },
             targets: targets
+        )
+    }
+
+    /// The « Voir tout » grid: every entry of the library, in the order given (newest added first).
+    public static func grid(library: Library, entries: [LibraryEntry], imageURL: ImageURL) -> LibraryGridContent {
+        LibraryGridContent(
+            title: library.name,
+            items: entries.map { poster($0, imageURL: imageURL) },
+            targets: Dictionary(entries.map { ($0.item.id, target(for: $0)) }, uniquingKeysWith: { first, _ in first })
         )
     }
 
