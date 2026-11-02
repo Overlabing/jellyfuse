@@ -15,6 +15,9 @@ public enum SessionStoreError: Error, LocalizedError {
 public enum SessionStore {
     /// Tests point it elsewhere so they never touch the app's own items.
     nonisolated(unsafe) static var service = "dev.antonin.jellytv"
+    /// Keychain access group shared by the app and the Top Shelf extension (`$(AppIdentifierPrefix)...shared`).
+    /// Nil keeps the process's default group (tests, unsigned SwiftPM runs); the app and the extension set it.
+    nonisolated(unsafe) public static var accessGroup: String?
     private static let account = "session"
     private static let deviceAccount = "deviceId"
 
@@ -40,6 +43,8 @@ public enum SessionStore {
         return id
     }
 
+    /// Reads and deletes search every group the process may access (so an item stored before the shared
+    /// group existed is still found); only `write` pins the group.
     private static func query(_ account: String) -> [String: Any] {
         [kSecClass as String: kSecClassGenericPassword,
          kSecAttrService as String: service,
@@ -59,6 +64,7 @@ public enum SessionStore {
     private static func write(_ account: String, _ data: Data) -> OSStatus {
         SecItemDelete(query(account) as CFDictionary)
         var q = query(account)
+        if let accessGroup { q[kSecAttrAccessGroup as String] = accessGroup }
         q[kSecValueData as String] = data
         q[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
         return SecItemAdd(q as CFDictionary, nil)

@@ -14,6 +14,8 @@ enum HomeRoute: Hashable {
 struct HomeScreen: View {
     let model: HomeModel
     let isPlayerOpen: Bool
+    /// An item id a deep link wants opened: shown on the stack, then cleared.
+    @Binding var detailRequest: String?
     let onPlay: (PlayTarget) -> Void
     @State private var path: [HomeRoute] = []
     @State private var isVisible = false
@@ -53,6 +55,11 @@ struct HomeScreen: View {
                     )
                 }
             }
+        }
+        .onChange(of: detailRequest, initial: true) { _, id in
+            guard let id else { return }
+            path = [.detail(id)]
+            detailRequest = nil
         }
         .onAppear { isVisible = true }
         .onDisappear { isVisible = false }

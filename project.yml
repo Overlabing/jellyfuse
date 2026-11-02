@@ -19,6 +19,15 @@ targets:
     dependencies:
       - package: JellyKit
         products: [PlayerCore, LibraryKit, DesignSystem, HomePresentation, PlaybackEngine, PlayerPresentation, SettingsKit]
+      - target: TopShelf
+        embed: true
+    info:
+      path: Apps/Jellyfuse/Info.plist
+      properties:
+        # jellyfuse://detail/{id} and jellyfuse://play/{id}: opened by the Top Shelf cards.
+        CFBundleURLTypes:
+          - CFBundleURLName: com.jellyfusion.app
+            CFBundleURLSchemes: [jellyfuse]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.jellyfusion.app
@@ -32,3 +41,32 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: 39TMVBW2CY
+        CODE_SIGN_ENTITLEMENTS: Apps/Jellyfuse/Jellyfuse.entitlements
+  # Top Shelf extension: reads the shared session and shows « À suivre » above the dock.
+  TopShelf:
+    type: app-extension
+    platform: tvOS
+    sources: [Apps/TopShelf]
+    dependencies:
+      - package: JellyKit
+        products: [LibraryKit]
+      - sdk: TVServices.framework
+    info:
+      path: Apps/TopShelf/Info.plist
+      properties:
+        CFBundleDisplayName: Jellyfuse Top Shelf
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.tv-top-shelf
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ContentProvider
+        # Plain-HTTP LAN servers, like the app.
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.jellyfusion.app.TopShelf
+        GENERATE_INFOPLIST_FILE: YES
+        MARKETING_VERSION: "0.1"
+        CURRENT_PROJECT_VERSION: "1"
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: 39TMVBW2CY
+        CODE_SIGN_ENTITLEMENTS: Apps/TopShelf/TopShelf.entitlements

@@ -16,8 +16,24 @@ final class AppModel {
     /// The « Reprendre / Recommencer » question, when a playback with a saved position was requested.
     var resumePrompt: PlayPrompt?
 
+    /// A `jellyfuse://` link waiting for the main screen: it can arrive before the session is loaded
+    /// (cold start) or before sign-in. The main tabs consume it.
+    var pendingLink: DeepLink?
+
     init() {
-        if let stored = SessionStore.load() { start(stored) }
+        SessionStore.accessGroup = Self.sharedKeychainGroup
+        if let stored = SessionStore.load() {
+            // Re-saved into the shared group: a session stored before the Top Shelf extension existed moves there.
+            try? SessionStore.save(stored)
+            start(stored)
+        }
+    }
+
+    /// `$(AppIdentifierPrefix)com.jellyfusion.app.shared`, shared with the Top Shelf extension.
+    static let sharedKeychainGroup = "39TMVBW2CY.com.jellyfusion.app.shared"
+
+    func open(_ url: URL) {
+        pendingLink = DeepLink(url: url)
     }
 
     func signedIn(_ session: Session) {

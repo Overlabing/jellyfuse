@@ -1,5 +1,6 @@
 import DesignSystem
 import HomePresentation
+import LibraryKit
 import SwiftUI
 
 /// Session gate: sign-in until there is a session, then the native tab bar.
@@ -23,20 +24,41 @@ private struct MainTabs: View {
     @Bindable var model: AppModel
     let home: HomeModel
     let playback: PlaybackServices
+    @State private var selection = Tab.home
+    /// A detail screen a deep link asked the home stack to open.
+    @State private var detailRequest: String?
     @Environment(\.scenePhase) private var scenePhase
 
+    private enum Tab { case home, movies, shows, search, settings }
+
     var body: some View {
-        TabView {
-            HomeScreen(model: home, isPlayerOpen: model.playing != nil, onPlay: { model.play($0) })
+        TabView(selection: $selection) {
+            HomeScreen(model: home, isPlayerOpen: model.playing != nil, detailRequest: $detailRequest, onPlay: { model.play($0) })
                 .tabItem { Text("Accueil") }
+                .tag(Tab.home)
             LibraryScreen(home: home, kind: .movies, onPlay: { model.play($0) })
                 .tabItem { Text("Films") }
+                .tag(Tab.movies)
             LibraryScreen(home: home, kind: .tvshows, onPlay: { model.play($0) })
                 .tabItem { Text("Séries") }
+                .tag(Tab.shows)
             SearchScreen(home: home, onPlay: { model.play($0) })
                 .tabItem { Text("Recherche") }
+                .tag(Tab.search)
             SettingsScreen(session: model.session, playback: playback, onSignOut: { model.signOut() })
                 .tabItem { Text("Réglages") }
+                .tag(Tab.settings)
+        }
+        .onChange(of: model.pendingLink, initial: true) { _, link in
+            guard let link else { return }
+            model.pendingLink = nil
+            switch link {
+            case .detail(let id):
+                selection = .home
+                detailRequest = id
+            case .play(let id, let title, let seconds):
+                model.play(PlayTarget(id: id, title: title, resumeSeconds: seconds))
+            }
         }
         .confirmationDialog(
             model.resumePrompt?.title ?? "",
