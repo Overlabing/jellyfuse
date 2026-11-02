@@ -19,6 +19,21 @@ public enum JellyfinError: Error, LocalizedError {
     }
 }
 
+/// The images of an item Jellyfuse shows.
+public enum ItemImageKind: Sendable {
+    case primary
+    case backdrop
+    case logo
+
+    var sdkType: ImageType {
+        switch self {
+        case .primary: .primary
+        case .backdrop: .backdrop
+        case .logo: .logo
+        }
+    }
+}
+
 /// The Jellyfin client: a thin facade over the official SDK. Every request goes through the SDK.
 /// One instance per session; the SDK sends the `Authorization: MediaBrowser ...` header.
 public actor JellyfinClient {
@@ -132,6 +147,36 @@ public actor JellyfinClient {
         return (result.items ?? []).compactMap(LibraryEntry.init(dto:))
     }
 
+    public func detail(of itemId: String) async throws -> (detail: ItemDetail, userData: UserData) {
+        let userId = try requireUserId()
+        let request = Paths.getItem(itemID: itemId, userID: userId)
+        let dto = try await call { try await self.sdk.send(request).value }
+        guard let detail = ItemDetail(dto: dto) else { throw JellyfinError.badResponse }
+        return (detail, dto.userData.map(UserData.init(dto:)) ?? .none)
+    }
+
+    public func seasons(of seriesId: String) async throws -> [LibraryEntry] {
+        let userId = try requireUserId()
+        let request = Paths.getSeasons(seriesID: seriesId, parameters: .init(userID: userId))
+        let result = try await call { try await self.sdk.send(request).value }
+        return (result.items ?? []).compactMap(LibraryEntry.init(dto:))
+    }
+
+    public func episodes(of seriesId: String) async throws -> [LibraryEntry] {
+        let userId = try requireUserId()
+        let request = Paths.getEpisodes(seriesID: seriesId, parameters: .init(userID: userId, enableUserData: true))
+        let result = try await call { try await self.sdk.send(request).value }
+        return (result.items ?? []).compactMap(LibraryEntry.init(dto:))
+    }
+
+    public func setFavorite(_ isFavorite: Bool, for itemId: String) async throws {
+        let userId = try requireUserId()
+        let request = isFavorite
+            ? Paths.markFavoriteItem(itemID: itemId, userID: userId)
+            : Paths.unmarkFavoriteItem(itemID: itemId, userID: userId)
+        _ = try await call { try await self.sdk.send(request).value }
+    }
+
     /// Unauthenticated reachability probe (`/System/Info/Public`), 5 s budget, no retry.
     public func ping() async -> Bool {
         let request = Paths.getPublicSystemInfo
@@ -150,9 +195,14 @@ public actor JellyfinClient {
     // MARK: URLs
 
     public nonisolated func imageURL(itemId: String, tag: String?, maxWidth: Int = 600) -> URL? {
+        imageURL(itemId: itemId, kind: .primary, tag: tag, maxWidth: maxWidth)
+    }
+
+    /// `/Items/{id}/Images/{type}?tag=...`: the tag makes the URL cacheable forever and doubles as "has this image".
+    public nonisolated func imageURL(itemId: String, kind: ItemImageKind, tag: String?, maxWidth: Int) -> URL? {
         guard let tag else { return nil }
         let request = Paths.getItemImage(
-            itemID: itemId, imageType: ImageType.primary.rawValue,
+            itemID: itemId, imageType: kind.sdkType.rawValue,
             parameters: .init(maxWidth: maxWidth, quality: 90, tag: tag)
         )
         return sdk.url(with: request)

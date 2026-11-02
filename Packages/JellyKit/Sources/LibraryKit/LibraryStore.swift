@@ -31,6 +31,20 @@ public enum ShelfKey: Hashable, Sendable, Codable {
     }
 }
 
+/// Resources of the detail screen. Memory only, keyed by what they describe.
+enum DetailKey: Hashable, Sendable {
+    case item(String)
+    case seasons(seriesId: String)
+    case episodes(seriesId: String)
+
+    var kind: ResourceKind {
+        switch self {
+        case .item: .detail
+        case .seasons, .episodes: .children
+        }
+    }
+}
+
 /// The one cache of server data for a signed-in user (data-plan §2). Lists hold ids, items and user
 /// data live in dictionaries, so a watched-state patch touches one entry and every shelf follows.
 /// One instance per session: changing user means dropping it and building another; each owner's
@@ -46,6 +60,10 @@ public final class LibraryStore {
     public private(set) var userData: [String: UserData] = [:]
     @ObservationIgnored private var shelves: [ShelfKey: Stamped<[String]>] = [:]
     @ObservationIgnored private var librariesStamped: Stamped<[Library]>?
+    @ObservationIgnored private var details: [String: ItemDetail] = [:]
+    @ObservationIgnored private var children: [DetailKey: [String]] = [:]
+    @ObservationIgnored private var detailFetchedAt: [DetailKey: Date] = [:]
+    @ObservationIgnored private var detailInflight: [DetailKey: Task<Void, any Error>] = [:]
     /// Bumped on every shelf change so views reading `shelf(_:)` are invalidated.
     private var revision = 0
 
@@ -110,6 +128,34 @@ public final class LibraryStore {
         return stamped.isStale(for: key.kind, now: now())
     }
 
+    // MARK: Detail reads
+
+    /// The detail extras of an item, once `ensureDetailFresh` has answered.
+    public func detail(_ id: String) -> ItemDetail? {
+        _ = revision
+        return details[id]
+    }
+
+    /// The seasons of a series, in the server's order.
+    public func seasons(of seriesId: String) -> [MediaItem] {
+        _ = revision
+        return (children[.seasons(seriesId: seriesId)] ?? []).compactMap { items[$0] }
+    }
+
+    /// Every episode of a series joined with its user data, in the server's order.
+    public func episodes(of seriesId: String) -> [LibraryEntry] {
+        _ = revision
+        return (children[.episodes(seriesId: seriesId)] ?? []).compactMap { id in
+            items[id].map { LibraryEntry(item: $0, userData: userData[id] ?? .none) }
+        }
+    }
+
+    /// Never loaded counts as stale.
+    func isStale(_ key: DetailKey) -> Bool {
+        guard let fetchedAt = detailFetchedAt[key] else { return true }
+        return now().timeIntervalSince(fetchedAt) > key.kind.staleTime.seconds
+    }
+
     // MARK: Loading
 
     /// Loads the shelf unless it is fresh (or `force`). Concurrent calls share one request. Offline,
@@ -162,6 +208,68 @@ public final class LibraryStore {
         } catch is CancellationError {
             return
         }
+    }
+
+    /// Loads the detail item unless it is fresh (or `force`); sharing and offline rules as for shelves.
+    public func ensureDetailFresh(_ id: String, force: Bool = false) async throws {
+        try await ensure(.item(id), force: force)
+    }
+
+    /// Loads a series' seasons and episodes (two requests, in parallel) unless fresh.
+    public func ensureSeriesFresh(_ seriesId: String, force: Bool = false) async throws {
+        async let seasons: Void = ensure(.seasons(seriesId: seriesId), force: force)
+        async let episodes: Void = ensure(.episodes(seriesId: seriesId), force: force)
+        _ = try await (seasons, episodes)
+    }
+
+    private func ensure(_ key: DetailKey, force: Bool) async throws {
+        guard force || isStale(key) else { return }
+        if let task = detailInflight[key] {
+            try await settle(task, for: key)
+            return
+        }
+        if let reachability, !reachability.isOnline { return }
+        let task = Task { try await self.load(key) }
+        detailInflight[key] = task
+        try await settle(task, for: key)
+    }
+
+    private func settle(_ task: Task<Void, any Error>, for key: DetailKey) async throws {
+        defer { if detailInflight[key] == task { detailInflight[key] = nil } }
+        do {
+            try await task.value
+        } catch is CancellationError {
+            return
+        }
+    }
+
+    private func load(_ key: DetailKey) async throws {
+        switch key {
+        case .item(let id):
+            let (detail, data) = try await request { try await self.api.detail(of: id) }
+            guard !Task.isCancelled else { throw CancellationError() }
+            details[id] = detail
+            items[id] = detail.item
+            userData[id] = data
+        case .seasons(let seriesId):
+            let entries = try await request { try await self.api.seasons(of: seriesId) }
+            guard !Task.isCancelled else { throw CancellationError() }
+            installChildren(entries, under: key)
+        case .episodes(let seriesId):
+            let entries = try await request { try await self.api.episodes(of: seriesId) }
+            guard !Task.isCancelled else { throw CancellationError() }
+            installChildren(entries, under: key)
+        }
+        detailFetchedAt[key] = now()
+        revision += 1
+    }
+
+    private func installChildren(_ entries: [LibraryEntry], under key: DetailKey) {
+        for entry in entries {
+            items[entry.item.id] = entry.item
+            userData[entry.item.id] = entry.userData
+        }
+        children[key] = entries.map(\.item.id)
     }
 
     private func load(_ key: ShelfKey) async throws {
@@ -244,6 +352,11 @@ public final class LibraryStore {
             task.cancel()
             inflight[key] = nil
         }
+        // A detail load in flight predates the patch too.
+        for id in ids {
+            detailInflight[.item(id)]?.cancel()
+            detailInflight[.item(id)] = nil
+        }
         let before = Dictionary(uniqueKeysWithValues: ids.map { ($0, userData[$0]) })
         for id in ids { userData[id] = transform(userData[id] ?? .none) }
         do {
@@ -265,6 +378,19 @@ public final class LibraryStore {
             inflight[key] = nil
         }
         userData[id] = transform(userData[id] ?? .none)
+    }
+
+    /// « Ma liste »: optimistic favorite toggle (data-plan §5.6). The local flag flips at once, offline
+    /// included; a server refusal restores it and rethrows. No shelf depends on favorites yet, so
+    /// nothing is invalidated.
+    public func setFavorite(_ isFavorite: Bool, for id: String) async throws {
+        try await mutateUserData([id], invalidating: []) { data in
+            var data = data
+            data.isFavorite = isFavorite
+            return data
+        } call: {
+            try await self.api.setFavorite(isFavorite, for: id)
+        }
     }
 
     // MARK: Persistence
