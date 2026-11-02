@@ -65,6 +65,8 @@ public struct ItemSegments: Sendable, Equatable {
 public protocol PlayerExtrasAPI: Sendable {
     /// One request per playback. Servers before 10.10 have no such route: callers treat a failure as « none ».
     func segments(itemId: String) async throws -> ItemSegments
+    /// The trickplay manifest of the media source being played. Nil when there is none.
+    func trickplay(itemId: String, mediaSourceId: String) async throws -> TrickplaySheet?
     /// `/Videos/{id}/Trickplay/{width}/{index}.jpg`, carrying `api_key`: never log it.
     func trickplayTileURL(itemId: String, width: Int, index: Int) -> URL?
 }
@@ -73,6 +75,10 @@ extension LibraryKit.JellyfinClient: PlayerExtrasAPI {
     public func segments(itemId: String) async throws -> ItemSegments {
         let result = try await perform(Paths.getItemSegments(itemID: itemId, includeSegmentTypes: [.intro, .outro]))
         return ItemSegments(dtos: result.items ?? [])
+    }
+
+    public func trickplay(itemId: String, mediaSourceId: String) async throws -> TrickplaySheet? {
+        try await trickplay(of: itemId, mediaSourceId: mediaSourceId)
     }
 
     public nonisolated func trickplayTileURL(itemId: String, width: Int, index: Int) -> URL? {

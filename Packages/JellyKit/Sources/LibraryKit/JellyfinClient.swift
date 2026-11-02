@@ -159,6 +159,15 @@ public actor JellyfinClient {
         return (detail, dto.userData.map(UserData.init(dto:)) ?? .none)
     }
 
+    /// The scrub thumbnails of the media source being played (`/Items/{id}` carries the manifest, keyed by
+    /// media source id). Nil when the server generated none.
+    public func trickplay(of itemId: String, mediaSourceId: String) async throws -> TrickplaySheet? {
+        let userId = try requireUserId()
+        let request = Paths.getItem(itemID: itemId, userID: userId)
+        let dto = try await call { try await self.sdk.send(request).value }
+        return TrickplaySheet.preferred(from: dto.trickplay, mediaSourceId: mediaSourceId)
+    }
+
     public func seasons(of seriesId: String) async throws -> [LibraryEntry] {
         let userId = try requireUserId()
         let request = Paths.getSeasons(seriesID: seriesId, parameters: .init(userID: userId))

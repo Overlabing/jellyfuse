@@ -82,6 +82,11 @@ final class PlaybackServices {
         (try? await extras.segments(itemId: id)) ?? .none
     }
 
+    /// The scrub thumbnails of the media source resolved for this playback. Nil when there are none or offline.
+    func trickplay(itemId: String, mediaSourceId: String) async -> TrickplaySheet? {
+        try? await extras.trickplay(itemId: itemId, mediaSourceId: mediaSourceId)
+    }
+
     /// The tile image `index` of the item's trickplay at `width`.
     func trickplayTileURL(itemId: String, width: Int, index: Int) -> URL? {
         extras.trickplayTileURL(itemId: itemId, width: width, index: index)

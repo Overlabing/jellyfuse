@@ -191,6 +191,7 @@ struct PlayerScreen: View {
             Text(String(format: "time: %.1f / %.1f", model.timePosition, model.duration))
             Text("video-codec: \(model.videoCodec)")
             Text("hwdec-current: \(model.hwdecCurrent)")
+            Text("trickplay: \(model.trickplay.map { "loaded (\($0.width) px)" } ?? "none")")
             Text("focus: \(focusProbe.description)")
             Text("panel presented: \(transport.isPanelOpen)")
             Text("osd visible: \(transport.visibility.isVisible)")
