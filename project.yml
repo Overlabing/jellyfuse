@@ -24,6 +24,8 @@ targets:
     info:
       path: Apps/Jellyfuse/Info.plist
       properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         # jellyfuse://detail/{id} and jellyfuse://play/{id}: opened by the Top Shelf cards.
         CFBundleURLTypes:
           - CFBundleURLName: com.jellyfusion.app
@@ -54,6 +56,8 @@ targets:
     info:
       path: Apps/TopShelf/Info.plist
       properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CFBundleDisplayName: Jellyfuse Top Shelf
         NSExtension:
           NSExtensionPointIdentifier: com.apple.tv-top-shelf
