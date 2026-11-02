@@ -22,7 +22,7 @@ public enum JellyfinError: Error, LocalizedError {
 /// The Jellyfin client: a thin facade over the official SDK. Every request goes through the SDK.
 /// One instance per session; the SDK sends the `Authorization: MediaBrowser ...` header.
 public actor JellyfinClient {
-    public static let clientName = "JellyTV"
+    public static let clientName = "Jellyfuse"
     public static let clientVersion = "0.1.0"
 
     /// Quick Connect progress, as produced by the SDK.

@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct JellyTVApp: App {
+struct JellyfuseApp: App {
     var body: some Scene {
         WindowGroup { PlayerScreen() }
     }
