@@ -81,8 +81,14 @@ public final class RemoteInputViewController: UIViewController {
     func setActive(_ active: Bool) {
         guard remoteView.takesFocus != active else { return }
         remoteView.takesFocus = active
-        setNeedsFocusUpdate()
-        updateFocusIfNeeded()
+        // A focus update only searches the subtree of the environment it is requested on: ask the root, or the
+        // panel (a sibling of this controller) is never found. Next turn, so SwiftUI has inserted or removed it.
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            let root: any UIFocusEnvironment = self.view.window ?? self
+            root.setNeedsFocusUpdate()
+            root.updateFocusIfNeeded()
+        }
     }
 
     public override func viewDidAppear(_ animated: Bool) {
@@ -99,7 +105,7 @@ public final class RemoteInputUIView: UIView {
 
     /// The tvOS simulator's Menu / Back key arrives as this private press type instead of `.menu`, and the
     /// system would then dismiss the player: it is handled like Menu.
-    private static let simulatorMenu = UIPress.PressType(rawValue: 2041)!
+    static let simulatorMenu = UIPress.PressType(rawValue: 2041)!
     /// A press delivered both ways must not count twice.
     private static let menuDebounce: TimeInterval = 0.3
     /// Downward travel, in pad heights, that counts as a swipe down.
@@ -107,7 +113,11 @@ public final class RemoteInputUIView: UIView {
 
     var handlers: RemoteHandlers?
     /// False while a SwiftUI surface (the content panel) must hold the focus.
-    var takesFocus = true
+    var takesFocus = true {
+        // The focus engine skips a view another one covers: the full-screen bridge must let touches (hit tests)
+        // through while the panel is up, or the panel's buttons are never focusable.
+        didSet { isUserInteractionEnabled = takesFocus }
+    }
     private var panTriggeredDown = false
     private var lastMenu = Date.distantPast
     private var repeatTask: Task<Void, Never>?
@@ -224,6 +234,43 @@ public final class RemoteInputUIView: UIView {
     private func stopRepeating() {
         repeatTask?.cancel()
         repeatTask = nil
+    }
+}
+
+/// Hosts SwiftUI content and catches Menu (the real one and the simulator's private press type) on its way up
+/// the responder chain from whatever inside is focused. `onExitCommand` misses the simulator's press, and the
+/// system would then dismiss the whole player.
+struct MenuInterceptor<Content: View>: UIViewControllerRepresentable {
+    let onMenu: @MainActor () -> Void
+    let content: Content
+
+    func makeUIViewController(context: Context) -> MenuHostController<Content> {
+        let controller = MenuHostController(rootView: content)
+        controller.onMenu = onMenu
+        controller.view.backgroundColor = .clear
+        controller.sizingOptions = .intrinsicContentSize
+        return controller
+    }
+
+    func updateUIViewController(_ controller: MenuHostController<Content>, context: Context) {
+        controller.rootView = content
+        controller.onMenu = onMenu
+    }
+}
+
+final class MenuHostController<Content: View>: UIHostingController<Content> {
+    var onMenu: @MainActor () -> Void = {}
+
+    private func isMenu(_ press: UIPress) -> Bool {
+        press.type == .menu || press.type == RemoteInputUIView.simulatorMenu
+    }
+
+    override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+        if !presses.contains(where: isMenu) { super.pressesBegan(presses, with: event) }
+    }
+
+    override func pressesEnded(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+        if presses.contains(where: isMenu) { onMenu() } else { super.pressesEnded(presses, with: event) }
     }
 }
 #endif

@@ -142,11 +142,21 @@ public struct ContentTabs: View {
     }
 
     public var body: some View {
+        #if os(tvOS)
+        MenuInterceptor(onMenu: onClose, content: panel)
+        #else
+        panel
+        #endif
+    }
+
+    private var panel: some View {
         VStack(alignment: .leading, spacing: Design.Spacing.m) {
             HStack(spacing: Design.Spacing.s) {
                 ForEach(model.tabs) { tab in
                     Button(tab.title) { onSelectTab(tab) }
                         .capsuleButtonStyle()
+                        .lineLimit(1)
+                        .fixedSize()
                         .fontWeight(tab == selection ? .bold : .regular)
                         .opacity(tab == selection ? 1 : 0.7)
                 }
@@ -154,12 +164,9 @@ public struct ContentTabs: View {
             content
         }
         .padding(Design.Spacing.l)
-        .frame(width: 900, alignment: .topLeading)
+        .frame(width: 960, alignment: .topLeading)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 28))
         .focusBlock()
-        #if os(tvOS)
-        .onExitCommand(perform: onClose)
-        #endif
     }
 
     @ViewBuilder private var content: some View {
