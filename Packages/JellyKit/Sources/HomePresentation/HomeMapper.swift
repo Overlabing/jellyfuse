@@ -187,6 +187,7 @@ public enum HomeMapper {
         let title = displayTitle(item)
         return PosterModel(
             id: item.id,
+            detailId: item.kind == .episode ? item.seriesId : nil,
             title: title,
             subtitle: item.seriesName == nil ? nil : item.name,
             image: ArtworkSource(url: imageURL(item.id, item.primaryImageTag, posterImageWidth), placeholderTitle: title),

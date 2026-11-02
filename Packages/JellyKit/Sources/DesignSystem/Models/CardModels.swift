@@ -9,6 +9,8 @@ func normalizedProgress(_ value: Double?) -> Double? {
 /// Display value of a poster (2:3) card.
 public struct PosterModel: Sendable, Equatable, Identifiable {
     public let id: String
+    /// What the card opens: the series for an episode, the item itself otherwise.
+    public let detailId: String
     public let title: String
     public let subtitle: String?
     public let image: ArtworkSource
@@ -17,6 +19,7 @@ public struct PosterModel: Sendable, Equatable, Identifiable {
 
     public init(
         id: String,
+        detailId: String? = nil,
         title: String,
         subtitle: String? = nil,
         image: ArtworkSource,
@@ -24,6 +27,7 @@ public struct PosterModel: Sendable, Equatable, Identifiable {
         isWatched: Bool = false
     ) {
         self.id = id
+        self.detailId = detailId ?? id
         self.title = title
         self.subtitle = subtitle
         self.image = image

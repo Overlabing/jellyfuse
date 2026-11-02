@@ -27,7 +27,7 @@ struct RecentGridView: View {
                             ForEach(0..<12, id: \.self) { _ in Skeleton(.poster) }
                         } else {
                             ForEach(items) { model in
-                                PosterCard(model) { onOpen(model.id) }
+                                PosterCard(model) { onOpen(model.detailId) }
                             }
                         }
                     }

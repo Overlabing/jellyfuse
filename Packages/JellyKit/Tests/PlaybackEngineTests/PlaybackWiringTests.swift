@@ -18,6 +18,12 @@ private actor StubLibraryAPI: LibraryAPI {
     func libraries() async throws -> [Library] { [] }
     func latest(in libraryId: String, limit: Int) async throws -> [LibraryEntry] { [] }
     func recentlyAdded(in libraryId: String, limit: Int) async throws -> [LibraryEntry] { [] }
+    func detail(of itemId: String) async throws -> (detail: ItemDetail, userData: UserData) {
+        (ItemDetail(item: MediaItem(id: itemId, name: "Movie", runtimeTicks: Self.runtime)), .none)
+    }
+    func seasons(of seriesId: String) async throws -> [LibraryEntry] { [] }
+    func episodes(of seriesId: String) async throws -> [LibraryEntry] { [] }
+    func setFavorite(_ isFavorite: Bool, for itemId: String) async throws {}
 }
 
 private final class Counter: @unchecked Sendable {

@@ -42,10 +42,16 @@ final class DetailModel {
     var isLoadingChildren: Bool { !hasLoaded && failure == nil }
 
     func refresh() async {
-        let loadsChildren = store.items[id]?.kind == .series
+        // The item may be unknown here (a shelf episode opening its series): only the detail answer
+        // says whether children exist, so an unknown kind checks again once the detail has landed.
+        let knownSeries = store.items[id]?.kind == .series
         async let detail = attempt { try await self.store.ensureDetailFresh(self.id) }
-        async let children = attempt { if loadsChildren { try await self.store.ensureSeriesFresh(self.id) } }
-        let errors = await [detail, children].compactMap { $0 }
+        async let children = attempt { if knownSeries { try await self.store.ensureSeriesFresh(self.id) } }
+        var errors = await [detail, children].compactMap { $0 }
+        if !knownSeries, store.items[id]?.kind == .series,
+           let error = await attempt({ try await self.store.ensureSeriesFresh(self.id) }) {
+            errors.append(error)
+        }
         hasLoaded = true
         failure = errors.first.map(UserFacingError.init)
     }

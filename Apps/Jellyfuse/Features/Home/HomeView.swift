@@ -47,7 +47,7 @@ struct HomeView: View {
                 ForEach(content.libraryShelves) { shelf in
                     if !shelf.items.isEmpty {
                         Shelf(title: shelf.title, items: shelf.items) { model in
-                            PosterCard(model) { onOpenDetail(model.id) }
+                            PosterCard(model) { onOpenDetail(model.detailId) }
                         } trailing: {
                             SeeAllCard { onSeeAll(shelf.library) }
                         }
