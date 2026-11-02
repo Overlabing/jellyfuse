@@ -29,9 +29,10 @@ vertical, Chapitres → 35:50, Vitesse, Upscaling IA, Mode ambiant, Stats HUD).
 défaut) / Plus…) + OPTIONS de style (Police, Taille, Couleur, Épaisseur, Contour,
 Arrière-plan, Opacité, Alignement vertical).
 
-## Deltas vs notre 3.4b actuel (à arbitrer avec Antonin)
-- Chapitres : onglet séparé chez nous, ligne de l'onglet Vidéo chez Infuse.
-- Ligne technique de l'onglet Infos (codec/bitrate/taille/fps) : pas encore chez nous.
-- Hint « balayez vers le bas » : pas chez nous.
-- Layout pistes+options en 2 colonnes : chez nous liste simple.
-- Icônes d'accès rapide sur l'OSD : pas chez nous.
+## Deltas vs notre 3.4b — arbitrages d'Antonin (2026-11-02)
+- Icônes d'accès rapide sur l'OSD : **NON, refusé** (« les icônes rapides en bas je n'en veux pas »).
+- Glisser vers le bas pour ouvrir le panneau : **OUI** (déjà implémenté chez nous) ; le hint
+  « Balayez vers le bas pour plus d'informations » sur l'OSD reste à ajouter (petit lot polish).
+- Chapitres : onglet séparé chez nous vs ligne de l'onglet Vidéo chez Infuse — à arbitrer.
+- Ligne technique de l'onglet Infos (codec/bitrate/taille/fps) : à ajouter (proposé, pas encore arbitré).
+- Layout pistes+options en 2 colonnes : à arbitrer.
