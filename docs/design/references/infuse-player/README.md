@@ -32,7 +32,7 @@ Arrière-plan, Opacité, Alignement vertical).
 ## Deltas vs notre 3.4b — arbitrages d'Antonin (2026-11-02)
 - Icônes d'accès rapide sur l'OSD : **NON, refusé** (« les icônes rapides en bas je n'en veux pas »).
 - Glisser vers le bas pour ouvrir le panneau : **OUI** (déjà implémenté chez nous) ; le hint
-  « Balayez vers le bas pour plus d'informations » sur l'OSD reste à ajouter (petit lot polish).
+  texte « Balayez vers le bas pour plus d'informations » : OUI, validé et implémenté sur l'OSD.
 - Chapitres : onglet séparé chez nous vs ligne de l'onglet Vidéo chez Infuse — à arbitrer.
 - Ligne technique de l'onglet Infos (codec/bitrate/taille/fps) : à ajouter (proposé, pas encore arbitré).
 - Layout pistes+options en 2 colonnes : à arbitrer.
