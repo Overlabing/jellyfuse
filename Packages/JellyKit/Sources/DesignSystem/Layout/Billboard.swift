@@ -25,7 +25,7 @@ public struct BackdropView: View {
     }
 }
 
-/// Home billboard (fixed-height section, `metrics.billboardHeight`): one static item with title, meta line, two-line synopsis, and two buttons.
+/// Home billboard (fixed-height section, `metrics.billboardHeight`): one static item with title (logo, text fallback), meta line, two-line synopsis, and two buttons.
 public struct Billboard: View {
     @Environment(\.designMetrics) private var metrics
     private let model: BillboardModel
@@ -55,10 +55,7 @@ public struct Billboard: View {
         // Fixed-height section at the head of the scroll: the text block is laid out inside the
         // frame and the backdrop is only its background, so it can never move the content.
         VStack(alignment: .leading, spacing: Design.Spacing.m) {
-            Text(model.title)
-                .font(Design.Typography.title)
-                .foregroundStyle(Design.Palette.textPrimary)
-                .lineLimit(2)
+            TitleLogo(title: model.title, logo: model.logo)
             BillboardMeta(parts: model.metaParts())
             Text(model.overview)
                 .font(Design.Typography.body)

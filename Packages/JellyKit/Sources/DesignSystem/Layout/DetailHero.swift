@@ -1,44 +1,5 @@
 import SwiftUI
 
-/// The title as the server's logo image, bottom-left aligned; the title as text when the item has no
-/// logo or it fails to load. While the logo loads nothing is drawn, so the text never flashes first.
-struct TitleLogo: View {
-    @Environment(\.designMetrics) private var metrics
-    let title: String
-    let logo: URL?
-
-    var body: some View {
-        Group {
-            if let logo {
-                AsyncImage(url: logo) { phase in
-                    switch phase {
-                    case .success(let image): image.resizable().scaledToFit()
-                    case .failure: TitleText(title: title)
-                    default: Color.clear
-                    }
-                }
-                .frame(maxWidth: metrics.detailLogo.width, maxHeight: metrics.detailLogo.height, alignment: .bottomLeading)
-            } else {
-                TitleText(title: title)
-            }
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(title)
-        .accessibilityAddTraits(.isHeader)
-    }
-}
-
-private struct TitleText: View {
-    let title: String
-
-    var body: some View {
-        Text(title)
-            .font(Design.Typography.title)
-            .foregroundStyle(Design.Palette.textPrimary)
-            .lineLimit(2)
-    }
-}
-
 /// Header of the detail screen: backdrop under the three scrims, title logo (text fallback), meta
 /// line, synopsis and the action buttons. The caller sets the height; the content sits bottom-left.
 public struct DetailHero<Actions: View>: View {

@@ -80,6 +80,29 @@ import Testing
         #expect(entry.userData.playbackPositionTicks == 300)
     }
 
+    @Test func itemWithItsOwnLogoCarriesTheTagOnly() throws {
+        let dto = BaseItemDto(id: "m1", imageTags: ["Primary": "p", "Logo": "lg"], name: "x", type: .movie)
+        let item = try #require(LibraryEntry(dto: dto)).item
+        #expect(item.logoImageTag == "lg")
+        #expect(item.logoItemId == nil)
+    }
+
+    @Test func episodeFallsBackToTheParentLogo() throws {
+        let dto = BaseItemDto(
+            id: "e1", imageTags: ["Primary": "p"], name: "x", parentLogoImageTag: "plg", parentLogoItemID: "s1", seriesID: "s1", type: .episode
+        )
+        let item = try #require(LibraryEntry(dto: dto)).item
+        #expect(item.logoImageTag == "plg")
+        #expect(item.logoItemId == "s1")
+    }
+
+    @Test func parentLogoWithoutItsCarrierIsIgnoredAndNoLogoStaysNil() throws {
+        let orphan = BaseItemDto(id: "e1", name: "x", parentLogoImageTag: "plg", type: .episode)
+        #expect(try #require(LibraryEntry(dto: orphan)).item.logoImageTag == nil)
+        let none = try #require(LibraryEntry(dto: BaseItemDto(id: "m1", name: "x", type: .movie))).item
+        #expect(none.logoImageTag == nil && none.logoItemId == nil)
+    }
+
     @Test func unsupportedKindsHaveNoKind() throws {
         let entry = try #require(LibraryEntry(dto: BaseItemDto(id: "x", name: "x", type: .boxSet)))
         #expect(entry.item.kind == nil)
@@ -90,6 +113,7 @@ import Testing
         let item = try JSONDecoder().decode(MediaItem.self, from: Data(json.utf8))
         #expect(item.kind == nil)
         #expect(item.seriesId == nil)
+        #expect(item.logoImageTag == nil)
     }
 }
 

@@ -26,11 +26,16 @@ public struct MediaItem: Sendable, Equatable, Identifiable, Codable {
     public let indexNumber: Int?
     /// Episodes: the season number.
     public let parentIndexNumber: Int?
+    /// The title as an image (Jellyfin `Logo`): the item's own, else its parent's (an episode shows its series' logo).
+    public let logoImageTag: String?
+    /// The item that carries the logo; nil when it is the item itself.
+    public let logoItemId: String?
 
     public init(
         id: String, name: String, seriesName: String? = nil, primaryImageTag: String? = nil,
         runtimeTicks: Int64? = nil, kind: Kind? = nil, seriesId: String? = nil, seasonId: String? = nil,
-        indexNumber: Int? = nil, parentIndexNumber: Int? = nil
+        indexNumber: Int? = nil, parentIndexNumber: Int? = nil,
+        logoImageTag: String? = nil, logoItemId: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -42,6 +47,8 @@ public struct MediaItem: Sendable, Equatable, Identifiable, Codable {
         self.seasonId = seasonId
         self.indexNumber = indexNumber
         self.parentIndexNumber = parentIndexNumber
+        self.logoImageTag = logoImageTag
+        self.logoItemId = logoItemId
     }
 }
 
@@ -132,6 +139,7 @@ public struct LibraryEntry: Sendable, Equatable {
 extension LibraryEntry {
     init?(dto: BaseItemDto) {
         guard let id = dto.id else { return nil }
+        let logo = MediaItem.logo(of: dto)
         self.init(
             item: MediaItem(
                 id: id,
@@ -143,10 +151,21 @@ extension LibraryEntry {
                 seriesId: dto.seriesID,
                 seasonId: dto.seasonID,
                 indexNumber: dto.indexNumber,
-                parentIndexNumber: dto.parentIndexNumber
+                parentIndexNumber: dto.parentIndexNumber,
+                logoImageTag: logo?.tag,
+                logoItemId: logo?.itemId
             ),
             userData: dto.userData.map(UserData.init(dto:)) ?? .none
         )
+    }
+}
+
+extension MediaItem {
+    /// The item's own logo, else the parent's (both tag and carrier id are needed to build its URL).
+    static func logo(of dto: BaseItemDto) -> (tag: String, itemId: String?)? {
+        if let tag = dto.imageTags?["Logo"] { return (tag, nil) }
+        if let tag = dto.parentLogoImageTag, let parentId = dto.parentLogoItemID { return (tag, parentId) }
+        return nil
     }
 }
 

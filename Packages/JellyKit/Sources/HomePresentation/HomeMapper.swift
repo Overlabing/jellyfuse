@@ -85,9 +85,10 @@ public struct LibraryGridContent: Sendable, Equatable {
 /// Pure mapping from `LibraryKit` entries to `DesignSystem` display models (ui-plan §6.2).
 public enum HomeMapper {
     /// `(itemId, imageTag, maxWidth)` -> image URL; the app passes `JellyfinClient.imageURL`.
-    public typealias ImageURL = @Sendable (_ itemId: String, _ tag: String?, _ maxWidth: Int) -> URL?
+    public typealias ImageURL = @Sendable (_ itemId: String, _ kind: ItemImageKind, _ tag: String?, _ maxWidth: Int) -> URL?
 
     public static let billboardImageWidth = 1920
+    public static let logoImageWidth = DetailMapper.logoImageWidth
     public static let landscapeImageWidth = 800
     public static let posterImageWidth = 500
 
@@ -168,7 +169,9 @@ public enum HomeMapper {
             title: title,
             // The store carries no synopsis yet: an episode shows its own name, a movie nothing.
             overview: item.seriesName == nil ? "" : item.name,
-            backdrop: ArtworkSource(url: imageURL(item.id, item.primaryImageTag, billboardImageWidth), placeholderTitle: title),
+            // The logo of an episode is its series' (`logoItemId`); without one the billboard shows the title as text.
+            logo: imageURL(item.logoItemId ?? item.id, .logo, item.logoImageTag, logoImageWidth),
+            backdrop: ArtworkSource(url: imageURL(item.id, .primary, item.primaryImageTag, billboardImageWidth), placeholderTitle: title),
             runtimeMinutes: item.runtimeTicks.map { Int($0 / 600_000_000) },
             isInList: isInList
         )
@@ -183,7 +186,7 @@ public enum HomeMapper {
             id: item.id,
             title: title,
             subtitle: subtitle.isEmpty ? nil : subtitle,
-            image: ArtworkSource(url: imageURL(item.id, item.primaryImageTag, landscapeImageWidth), placeholderTitle: title),
+            image: ArtworkSource(url: imageURL(item.id, .primary, item.primaryImageTag, landscapeImageWidth), placeholderTitle: title),
             progress: entry.userData.progress(runtimeTicks: item.runtimeTicks)
         )
     }
@@ -196,7 +199,7 @@ public enum HomeMapper {
             detailId: item.kind == .episode ? item.seriesId : nil,
             title: title,
             subtitle: item.seriesName == nil ? nil : item.name,
-            image: ArtworkSource(url: imageURL(item.id, item.primaryImageTag, posterImageWidth), placeholderTitle: title),
+            image: ArtworkSource(url: imageURL(item.id, .primary, item.primaryImageTag, posterImageWidth), placeholderTitle: title),
             isWatched: entry.userData.played
         )
     }

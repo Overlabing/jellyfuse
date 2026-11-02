@@ -123,6 +123,6 @@ final class HomeModel {
     }
 
     private nonisolated static func makeImageURL(_ client: JellyfinClient) -> HomeMapper.ImageURL {
-        { @Sendable id, tag, width in client.imageURL(itemId: id, tag: tag, maxWidth: width) }
+        { @Sendable id, kind, tag, width in client.imageURL(itemId: id, kind: kind, tag: tag, maxWidth: width) }
     }
 }

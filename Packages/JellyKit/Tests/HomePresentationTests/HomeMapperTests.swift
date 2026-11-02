@@ -16,8 +16,8 @@ private func entry(
     )
 }
 
-private let urls: HomeMapper.ImageURL = { id, tag, width in
-    tag.flatMap { URL(string: "https://jf.test/\(id)/\($0)/\(width)") }
+private let urls: HomeMapper.ImageURL = { id, kind, tag, width in
+    tag.flatMap { URL(string: "https://jf.test/\(id)/\(kind == .logo ? "logo/" : "")\($0)/\(width)") }
 }
 
 private func films(_ entries: [LibraryEntry]) -> LibraryShelfSource {
@@ -127,6 +127,26 @@ private func films(_ entries: [LibraryEntry]) -> LibraryShelfSource {
         // The episode's own flag is irrelevant.
         let own = HomeMapper.content(continueWatching: [episode], nextUp: [], libraries: [], isInList: { $0 == "e1" }, imageURL: urls)
         #expect(own.billboard?.model.isInList == false)
+    }
+
+    @Test func billboardCarriesTheItemsOwnLogoAtDetailWidth() {
+        let movie = LibraryEntry(item: MediaItem(id: "m1", name: "Neuf", primaryImageTag: "p", kind: .movie, logoImageTag: "lg"))
+        let content = HomeMapper.content(continueWatching: [movie], nextUp: [], libraries: [], imageURL: urls)
+        #expect(content.billboard?.model.logo == URL(string: "https://jf.test/m1/logo/lg/\(DetailMapper.logoImageWidth)"))
+    }
+
+    @Test func billboardOfAnEpisodeUsesTheSeriesLogo() {
+        let episode = LibraryEntry(item: MediaItem(
+            id: "e1", name: "Ep", seriesName: "Nocturne", primaryImageTag: "p", kind: .episode, seriesId: "s1",
+            logoImageTag: "lg", logoItemId: "s1"
+        ))
+        let content = HomeMapper.content(continueWatching: [episode], nextUp: [], libraries: [], imageURL: urls)
+        #expect(content.billboard?.model.logo == URL(string: "https://jf.test/s1/logo/lg/\(DetailMapper.logoImageWidth)"))
+    }
+
+    @Test func billboardWithoutLogoFallsBackToText() {
+        let content = HomeMapper.content(continueWatching: [entry("m1", "Neuf")], nextUp: [], libraries: [], imageURL: urls)
+        #expect(content.billboard?.model.logo == nil)
     }
 
     @Test func billboardOfAnEpisodeOfAnUnknownSeriesActsOnTheEpisode() {

@@ -107,6 +107,8 @@ public struct BillboardModel: Sendable, Equatable, Identifiable {
     public let id: String
     public let title: String
     public let overview: String
+    /// The title as an image (Jellyfin `Logo`); nil shows the title as text.
+    public let logo: URL?
     public let backdrop: ArtworkSource
     public let rating: Double?
     public let year: Int?
@@ -118,6 +120,7 @@ public struct BillboardModel: Sendable, Equatable, Identifiable {
         id: String,
         title: String,
         overview: String,
+        logo: URL? = nil,
         backdrop: ArtworkSource,
         rating: Double? = nil,
         year: Int? = nil,
@@ -127,6 +130,7 @@ public struct BillboardModel: Sendable, Equatable, Identifiable {
         self.id = id
         self.title = title
         self.overview = overview
+        self.logo = logo
         self.backdrop = backdrop
         self.rating = rating
         self.year = year
