@@ -10,7 +10,7 @@ extension View {
         #if os(tvOS)
         buttonStyle(.card)
         #else
-        buttonStyle(.plain)
+        buttonStyle(PressableCardStyle())
         #endif
     }
 
@@ -30,8 +30,36 @@ extension View {
     }
 
     /// Chip / pill button: system capsule style (focus inversion on tvOS).
-    func capsuleButtonStyle() -> some View {
+    /// `isProminent`: the filled primary action on touch platforms (tvOS keeps its focus inversion for every pill).
+    @ViewBuilder
+    func capsuleButtonStyle(isProminent: Bool = false) -> some View {
+        #if os(tvOS)
         buttonStyle(.bordered).buttonBorderShape(.capsule)
+        #else
+        if isProminent {
+            buttonStyle(.borderedProminent).buttonBorderShape(.capsule).tint(Design.Palette.accent)
+        } else {
+            buttonStyle(.bordered).buttonBorderShape(.capsule)
+        }
+        #endif
+    }
+
+    /// Names the region the default focus is resolved in (tvOS / macOS focus engine); nothing on touch platforms.
+    public func platformFocusScope(_ namespace: Namespace.ID) -> some View {
+        #if os(tvOS) || os(macOS)
+        focusScope(namespace)
+        #else
+        self
+        #endif
+    }
+
+    /// Asks for the initial focus inside `namespace`; nothing on touch platforms.
+    public func platformDefaultFocus(_ prefers: Bool = true, in namespace: Namespace.ID) -> some View {
+        #if os(tvOS) || os(macOS)
+        prefersDefaultFocus(prefers, in: namespace)
+        #else
+        self
+        #endif
     }
 
     /// Groups children so directional focus moves between blocks predictably (tvOS / macOS focus engine).
@@ -44,3 +72,24 @@ extension View {
     }
 }
 
+
+#if !os(tvOS)
+/// Touch card: the artwork dips slightly under the finger (no focus effect to lean on).
+struct PressableCardStyle: ButtonStyle {
+    static let pressedScale: CGFloat = 0.96
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? Self.pressedScale : 1)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
+#if !os(macOS)
+extension View {
+    /// `focusSection()` is a tvOS / macOS focus-engine API; on iOS the sections are meaningless, so it is a no-op.
+    /// Lets shared views (the player's content panel) keep calling it.
+    func focusSection() -> some View { self }
+}
+#endif
+#endif

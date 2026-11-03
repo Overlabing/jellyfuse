@@ -4,11 +4,20 @@ import SwiftUI
 public struct PillButton: View {
     private let title: String
     private let systemImage: String
+    private let isProminent: Bool
+    private let fillsWidth: Bool
     private let action: () -> Void
 
-    public init(_ title: String, systemImage: String, action: @escaping () -> Void) {
+    /// `isProminent`: the filled primary action (touch platforms; tvOS keeps one look for every pill).
+    /// `fillsWidth`: the pill shares the width of its row (iPhone button rows).
+    public init(
+        _ title: String, systemImage: String, isProminent: Bool = false, fillsWidth: Bool = false,
+        action: @escaping () -> Void
+    ) {
         self.title = title
         self.systemImage = systemImage
+        self.isProminent = isProminent
+        self.fillsWidth = fillsWidth
         self.action = action
     }
 
@@ -16,8 +25,11 @@ public struct PillButton: View {
         Button(action: action) {
             Label(title, systemImage: systemImage)
                 .font(Design.Typography.callout.weight(.bold))
+                .lineLimit(1)
+                .minimumScaleFactor(fillsWidth ? 0.75 : 1)
+                .frame(maxWidth: fillsWidth ? .infinity : nil)
         }
-        .capsuleButtonStyle()
+        .capsuleButtonStyle(isProminent: isProminent)
     }
 }
 

@@ -11,12 +11,15 @@ struct CardCaption: View {
     /// How far the growing artwork pushes the caption down: half the artwork's extra height.
     var focusShift: CGFloat = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.designMetrics) private var metrics
 
     var body: some View {
+        // Touch has no focus: the caption never moves and the title is always primary.
+        let isFocused = isFocused && !metrics.isTouch
         VStack(alignment: .leading, spacing: Design.Spacing.xs) {
             Text(title)
-                .font(Design.Typography.body.weight(.semibold))
-                .foregroundStyle(isFocused ? Design.Palette.textPrimary : Design.Palette.textSecondary)
+                .font(metrics.cardTitleFont)
+                .foregroundStyle(isFocused || metrics.isTouch ? Design.Palette.textPrimary : Design.Palette.textSecondary)
                 .lineLimit(1)
             if let subtitle {
                 Text(subtitle)

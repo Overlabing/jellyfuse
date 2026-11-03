@@ -26,9 +26,8 @@ public struct DetailHero<Actions: View>: View {
                 .padding(.top, Design.Spacing.s)
                 .focusBlock()
         }
-        .frame(width: metrics.billboardTextWidth, alignment: .leading)
-        .padding(.leading, metrics.screenMargin)
-        .padding(.bottom, Design.Spacing.xl)
+        .heroTextColumn(metrics)
+        .padding(.bottom, metrics.heroBottomInset)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
         .background { BackdropView(model.backdrop) }
         .clipped()

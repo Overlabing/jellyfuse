@@ -61,29 +61,41 @@ public struct Billboard: View {
                 .font(Design.Typography.body)
                 .foregroundStyle(Design.Palette.textSecondary)
                 .lineLimit(2)
-            HStack(spacing: Design.Spacing.m) {
-                PillButton(primaryLabel, systemImage: "play.fill", action: onPlay)
+            HStack(spacing: metrics.isTouch ? Design.Spacing.xs : Design.Spacing.m) {
+                PillButton(primaryLabel, systemImage: "play.fill", isProminent: true, fillsWidth: metrics.isTouch, action: onPlay)
                     .accessibilityIdentifier("home.billboard.play")
-                    .prefersDefaultFocus(true, in: focusNamespace)
+                    .platformDefaultFocus(in: focusNamespace)
                 PillButton(
                     model.isInList ? String(localized: "Dans ma liste", bundle: .module) : String(localized: "Ma liste", bundle: .module),
                     systemImage: model.isInList ? "checkmark" : "plus",
+                    fillsWidth: metrics.isTouch,
                     action: onToggleList
                 )
                 if let onOpenDetail {
-                    PillButton(String(localized: "Détails", bundle: .module), systemImage: "info.circle", action: onOpenDetail)
+                    PillButton(String(localized: "Détails", bundle: .module), systemImage: "info.circle", fillsWidth: metrics.isTouch, action: onOpenDetail)
                 }
             }
             .padding(.top, Design.Spacing.s)
             .focusBlock()
         }
-        .frame(width: metrics.billboardTextWidth, alignment: .leading)
-        .padding(.leading, metrics.screenMargin)
-        .padding(.bottom, Design.Spacing.xl)
+        .heroTextColumn(metrics)
+        .padding(.bottom, metrics.heroBottomInset)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
         .frame(height: metrics.billboardHeight)
         .background { BackdropView(model.backdrop) }
         .clipped()
+    }
+}
+
+extension View {
+    /// The text block of a hero: a fixed-width column on the left (tv, iPad), or the full width between the margins (iPhone).
+    @ViewBuilder
+    func heroTextColumn(_ metrics: Design.Metrics) -> some View {
+        if let width = metrics.billboardTextWidth {
+            frame(width: width, alignment: .leading).padding(.leading, metrics.screenMargin)
+        } else {
+            frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, metrics.screenMargin)
+        }
     }
 }
 
