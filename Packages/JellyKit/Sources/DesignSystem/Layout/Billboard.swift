@@ -110,9 +110,9 @@ struct BillboardMeta: View {
                 }
                 switch part {
                 case .rating(let text):
-                    Text(text).font(Design.Typography.body.weight(.bold)).foregroundStyle(Design.Palette.warning)
+                    Text(text).font(Design.Typography.body.weight(.bold)).foregroundStyle(Design.Palette.warning).lineLimit(1)
                 case .text(let text):
-                    Text(text).font(Design.Typography.body).foregroundStyle(Design.Palette.textSecondary)
+                    Text(text).font(Design.Typography.body).foregroundStyle(Design.Palette.textSecondary).lineLimit(1)
                 }
             }
         }
