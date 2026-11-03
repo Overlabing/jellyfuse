@@ -35,7 +35,7 @@ final class PlaybackServices {
         self.store = store
         self.client = client
         extras = client
-        resolver = PlaybackResolver(api: client, profile: .jellyfuse())
+        resolver = PlaybackResolver(api: client, profile: .jellyfuse(.init(name: DeviceName.current)))
         let thresholds = ResumeThresholdsCache(fetch: Self.makeThresholdsFetch(client))
         self.thresholds = thresholds
         reporter = PlaybackReporter(

@@ -46,10 +46,11 @@ final class LoginModel {
         defer { isBusy = false }
         // Probe every candidate in parallel; among the ones that answer, HTTPS wins.
         let deviceId = SessionStore.deviceId()
+        let deviceName = DeviceName.current
         let reachable = await withTaskGroup(of: (Int, JellyfinClient)?.self) { group in
             for (rank, url) in candidates.enumerated() {
                 group.addTask { @Sendable in
-                    let candidate = JellyfinClient(serverURL: url, deviceId: deviceId)
+                    let candidate = JellyfinClient(serverURL: url, deviceId: deviceId, deviceName: deviceName)
                     return await candidate.ping() ? (rank, candidate) : nil
                 }
             }

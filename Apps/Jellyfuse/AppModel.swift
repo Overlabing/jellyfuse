@@ -73,7 +73,7 @@ final class AppModel {
 
     private func start(_ session: Session) {
         self.session = session
-        let client = JellyfinClient(session: session, onUnauthorized: Self.makeUnauthorizedHandler(self))
+        let client = JellyfinClient(session: session, deviceName: DeviceName.current, onUnauthorized: Self.makeUnauthorizedHandler(self))
         let home = HomeModel(session: session, client: client)
         self.home = home
         #if !PLAYER_DISABLED
