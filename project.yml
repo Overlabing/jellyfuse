@@ -4,8 +4,9 @@ options:
   developmentLanguage: fr
   bundleIdPrefix: dev.antonin
   deploymentTarget:
-    tvOS: "17.0"
-    iOS: "17.0"
+    # tvOS stays at 18 (the `Tab` syntax floor): the QA rig has no tvOS 26 simulator runtime.
+    tvOS: "18.0"
+    iOS: "26.0"
 packages:
   JellyKit:
     path: Packages/JellyKit

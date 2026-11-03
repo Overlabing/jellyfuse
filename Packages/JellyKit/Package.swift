@@ -1,10 +1,10 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.2
 import PackageDescription
 
 let package = Package(
     name: "JellyKit",
     defaultLocalization: "fr",
-    platforms: [.tvOS(.v17), .iOS(.v17), .macOS(.v14)],
+    platforms: [.tvOS(.v18), .iOS(.v26), .macOS(.v26)],
     products: [
         .library(name: "PlayerCore", targets: ["PlayerCore"]),
         .library(name: "LibraryKit", targets: ["LibraryKit"]),

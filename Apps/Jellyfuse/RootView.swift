@@ -35,22 +35,12 @@ private struct MainTabs: View {
     #if !PLAYER_DISABLED
     let playback: PlaybackServices
     #endif
-    @State private var selection = Tab.home
+    @State private var selection = AppTab.home
     /// A detail screen a deep link asked the home stack to open.
     @State private var detailRequest: String?
     @Environment(\.scenePhase) private var scenePhase
 
-    private enum Tab { case home, movies, shows, search, settings }
-
-    /// tvOS tabs are text only; the touch tab bar pairs each title with an icon.
-    @ViewBuilder
-    private func tabLabel(_ title: LocalizedStringKey, systemImage: String) -> some View {
-        #if os(tvOS)
-        Text(title)
-        #else
-        Label(title, systemImage: systemImage)
-        #endif
-    }
+    private enum AppTab { case home, movies, shows, search, settings }
 
     private var settings: some View {
         #if PLAYER_DISABLED
@@ -62,21 +52,23 @@ private struct MainTabs: View {
 
     var body: some View {
         TabView(selection: $selection) {
-            HomeScreen(model: home, isPlayerOpen: model.playing != nil, detailRequest: $detailRequest, onPlay: { model.play($0) })
-                .tabItem { tabLabel("Accueil", systemImage: "house") }
-                .tag(Tab.home)
-            LibraryScreen(home: home, kind: .movies, onPlay: { model.play($0) })
-                .tabItem { tabLabel("Films", systemImage: "film") }
-                .tag(Tab.movies)
-            LibraryScreen(home: home, kind: .tvshows, onPlay: { model.play($0) })
-                .tabItem { tabLabel("Séries", systemImage: "tv") }
-                .tag(Tab.shows)
-            SearchScreen(home: home, onPlay: { model.play($0) })
-                .tabItem { tabLabel("Recherche", systemImage: "magnifyingglass") }
-                .tag(Tab.search)
-            settings
-                .tabItem { tabLabel("Réglages", systemImage: "gearshape") }
-                .tag(Tab.settings)
+            Tab("Accueil", systemImage: "house", value: AppTab.home) {
+                HomeScreen(model: home, isPlayerOpen: model.playing != nil, detailRequest: $detailRequest, onPlay: { model.play($0) })
+            }
+            Tab("Films", systemImage: "film", value: AppTab.movies) {
+                LibraryScreen(home: home, kind: .movies, onPlay: { model.play($0) })
+            }
+            Tab("Séries", systemImage: "tv", value: AppTab.shows) {
+                LibraryScreen(home: home, kind: .tvshows, onPlay: { model.play($0) })
+            }
+            Tab("Réglages", systemImage: "gearshape", value: AppTab.settings) {
+                settings
+            }
+            // `role: .search`: the system detaches the tab — trailing magnifier on the iPhone tab
+            // bar, top-right on iPad, loupe tab on tvOS — and pairs it with the screen's `.searchable`.
+            Tab(value: AppTab.search, role: .search) {
+                SearchScreen(home: home, onPlay: { model.play($0) })
+            }
         }
         .onChange(of: model.pendingLink, initial: true) { _, link in
             guard let link else { return }
