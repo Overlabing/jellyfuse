@@ -49,9 +49,6 @@ targets:
         CODE_SIGN_ENTITLEMENTS: Apps/Jellyfuse/Jellyfuse.entitlements
   # iPhone + iPad. Same bundle id as the tvOS app (one multi-platform record on App Store Connect) and the
   # same shared sources; the differences live in the DesignSystem metrics.
-  # TEMPORARY: PLAYER_DISABLED compiles the app without the player (MPVKit has no iOS slice yet). To wire the
-  # player: drop the flag, the `Features/Player/**` exclude, and add PlayerCore / PlaybackEngine / PlayerPresentation
-  # to the products below.
   Jellyfuse-iOS:
     type: application
     platform: iOS
@@ -60,11 +57,10 @@ targets:
         excludes:
           - Assets.xcassets
           - Info.plist
-          - Features/Player/**
       - path: Apps/Jellyfuse-iOS/Assets.xcassets
     dependencies:
       - package: JellyKit
-        products: [LibraryKit, DesignSystem, HomePresentation, SettingsKit]
+        products: [LibraryKit, DesignSystem, HomePresentation, SettingsKit, PlayerCore, PlaybackEngine, PlayerPresentation]
     info:
       path: Apps/Jellyfuse-iOS/Info.plist
       properties:
@@ -90,7 +86,6 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsArbitraryLoads: YES
-        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) PLAYER_DISABLED"
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "4"
         CODE_SIGN_STYLE: Automatic

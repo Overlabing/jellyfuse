@@ -21,7 +21,9 @@ struct PlayerScreen: View {
     #else
     private let showsStats = false
     #endif
+    #if os(tvOS)
     @State private var focusProbe = FocusProbe()
+    #endif
 
     init(target: PlayTarget, services: PlaybackServices, onClose: @escaping () -> Void, onPlayNext: @escaping (PlayTarget) -> Void) {
         self.onClose = onClose
@@ -45,20 +47,38 @@ struct PlayerScreen: View {
                 MpvPlayerView(player: player, startURL: url)
                     .ignoresSafeArea()
             }
+            #if os(tvOS)
             PlayerOSD(state: transport.state, model: osdModel, scrubThumbnail: scrubThumbnail)
                 .ignoresSafeArea()
+            #else
+            PlayerControlsLayer(
+                transport: transport, model: osdModel, scrubThumbnail: scrubThumbnail,
+                panel: model.contentTabs(),
+                handlers: PlayerControlsHandlers(
+                    onClose: { onClose() },
+                    onSelectAudio: { model.selectAudio($0) },
+                    onSelectSubtitle: { model.selectSubtitle($0 == TrackRow.offID ? nil : $0) },
+                    onSelectChapter: { model.seek(to: $0) }
+                )
+            )
+            .ignoresSafeArea()
+            #endif
             PlayerPrompts(skipLabel: skipLabel, upNext: upNextCard, isOSDVisible: transport.visibility.isVisible)
                 .ignoresSafeArea()
             status
             if showsStats { stats }
         }
         .animation(.easeOut(duration: 0.2), value: model.isBuffering)
+        #if os(tvOS)
         // The panel is a presentation: the platform gives its content the focus and Menu dismisses it (not the
         // player under it). The bridge steps aside while it is up and takes the focus back when it goes.
         .fullScreenCover(isPresented: Binding(get: { transport.isPanelOpen }, set: { if !$0 { transport.closePanel() } })) {
             PanelCover(onDismiss: { transport.closePanel() }) { close in panel(close: close) }
         }
         .overlay { RemoteInputView(handlers: remoteHandlers, isActive: !transport.isPanelOpen).ignoresSafeArea() }
+        #else
+        .playerFullScreen()
+        #endif
         .task(id: transport.visibility.deadline) { await hideWhenIdle() }
         .task(id: transport.skipFeedback?.token) { await clearSkipFeedback() }
         .onChange(of: model.isPaused) { _, paused in transport.pausedChanged(paused) }
@@ -117,6 +137,7 @@ struct PlayerScreen: View {
         }
     }
 
+    #if os(tvOS)
     private var remoteHandlers: RemoteHandlers {
         RemoteHandlers(
             onTouch: { transport.reveal() },
@@ -130,6 +151,7 @@ struct PlayerScreen: View {
             onPanEnded: {}
         )
     }
+    #endif
 
     // MARK: Trickplay, skip and next episode
 
@@ -196,7 +218,9 @@ struct PlayerScreen: View {
             Text(verbatim: "video-codec: \(model.videoCodec)")
             Text(verbatim: "hwdec-current: \(model.hwdecCurrent)")
             Text(verbatim: "trickplay: \(model.trickplay.map { "loaded (\($0.width) px)" } ?? "none")")
+            #if os(tvOS)
             Text(verbatim: "focus: \(focusProbe.description)")
+            #endif
             Text(verbatim: "panel presented: \(transport.isPanelOpen)")
             Text(verbatim: "osd visible: \(transport.visibility.isVisible)")
             Text(verbatim: "last press: \(lastPressRawValue.map(String.init) ?? "-")")
@@ -208,8 +232,10 @@ struct PlayerScreen: View {
         .background(.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 12))
         .padding(60)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        #if os(tvOS)
         .onAppear { RemoteInputUIView.debugPressSink = { lastPressRawValue = $0 } }
         .onDisappear { RemoteInputUIView.debugPressSink = nil }
+        #endif
     }
 }
 
