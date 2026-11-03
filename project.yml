@@ -90,7 +90,6 @@ targets:
         CURRENT_PROJECT_VERSION: "5"
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: 39TMVBW2CY
-        CODE_SIGN_ENTITLEMENTS: Apps/Jellyfuse/Jellyfuse.entitlements
   # Top Shelf extension: reads the shared session and shows « À suivre » above the dock.
   TopShelf:
     type: app-extension
