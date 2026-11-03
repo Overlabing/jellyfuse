@@ -43,4 +43,23 @@ public enum ChapterMarks {
         }
         return x
     }
+
+    /// The inverse of `playheadX`: the 0...1 progress under a touch at `x` points. A touch in a gap snaps to
+    /// the segment boundary; outside the bar it clamps to the ends.
+    public static func progress(atX x: Double, segments: [ClosedRange<Double>], width: Double, gap: Double) -> Double {
+        guard let first = segments.first, let last = segments.last else { return 0 }
+        guard x > 0 else { return first.lowerBound }
+        let widths = segmentWidths(segments, width: width, gap: gap)
+        var start = 0.0
+        for (segment, w) in zip(segments, widths) {
+            if x <= start + w {
+                let local = w > 0 ? (x - start) / w : 0
+                return segment.lowerBound + local * (segment.upperBound - segment.lowerBound)
+            }
+            // In the gap after this segment: its end.
+            if x < start + w + gap { return segment.upperBound }
+            start += w + gap
+        }
+        return last.upperBound
+    }
 }
