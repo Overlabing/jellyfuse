@@ -1,12 +1,16 @@
 import LibraryKit
+#if !PLAYER_DISABLED
 import PlaybackEngine
+#endif
 import SettingsKit
 import SwiftUI
 
 /// Composition layer of the Réglages tab: its own navigation stack, session actions, the bundled license catalog.
 struct SettingsScreen: View {
     let session: Session?
+    #if !PLAYER_DISABLED
     let playback: PlaybackServices?
+    #endif
     let onSignOut: () -> Void
 
     private enum Route: Hashable {
@@ -23,7 +27,11 @@ struct SettingsScreen: View {
                 account: session.map(AccountSummary.init),
                 version: AppVersion.display(Bundle.main.infoDictionary),
                 onSignOut: onSignOut,
-                onResetTrackChoices: { playback?.trackPreferences.removeAll() },
+                onResetTrackChoices: {
+                    #if !PLAYER_DISABLED
+                    playback?.trackPreferences.removeAll()
+                    #endif
+                },
                 onOpenLicenses: { path.append(Route.licenses) }
             )
             .navigationTitle("Réglages")

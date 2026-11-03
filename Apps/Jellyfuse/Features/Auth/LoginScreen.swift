@@ -5,6 +5,7 @@ import SwiftUI
 /// Composition layer for sign-in: owns the model, picks the step view.
 struct LoginScreen: View {
     @State private var model: LoginModel
+    @Environment(\.designMetrics) private var metrics
 
     init(onSignedIn: @escaping @MainActor (Session) -> Void) {
         _model = State(initialValue: LoginModel(onSignedIn: onSignedIn))
@@ -34,9 +35,24 @@ struct LoginScreen: View {
                 )
             }
         }
-        .padding(.horizontal, Design.Metrics.tv.screenMargin)
-        .padding(.vertical, Design.Metrics.tv.safeVertical)
+        .padding(.horizontal, metrics.screenMargin)
+        .padding(.vertical, metrics.safeVertical)
     }
+}
+
+/// Sizes that differ between the 10-foot and the touch layouts (no DesignSystem token for them yet).
+private enum LoginLayout {
+    #if os(tvOS)
+    static let topClearance: CGFloat = 170
+    static let fieldWidth: CGFloat = 900
+    static let digitFont: CGFloat = 92
+    static let digitSize = CGSize(width: 112, height: 150)
+    #else
+    static let topClearance: CGFloat = 90
+    static let fieldWidth: CGFloat = 480
+    static let digitFont: CGFloat = 34
+    static let digitSize = CGSize(width: 44, height: 62)
+    #endif
 }
 
 // MARK: - Steps (pure views)
@@ -51,7 +67,7 @@ private struct StepHeader: View {
             Text(subtitle)
                 .font(Design.Typography.body)
                 .foregroundStyle(Design.Palette.textSecondary)
-                .frame(maxWidth: 900, alignment: .leading)
+                .frame(maxWidth: LoginLayout.fieldWidth, alignment: .leading)
         }
     }
 }
@@ -82,12 +98,13 @@ private struct ServerStepView: View {
             )
             TextField(String(localized: "jellyfin.local:8096"), text: $address)
                 .onSubmit(onContinue)
-                .frame(maxWidth: 900)
+                .touchTextEntry(.url)
+                .frame(maxWidth: LoginLayout.fieldWidth)
             ErrorLine(message: errorMessage)
             PillButton(isBusy ? String(localized: "Connexion…") : String(localized: "Continuer"), systemImage: "arrow.right", action: onContinue)
                 .disabled(isBusy)
         }
-        .padding(.top, 170)
+        .padding(.top, LoginLayout.topClearance)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 }
@@ -99,6 +116,7 @@ private struct QuickConnectStepView: View {
     let onUsePassword: () -> Void
     let onChangeServer: () -> Void
     @Namespace private var focusNamespace
+    @Environment(\.designMetrics) private var metrics
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -112,9 +130,10 @@ private struct QuickConnectStepView: View {
                     .font(Design.Typography.body)
                     .foregroundStyle(Design.Palette.textSecondary)
             }
-            .padding(.top, 170)
+            .padding(.top, LoginLayout.topClearance)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
+            #if os(tvOS)
             if let link {
                 VStack(spacing: Design.Spacing.s) {
                     QRCodeView(url: link, side: 300)
@@ -124,13 +143,17 @@ private struct QuickConnectStepView: View {
                         .multilineTextAlignment(.center)
                         .frame(width: 300)
                 }
-                .padding(.top, 190)
+                .padding(.top, LoginLayout.topClearance + 20)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
             }
+            #endif
 
-            HStack(spacing: Design.Spacing.m) {
+            let layout = metrics.isTouch
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: Design.Spacing.xs))
+                : AnyLayout(HStackLayout(spacing: Design.Spacing.m))
+            layout {
                 PillButton(String(localized: "Utiliser un mot de passe"), systemImage: "key.fill", action: onUsePassword)
-                    .prefersDefaultFocus(in: focusNamespace)
+                    .platformDefaultFocus(in: focusNamespace)
                 PillButton(String(localized: "Changer de serveur"), systemImage: "server.rack", action: onChangeServer)
                 if let host {
                     Text(host).font(Design.Typography.caption).foregroundStyle(Design.Palette.textSecondary)
@@ -138,7 +161,7 @@ private struct QuickConnectStepView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
         }
-        .focusScope(focusNamespace)
+        .platformFocusScope(focusNamespace)
     }
 }
 
@@ -152,10 +175,10 @@ private struct CodeDigits: View {
             ForEach(0..<6, id: \.self) { index in
                 if index == 3 { Spacer().frame(width: Design.Spacing.s) }
                 Text(index < digits.count ? String(digits[index]) : "")
-                    .font(.system(size: 92, weight: .bold)) // ui-plan §3.2 code size; no DesignSystem token yet
+                    .font(.system(size: LoginLayout.digitFont, weight: .bold)) // ui-plan §3.2 code size; no DesignSystem token yet
                     .monospacedDigit()
                     .foregroundStyle(Design.Palette.textPrimary)
-                    .frame(width: 112, height: 150)
+                    .frame(width: LoginLayout.digitSize.width, height: LoginLayout.digitSize.height)
                     .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: Design.Spacing.m))
             }
         }
@@ -180,10 +203,12 @@ private struct PasswordStepView: View {
                 subtitle: host.map { String(localized: "Serveur : \($0)") } ?? ""
             )
             TextField(String(localized: "Nom d'utilisateur"), text: $userName)
-                .frame(maxWidth: 900)
+                .touchTextEntry(.username)
+                .frame(maxWidth: LoginLayout.fieldWidth)
             SecureField(String(localized: "Mot de passe"), text: $password)
+                .touchTextEntry(.password)
                 .onSubmit(onSubmit)
-                .frame(maxWidth: 900)
+                .frame(maxWidth: LoginLayout.fieldWidth)
             ErrorLine(message: errorMessage)
             HStack(spacing: Design.Spacing.m) {
                 PillButton(isBusy ? String(localized: "Connexion…") : String(localized: "Se connecter"), systemImage: "arrow.right", action: onSubmit)
@@ -191,7 +216,24 @@ private struct PasswordStepView: View {
                 PillButton(String(localized: "Changer de serveur"), systemImage: "server.rack", action: onChangeServer)
             }
         }
-        .padding(.top, 170)
+        .padding(.top, LoginLayout.topClearance)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 }
+
+extension View {
+    /// Keyboard behavior of a sign-in field on touch platforms (no-op on tvOS).
+    fileprivate func touchTextEntry(_ kind: TouchTextKind) -> some View {
+        #if os(iOS)
+        textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+            .textFieldStyle(.roundedBorder)
+            .keyboardType(kind == .url ? .URL : .default)
+            .textContentType(kind == .url ? .URL : kind == .username ? .username : .password)
+        #else
+        self
+        #endif
+    }
+}
+
+private enum TouchTextKind { case url, username, password }

@@ -39,6 +39,7 @@ struct HomeScreen: View {
                 onSeeAll: { path.append(.grid($0)) },
                 onToggleList: { Task { await model.toggleBillboardList() } }
             )
+            .hidesNavigationBar()
             .navigationDestination(for: HomeRoute.self) { route in
                 switch route {
                 case .grid(let library):
@@ -48,6 +49,7 @@ struct HomeScreen: View {
                         model: model.detailModel(for: id), onPlay: onPlay,
                         onOpenPerson: { path.append(.person(id: $0, name: $1)) }
                     )
+                    .transparentNavigationBar()
                 case .person(let id, let name):
                     FixedGridScreen(
                         title: name, key: GridKey(.person(id: id), sort: LibrarySort(.year)),

@@ -59,8 +59,8 @@ struct HomeView: View {
             }
             .padding(.bottom, metrics.safeVertical)
         }
-        .focusScope(focusNamespace)
-        .ignoresSafeArea(edges: [.top, .horizontal])
+        .platformFocusScope(focusNamespace)
+        .ignoresSafeArea(edges: metrics.isTouch ? [.top] : [.top, .horizontal])
         .scrollClipDisabled()
     }
 }

@@ -47,6 +47,7 @@ struct LibraryScreen: View {
                 onOpen: open,
                 onLoadMore: { Task { await tab.grid.loadMore(key) } }
             )
+            .hidesNavigationBar()
             .navigationDestination(for: LibraryRoute.self) { route in
                 switch route {
                 case .detail(let id):
@@ -54,6 +55,7 @@ struct LibraryScreen: View {
                         model: home.detailModel(for: id), onPlay: onPlay,
                         onOpenPerson: { path.append(.person(id: $0, name: $1)) }
                     )
+                    .transparentNavigationBar()
                 case .collection(let id, let name):
                     FixedGridScreen(
                         title: name, key: GridKey(.collection(id: id), sort: LibrarySort(.year, .ascending)),
@@ -79,6 +81,10 @@ struct LibraryScreen: View {
                 onSetUnwatched: { tab.setUnwatchedOnly($0) }, onSetFavorites: { tab.setFavoritesOnly($0) },
                 onJump: { tab.jump(toLetter: $0) }
             )
+            #if os(iOS)
+            .presentationDetents([.medium, .large])
+            .presentationBackground(Design.Palette.canvas)
+            #endif
         }
     }
 

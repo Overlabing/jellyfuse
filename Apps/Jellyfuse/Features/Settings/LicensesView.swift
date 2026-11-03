@@ -46,6 +46,7 @@ struct LicensesView: View {
 
 /// One component: facts, then the verbatim text in a scrollable page (focusable so the remote can scroll it).
 struct LicenseDetailView: View {
+    @Environment(\.designMetrics) private var metrics
     let entry: LicenseEntry
     let text: String?
 
@@ -61,10 +62,12 @@ struct LicenseDetailView: View {
                     Text("Le texte intégral n'est pas fourni avec l'app : voir le dépôt, \(entry.url).")
                 }
             }
-            .padding(Design.Spacing.xl)
+            .padding(metrics.isTouch ? Design.Spacing.s : Design.Spacing.xl)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+        #if os(tvOS)
         .focusable()
+        #endif
     }
 
     private var facts: String {

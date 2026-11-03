@@ -37,6 +37,7 @@ struct SearchView: View {
             .padding(.bottom, metrics.safeVertical)
         }
         .scrollClipDisabled()
+        .dismissesKeyboardOnScroll()
     }
 
     @ViewBuilder private var results: some View {

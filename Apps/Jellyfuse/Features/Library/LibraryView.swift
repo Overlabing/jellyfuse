@@ -56,20 +56,51 @@ struct LibraryView: View {
     }
 
     private var header: some View {
+        Group {
+            if metrics.isTouch {
+                VStack(alignment: .leading, spacing: Design.Spacing.xs) {
+                    Text(title)
+                        .font(Design.Typography.title)
+                        .foregroundStyle(Design.Palette.textPrimary)
+                        .accessibilityAddTraits(.isHeader)
+                    HStack {
+                        Text(summaryLine)
+                            .font(Design.Typography.callout)
+                            .foregroundStyle(Design.Palette.textSecondary)
+                            .lineLimit(1)
+                        Spacer(minLength: Design.Spacing.s)
+                        filtersButton
+                    }
+                }
+            } else {
+                tvHeader
+            }
+        }
+        .padding(.horizontal, metrics.screenMargin)
+        .padding(.bottom, metrics.focusInset)
+    }
+
+    private var summaryLine: String {
+        ([summary] + [content.total.map { String(localized: "\($0.formatted()) titres") }].compactMap { $0 }).joined(separator: " · ")
+    }
+
+    private var filtersButton: some View {
+        PillButton(String(localized: "Filtres et tri"), systemImage: "line.3.horizontal.decrease", action: onOpenFilters)
+            .accessibilityIdentifier("library.filters")
+    }
+
+    private var tvHeader: some View {
         HStack(alignment: .center, spacing: Design.Spacing.m) {
             Text(title)
                 .font(Design.Typography.title)
                 .foregroundStyle(Design.Palette.textPrimary)
                 .accessibilityAddTraits(.isHeader)
             Spacer(minLength: Design.Spacing.m)
-            Text(([summary] + [content.total.map { String(localized: "\($0.formatted()) titres") }].compactMap { $0 }).joined(separator: " · "))
+            Text(summaryLine)
                 .font(Design.Typography.callout)
                 .foregroundStyle(Design.Palette.textSecondary)
                 .lineLimit(1)
-            PillButton(String(localized: "Filtres et tri"), systemImage: "line.3.horizontal.decrease", action: onOpenFilters)
-                .accessibilityIdentifier("library.filters")
+            filtersButton
         }
-        .padding(.horizontal, metrics.screenMargin)
-        .padding(.bottom, metrics.focusInset)
     }
 }

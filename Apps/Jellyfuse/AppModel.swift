@@ -2,7 +2,9 @@ import Foundation
 import HomePresentation
 import LibraryKit
 import Observation
+#if !PLAYER_DISABLED
 import PlaybackEngine
+#endif
 
 /// Session lifecycle and the objects that live exactly as long as a session.
 @MainActor
@@ -10,7 +12,9 @@ import PlaybackEngine
 final class AppModel {
     private(set) var session: Session?
     private(set) var home: HomeModel?
+    #if !PLAYER_DISABLED
     private(set) var playback: PlaybackServices?
+    #endif
     /// What the player screen is showing, if anything.
     var playing: PlayRequest?
     /// The « Reprendre / Recommencer » question, when a playback with a saved position was requested.
@@ -45,7 +49,9 @@ final class AppModel {
         SessionStore.clear()
         session = nil
         home = nil
+        #if !PLAYER_DISABLED
         playback = nil
+        #endif
         playing = nil
         resumePrompt = nil
     }
@@ -70,7 +76,9 @@ final class AppModel {
         let client = JellyfinClient(session: session, onUnauthorized: Self.makeUnauthorizedHandler(self))
         let home = HomeModel(session: session, client: client)
         self.home = home
+        #if !PLAYER_DISABLED
         playback = PlaybackServices(session: session, client: client, store: home.store, reachability: home.reachability)
+        #endif
     }
 
     /// Fired from the SDK's threads: built outside the actor so the closure does not inherit its isolation.

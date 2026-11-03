@@ -35,6 +35,7 @@ struct SearchScreen: View {
                         model: home.detailModel(for: id), onPlay: onPlay,
                         onOpenPerson: { path.append(.person(id: $0, name: $1)) }
                     )
+                    .transparentNavigationBar()
                 case .person(let id, let name):
                     FixedGridScreen(
                         title: name, key: GridKey(.person(id: id), sort: LibrarySort(.year)),

@@ -33,8 +33,8 @@ struct DetailView: View {
             }
             .padding(.bottom, metrics.safeVertical)
         }
-        .focusScope(focusNamespace)
-        .ignoresSafeArea(edges: [.top, .horizontal])
+        .platformFocusScope(focusNamespace)
+        .ignoresSafeArea(edges: metrics.isTouch ? [.top] : [.top, .horizontal])
         .scrollClipDisabled()
     }
 
@@ -42,19 +42,21 @@ struct DetailView: View {
     private func hero(_ content: DetailContent) -> some View {
         let header = DetailHero(content.header) {
             VStack(alignment: .leading, spacing: Design.Spacing.s) {
-                HStack(spacing: Design.Spacing.m) {
-                    PillButton(content.playLabel, systemImage: "play.fill", action: onPlay)
+                HStack(spacing: metrics.isTouch ? Design.Spacing.xs : Design.Spacing.m) {
+                    PillButton(content.playLabel, systemImage: "play.fill", isProminent: true, fillsWidth: metrics.isTouch, action: onPlay)
                         .disabled(content.playTarget == nil)
-                        .prefersDefaultFocus(true, in: focusNamespace)
+                        .platformDefaultFocus(in: focusNamespace)
                     PillButton(
                         content.isFavorite ? String(localized: "Dans ma liste") : String(localized: "Ma liste"),
                         systemImage: content.isFavorite ? "checkmark" : "plus",
+                        fillsWidth: metrics.isTouch,
                         action: onToggleFavorite
                     )
                     if let isWatched = content.isWatched {
                         PillButton(
                             isWatched ? String(localized: "Vu") : String(localized: "Marquer vu"),
                             systemImage: isWatched ? "checkmark" : "eye",
+                            fillsWidth: metrics.isTouch,
                             action: onToggleWatched
                         )
                     }
@@ -66,7 +68,7 @@ struct DetailView: View {
                 }
             }
         }
-        if content.isSeries {
+        if content.isSeries || metrics.isTouch {
             header.frame(height: metrics.detailHeroHeight)
         } else {
             header.containerRelativeFrame(.vertical)

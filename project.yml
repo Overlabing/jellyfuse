@@ -5,6 +5,7 @@ options:
   bundleIdPrefix: dev.antonin
   deploymentTarget:
     tvOS: "17.0"
+    iOS: "17.0"
 packages:
   JellyKit:
     path: Packages/JellyKit
@@ -41,6 +42,55 @@ targets:
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         # Open ATS while developing against plain-HTTP LAN servers.
         INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsArbitraryLoads: YES
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "4"
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: 39TMVBW2CY
+        CODE_SIGN_ENTITLEMENTS: Apps/Jellyfuse/Jellyfuse.entitlements
+  # iPhone + iPad. Same bundle id as the tvOS app (one multi-platform record on App Store Connect) and the
+  # same shared sources; the differences live in the DesignSystem metrics.
+  # TEMPORARY: PLAYER_DISABLED compiles the app without the player (MPVKit has no iOS slice yet). To wire the
+  # player: drop the flag, the `Features/Player/**` exclude, and add PlayerCore / PlaybackEngine / PlayerPresentation
+  # to the products below.
+  Jellyfuse-iOS:
+    type: application
+    platform: iOS
+    sources:
+      - path: Apps/Jellyfuse
+        excludes:
+          - Assets.xcassets
+          - Info.plist
+          - Features/Player/**
+      - path: Apps/Jellyfuse-iOS/Assets.xcassets
+    dependencies:
+      - package: JellyKit
+        products: [LibraryKit, DesignSystem, HomePresentation, SettingsKit]
+    info:
+      path: Apps/Jellyfuse-iOS/Info.plist
+      properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleURLTypes:
+          - CFBundleURLName: com.jellyfusion.app
+            CFBundleURLSchemes: [jellyfuse]
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.jellyfusion.app
+        PRODUCT_NAME: Jellyfuse
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        INFOPLIST_KEY_CFBundleDisplayName: Jellyfuse
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
+        INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsArbitraryLoads: YES
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) PLAYER_DISABLED"
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "4"
         CODE_SIGN_STYLE: Automatic
@@ -89,6 +139,10 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.jellyfusion.app.uitests
         TEST_TARGET_NAME: Jellyfuse
 schemes:
+  Jellyfuse-iOS:
+    build:
+      targets:
+        Jellyfuse-iOS: all
   Jellyfuse:
     build:
       targets:
