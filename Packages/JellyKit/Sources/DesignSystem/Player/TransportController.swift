@@ -133,8 +133,9 @@ public final class TransportController {
         if isScrubbing { commitScrub() } else { playPause() }
     }
 
-    /// A left / right click: ±10 s, or a nudge of the scrub preview.
-    public func skip(_ direction: SkipDirection) {
+    /// A left / right click: ±10 s, or a nudge of the scrub preview. `revealsDisplay` false skips without
+    /// opening the display (a double-tap on the bare video).
+    public func skip(_ direction: SkipDirection, revealsDisplay: Bool = true) {
         if var session = scrub {
             session.nudge(direction)
             scrub = session
@@ -143,7 +144,7 @@ public final class TransportController {
         driver.seek(TransportMath.skipTarget(from: driver.position(), direction: direction, duration: driver.duration()))
         skipCount += 1
         skipFeedback = SkipFeedback(direction: direction, token: skipCount)
-        reveal()
+        if revealsDisplay || visibility.isVisible { reveal() }
     }
 
     public func menu() -> MenuOutcome {
@@ -158,6 +159,41 @@ public final class TransportController {
         guard visibility.isVisible else { return .exit }
         visibility.hide()
         return .handled
+    }
+
+    // MARK: Touch
+
+    /// A tap on the bare video: shows the display, or hides it when it is already there. Ignored under the panel.
+    public func toggleDisplay() {
+        guard !isPanelOpen else { return }
+        if visibility.isVisible, !isScrubbing {
+            visibility.hide()
+        } else {
+            reveal()
+        }
+    }
+
+    /// A finger lands on the bar. Unlike the pad, a touch scrubs playing or paused alike.
+    public func touchScrubBegan() {
+        guard !isPanelOpen, !isScrubbing else { return }
+        scrub = ScrubSession(origin: driver.position(), duration: driver.duration())
+        visibility.hold()
+    }
+
+    /// The finger is at `fraction` (0...1) of the bar.
+    public func touchScrub(fraction: Double) {
+        if !isScrubbing { touchScrubBegan() }
+        guard var session = scrub else { return }
+        session.scrub(toFraction: fraction)
+        scrub = session
+    }
+
+    /// The finger lifts: seeks there and leaves play / pause as it was.
+    public func touchScrubEnded() {
+        guard let session = scrub else { return }
+        scrub = nil
+        driver.seek(session.target)
+        visibility.reveal(isPlaying: !driver.isPaused(), now: now())
     }
 
     // MARK: Content panel

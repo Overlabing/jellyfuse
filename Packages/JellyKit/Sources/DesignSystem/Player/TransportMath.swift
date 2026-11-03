@@ -87,9 +87,24 @@ public struct ScrubSession: Sendable, Equatable {
         target = TransportMath.clamp(anchor + fraction * Self.span(duration: duration), duration: duration)
     }
 
+    /// Absolute scrub by touch: the finger sets the playhead, `fraction` is 0...1 of the file.
+    public mutating func scrub(toFraction fraction: Double) {
+        let fraction = fraction.isFinite ? min(max(fraction, 0), 1) : 0
+        target = TransportMath.clamp(fraction * duration, duration: duration)
+        anchor = target
+    }
+
     /// A left / right click while scrubbing.
     public mutating func nudge(_ direction: SkipDirection) {
         target = TransportMath.skipTarget(from: target, direction: direction, duration: duration)
         anchor = target
+    }
+}
+
+/// Pure arithmetic of the touch layer.
+public enum TouchMath {
+    /// A double-tap skips by half of the screen: left goes back, right goes forward.
+    public static func skipDirection(tapX x: Double, width: Double) -> SkipDirection {
+        x < width / 2 ? .backward : .forward
     }
 }

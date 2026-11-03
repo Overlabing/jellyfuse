@@ -127,12 +127,22 @@ public struct ContentTabs: View {
     private let onSelectChapter: (Double) -> Void
     /// Menu or up from the tab row: the screen animates the panel away, then dismisses it.
     private let onClose: @MainActor () -> Void
+    private let presentation: Presentation
+
+    /// How the panel is laid out: the tvOS card pinned to the top of the screen, or the content alone, which an
+    /// iOS sheet frames and backs itself.
+    public enum Presentation: Sendable {
+        case pinnedPanel
+        case sheet
+    }
 
     public init(
         model: ContentTabsModel, selection: PlayerTab, onSelectTab: @escaping (PlayerTab) -> Void,
         onSelectAudio: @escaping (Int) -> Void, onSelectSubtitle: @escaping (Int) -> Void,
-        onSelectChapter: @escaping (Double) -> Void, onClose: @escaping @MainActor () -> Void
+        onSelectChapter: @escaping (Double) -> Void, onClose: @escaping @MainActor () -> Void,
+        presentation: Presentation = .pinnedPanel
     ) {
+        self.presentation = presentation
         self.model = model
         self.selection = selection
         self.onSelectTab = onSelectTab
@@ -145,7 +155,10 @@ public struct ContentTabs: View {
     @FocusState private var focusedTab: PlayerTab?
 
     public var body: some View {
-        pinned
+        switch presentation {
+        case .pinnedPanel: pinned
+        case .sheet: panel
+        }
     }
 
     /// Glued to the top edge, centered horizontally; the rest of the screen stays empty (video behind).
@@ -178,9 +191,9 @@ public struct ContentTabs: View {
             // on the real pad); the focus sections keep them inside the row. Only up, which has nothing above, is ours.
             .onMoveCommand { if $0 == .up { onClose() } }
             #endif
-            .focusSection()
+            .focusBlock()
             content
-                .focusSection()
+                .focusBlock()
                 #if os(tvOS)
                 // Menu from inside the list climbs back to the tab (like the system tab bar) instead of closing
                 // the panel: the event is consumed here, so the presentation never sees it. From the tabs, which
@@ -188,10 +201,8 @@ public struct ContentTabs: View {
                 .onExitCommand { focusedTab = selection }
                 #endif
         }
-        .padding(Design.Spacing.l)
-        .frame(width: 1400, alignment: .topLeading)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 28))
-        .focusSection()
+        .modifier(PanelChrome(presentation: presentation))
+        .focusBlock()
         .defaultFocus($focusedTab, selection)
         // The selection follows the focus (like the system tab bar): no click needed to open a tab.
         .onChange(of: focusedTab) { _, tab in if let tab { onSelectTab(tab) } }
@@ -239,6 +250,25 @@ public struct ContentTabs: View {
         )
     }
 
+    /// The tvOS card (fixed width, material, padding) or nothing: a sheet supplies its own.
+    private struct PanelChrome: ViewModifier {
+        let presentation: Presentation
+
+        func body(content: Content) -> some View {
+            switch presentation {
+            case .pinnedPanel:
+                content
+                    .padding(Design.Spacing.l)
+                    .frame(width: 1400, alignment: .topLeading)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 28))
+            case .sheet:
+                content.padding(.horizontal, Design.Spacing.s).frame(maxWidth: .infinity, alignment: .topLeading)
+                    // The bordered capsules would read in the accent blue: white, like the rest of the player.
+                    .tint(.white)
+            }
+        }
+    }
+
     private struct Row: Identifiable {
         let id: Int
         let title: String
@@ -275,7 +305,7 @@ public struct ContentTabs: View {
                 .padding(.vertical, Design.Spacing.s)
             }
             .scrollClipDisabled()
-            .frame(maxHeight: 460)
+            .frame(maxHeight: presentation == .pinnedPanel ? 460 : nil)
             // Focus effects may overflow sideways, but a scrolled row must not draw over the tab row.
             .mask(Rectangle().padding(.horizontal, -Design.Spacing.l))
             .onAppear {

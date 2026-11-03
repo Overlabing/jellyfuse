@@ -48,19 +48,7 @@ public struct PlayerOSD: View {
         .accessibilityHidden(!state.isVisible)
     }
 
-    private var times: some View {
-        HStack {
-            Text(model.elapsed)
-            Spacer()
-            if let endsAt = model.endsAt {
-                Text(endsAt).foregroundStyle(Design.Palette.textSecondary)
-            }
-            Spacer()
-            Text(model.remaining ?? "")
-        }
-        .font(Design.Typography.caption.monospacedDigit())
-        .foregroundStyle(.white.opacity(0.85))
-    }
+    private var times: some View { OSDTimes(model: model) }
 
     /// Legibility over any frame (mockup `.osd-bot`): black .85 at the edge, .5 at 55%, clear at the top.
     private var gradient: some View {
@@ -78,6 +66,41 @@ public struct PlayerOSD: View {
     }
 }
 
+/// Elapsed time, end time and remaining time on one line.
+struct OSDTimes: View {
+    let model: OSDModel
+
+    var body: some View {
+        HStack {
+            Text(model.elapsed)
+            Spacer()
+            if let endsAt = model.endsAt {
+                Text(endsAt).foregroundStyle(Design.Palette.textSecondary)
+            }
+            Spacer()
+            Text(model.remaining ?? "")
+        }
+        .font(Design.Typography.caption.monospacedDigit())
+        .foregroundStyle(.white.opacity(0.85))
+    }
+}
+
+/// The bar's dimensions: a 10-foot bar on tvOS, a finger-sized one on iOS.
+struct OSDBarStyle: Equatable {
+    var trackHeight: CGFloat
+    var gap: Double
+    var knob: CGFloat
+    var knobScrubbing: CGFloat
+    var bubbleWidth: CGFloat
+    /// Space between the bar and the bubble above it.
+    var bubbleLift: CGFloat
+    var bubbleRadius: CGFloat
+
+    static let tv = OSDBarStyle(trackHeight: 10, gap: 6, knob: 30, knobScrubbing: 44, bubbleWidth: 336, bubbleLift: 28, bubbleRadius: 20)
+    /// The bubble stands well above the bar so the finger never covers it.
+    static let touch = OSDBarStyle(trackHeight: 6, gap: 3, knob: 14, knobScrubbing: 24, bubbleWidth: 200, bubbleLift: 44, bubbleRadius: 14)
+}
+
 /// The track split into chapter segments (small gaps, like YouTube), the played part, the playhead, the scrub
 /// preview and the skip chevrons. Without chapters it is one segment.
 struct OSDProgressBar: View {
@@ -88,11 +111,12 @@ struct OSDProgressBar: View {
     let thumbnail: Image?
     let skip: SkipFeedback?
     let isScrubbing: Bool
+    var style: OSDBarStyle = .tv
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private let trackHeight: CGFloat = 10
-    private let gap: Double = 6
-    private var knobSize: CGFloat { isScrubbing ? 44 : 30 }
+    private var trackHeight: CGFloat { style.trackHeight }
+    private var gap: Double { style.gap }
+    private var knobSize: CGFloat { isScrubbing ? style.knobScrubbing : style.knob }
 
     var body: some View {
         GeometryReader { proxy in
@@ -125,9 +149,9 @@ struct OSDProgressBar: View {
                 if let preview {
                     // A box of known width centred on the playhead (kept on screen), standing on the bar:
                     // bottom-aligned to it, then lifted by the bar's height and a gap.
-                    let centre = min(max(x, Self.bubbleWidth / 2), proxy.size.width - Self.bubbleWidth / 2)
+                    let centre = min(max(x, style.bubbleWidth / 2), proxy.size.width - style.bubbleWidth / 2)
                     bubble(preview, chapter: chapterTitle)
-                        .offset(x: centre - Self.bubbleWidth / 2, y: -(trackHeight + 28))
+                        .offset(x: centre - style.bubbleWidth / 2, y: -(trackHeight + style.bubbleLift))
                 }
             }
             .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: progress)
@@ -139,12 +163,10 @@ struct OSDProgressBar: View {
 
     /// The bubble's fixed width, with or without a thumbnail: nothing inside it can resize it or shift as frames,
     /// digits or chapter names change.
-    private static let bubbleWidth: CGFloat = 336
-
     /// One box (thumbnail, time, chapter) so a single offset places everything. Its content never animates
     /// by itself: the box eases to the playhead with the knob, and what is inside stays put in it.
     private func bubble(_ text: String, chapter: String?) -> some View {
-        let inner = Self.bubbleWidth - 2 * Design.Spacing.xs
+        let inner = style.bubbleWidth - 2 * Design.Spacing.xs
         return VStack(spacing: 2) {
             if let thumbnail {
                 thumbnail
@@ -153,7 +175,7 @@ struct OSDProgressBar: View {
                     .frame(width: inner)
                     // The overlay proposes the bar's 10 pt height: without this the frame collapses to it.
                     .fixedSize(horizontal: false, vertical: true)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .clipShape(RoundedRectangle(cornerRadius: style.bubbleRadius - 8))
                     .padding(.bottom, Design.Spacing.xs)
             }
             Text(text)
@@ -169,8 +191,8 @@ struct OSDProgressBar: View {
         }
         .multilineTextAlignment(.center)
         .padding(Design.Spacing.xs)
-        .frame(width: Self.bubbleWidth)
-        .background(.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 20))
+        .frame(width: style.bubbleWidth)
+        .background(.black.opacity(0.6), in: RoundedRectangle(cornerRadius: style.bubbleRadius))
         .transaction { $0.animation = nil }
     }
 
