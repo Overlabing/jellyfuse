@@ -4,7 +4,7 @@ import PackageDescription
 let package = Package(
     name: "JellyKit",
     defaultLocalization: "fr",
-    platforms: [.tvOS(.v18), .iOS(.v26), .macOS(.v26)],
+    platforms: [.tvOS(.v26), .iOS(.v26), .macOS(.v26)],
     products: [
         .library(name: "PlayerCore", targets: ["PlayerCore"]),
         .library(name: "LibraryKit", targets: ["LibraryKit"]),
